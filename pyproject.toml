@@ -8,6 +8,11 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = "^3.11"
 
+[tool.black]
+line-length = 100
+
+[tool.isort]
+profile = "black"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.0"

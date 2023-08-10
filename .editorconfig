@@ -1,0 +1,9 @@
+[*]
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.py]
+max_line_length = 100
+
+[*.yaml]
+indent_size = 2
