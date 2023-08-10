@@ -1,4 +1,5 @@
 import dataclasses
+import string
 
 
 class Ship:
@@ -41,6 +42,9 @@ class Destroyer(Ship):
 
 @dataclasses.dataclass
 class Cell:
+    COLUMNS = tuple(string.ascii_uppercase[:10])
+    ROWS = tuple(range(1, 11))
+
     row: int
     column: str
     ship: Ship = None
@@ -51,3 +55,8 @@ class Cell:
 
         if self.ship is not None:
             self.ship.hit()
+
+
+class Board:
+    def __init__(self):
+        self.cells = [[Cell(row, column) for column in Cell.COLUMNS] for row in Cell.ROWS]

@@ -77,3 +77,12 @@ def test_cell_without_ship_is_shot():
     cell.hit()
 
     assert cell.is_shot
+
+
+def test_board_is_10_x_10():
+    board = domain.Board()
+
+    assert len(board.cells) == 10
+
+    for row in board.cells:
+        assert len(row) == 10
