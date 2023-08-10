@@ -3,11 +3,11 @@ class Ship:
     hitpoints: int
 
     @property
-    def dead(self):
+    def is_dead(self):
         return self.hitpoints == 0
 
     def hit(self):
-        if not self.dead:
+        if not self.is_dead:
             self.hitpoints -= 1
 
 

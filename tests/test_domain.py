@@ -39,3 +39,23 @@ def test_ship_not_hit_after_no_hp_left():
     assert cruiser.hitpoints == 0
     assert submarine.hitpoints == 0
     assert destroyer.hitpoints == 0
+
+
+def test_ship_with_no_hp_is_dead():
+    carrier = domain.Carrier()
+    battleship = domain.Battleship()
+    cruiser = domain.Cruiser()
+    submarine = domain.Submarine()
+    destroyer = domain.Destroyer()
+
+    [carrier.hit() for _ in range(carrier.hitpoints)]
+    [battleship.hit() for _ in range(battleship.hitpoints)]
+    [cruiser.hit() for _ in range(cruiser.hitpoints)]
+    [submarine.hit() for _ in range(submarine.hitpoints)]
+    [destroyer.hit() for _ in range(destroyer.hitpoints)]
+
+    assert carrier.is_dead
+    assert battleship.is_dead
+    assert cruiser.is_dead
+    assert submarine.is_dead
+    assert destroyer.is_dead
