@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "battleship"
+version = "0.1.0"
+description = "Online TUI Battleship."
+authors = ["Roman Vlasenko <klavionik@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.4.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
