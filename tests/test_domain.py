@@ -59,3 +59,21 @@ def test_ship_with_no_hp_is_dead():
     assert cruiser.is_dead
     assert submarine.is_dead
     assert destroyer.is_dead
+
+
+def test_cell_hits_bound_ship():
+    cruiser = domain.Cruiser()
+    cell = domain.Cell(1, "A", cruiser)
+
+    cell.hit()
+
+    assert cell.is_shot
+    assert cruiser.hitpoints == 2
+
+
+def test_cell_without_ship_is_shot():
+    cell = domain.Cell(1, "A")
+
+    cell.hit()
+
+    assert cell.is_shot

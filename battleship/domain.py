@@ -1,3 +1,6 @@
+import dataclasses
+
+
 class Ship:
     kind: str
     hitpoints: int
@@ -34,3 +37,17 @@ class Submarine(Ship):
 class Destroyer(Ship):
     kind = "destroyer"
     hitpoints = 2
+
+
+@dataclasses.dataclass
+class Cell:
+    row: int
+    column: str
+    ship: Ship = None
+    is_shot: bool = False
+
+    def hit(self):
+        self.is_shot = True
+
+        if self.ship is not None:
+            self.ship.hit()
