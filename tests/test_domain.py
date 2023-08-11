@@ -1,3 +1,5 @@
+import pytest
+
 from battleship import domain
 
 
@@ -86,3 +88,49 @@ def test_board_is_10_x_10():
 
     for row in board.cells:
         assert len(row) == 10
+
+
+@pytest.mark.parametrize(["row", "col"], [[3, "A"], [5, "B"], [10, "I"]])
+def test_board_find_cells(row: str, col: str):
+    board = domain.Board()
+
+    cell = board.find_cell(f"{col}{row}")
+
+    assert cell.column == col
+    assert cell.row == row
+
+
+@pytest.mark.parametrize(["row", "col"], [[11, "A"], [0, "B"], [5, "V"]])
+def test_board_raises_exc_if_cell_not_found(row: str, col: str):
+    board = domain.Board()
+
+    with pytest.raises(domain.CellNotFound):
+        board.find_cell(f"{col}{row}")
+
+
+def test_board_places_ship():
+    board = domain.Board()
+    ship = domain.Cruiser()
+
+    board.place_ship("A3", "A4", "A5", ship=ship)
+
+    assert board.cells[2][0].ship is ship
+    assert board.cells[3][0].ship is ship
+    assert board.cells[4][0].ship is ship
+
+
+def test_board_raises_exc_if_cell_is_taken():
+    board = domain.Board()
+    ship = domain.Cruiser()
+    another_ship = domain.Cruiser()
+
+    board.place_ship("A3", "A4", "A5", ship=ship)
+
+    with pytest.raises(domain.CellTaken):
+        board.place_ship("A3", "A4", "A5", ship=another_ship)
+
+    with pytest.raises(domain.CellTaken):
+        board.place_ship("A5", "A6", "A7", ship=another_ship)
+
+    with pytest.raises(domain.CellTaken):
+        board.place_ship("A5", "B5", "C5", ship=another_ship)
