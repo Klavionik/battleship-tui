@@ -134,3 +134,17 @@ def test_board_raises_exc_if_cell_is_taken():
 
     with pytest.raises(domain.CellTaken):
         board.place_ship("A5", "B5", "C5", ship=another_ship)
+
+
+def test_board_shooting():
+    board = domain.Board()
+    ship = domain.Battleship()
+    board.place_ship("J7", "J8", "J9", "J10", ship=ship)
+
+    board.shoot("J7")
+
+    assert ship.hitpoints == 3
+
+    board.shoot("J6")
+
+    assert ship.hitpoints == 3

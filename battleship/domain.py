@@ -97,3 +97,7 @@ class Board:
             raise CellNotFound(f"Incorrect row {row}.")
 
         return self.cells[row_index][col_index]
+
+    def shoot(self, target: str):
+        cell = self.find_cell(target)
+        cell.hit()
