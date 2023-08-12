@@ -1,10 +1,14 @@
 import dataclasses
 import string
+from itertools import cycle
 
 
 class Ship:
     kind: str
     hitpoints: int
+
+    def __str__(self):
+        return self.kind
 
     @property
     def is_dead(self):
@@ -44,6 +48,10 @@ class CellTaken(RuntimeError):
     pass
 
 
+class CellAlreadyShot(RuntimeError):
+    pass
+
+
 @dataclasses.dataclass
 class Cell:
     COLUMNS = tuple(string.ascii_uppercase[:10])
@@ -55,6 +63,9 @@ class Cell:
     is_shot: bool = False
 
     def hit(self):
+        if self.is_shot:
+            raise CellAlreadyShot(f"You can't shot the same cell {self} twice.")
+
         self.is_shot = True
 
         if self.ship is not None:
@@ -98,6 +109,50 @@ class Board:
 
         return self.cells[row_index][col_index]
 
-    def shoot(self, target: str):
+    def shoot(self, target: str) -> Cell:
         cell = self.find_cell(target)
         cell.hit()
+        return cell
+
+
+class Player:
+    def __init__(self, name: str, board: Board):
+        self.name = name
+        self.board = board
+        self.ships = []
+
+    def place_ship(self, *cells: str, ship: Ship):
+        self.board.place_ship(*cells, ship=ship)
+        self.ships.append(ship)
+
+    def __str__(self):
+        return self.name
+
+    @property
+    def ships_left(self):
+        return len([ship for ship in self.ships if ship.hitpoints > 0])
+
+
+class Turn:
+    def __init__(self, player: Player, hostile: Player):
+        self.player = player
+        self.hostile = hostile
+
+    def fire(self, target: str) -> Cell:
+        return self.hostile.board.shoot(target)
+
+
+class Game:
+    def __init__(self, player_a: Player, player_b: Player):
+        self.player_a = player_a
+        self.player_b = player_b
+        self.players = cycle(zip([self.player_a, self.player_b], [self.player_b, self.player_a]))
+        self.winner = None
+
+    def __iter__(self):
+        for player, hostile in self.players:
+            yield Turn(player, hostile)
+
+            if hostile.ships_left == 0:
+                self.winner = player
+                break
