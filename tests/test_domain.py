@@ -1,6 +1,6 @@
 import pytest
 
-from battleship import domain
+from battleship import domain, errors
 
 
 def test_ship_hit_decreases_hitpoints():
@@ -104,7 +104,7 @@ def test_board_find_cells(row: str, col: str):
 def test_board_raises_exc_if_cell_not_found(row: str, col: str):
     board = domain.Board()
 
-    with pytest.raises(domain.CellNotFound):
+    with pytest.raises(errors.CellNotFound):
         board.find_cell(f"{col}{row}")
 
 
@@ -126,13 +126,13 @@ def test_board_raises_exc_if_cell_is_taken():
 
     board.place_ship("A3", "A4", "A5", ship=ship)
 
-    with pytest.raises(domain.CellTaken):
+    with pytest.raises(errors.CellTaken):
         board.place_ship("A3", "A4", "A5", ship=another_ship)
 
-    with pytest.raises(domain.CellTaken):
+    with pytest.raises(errors.CellTaken):
         board.place_ship("A5", "A6", "A7", ship=another_ship)
 
-    with pytest.raises(domain.CellTaken):
+    with pytest.raises(errors.CellTaken):
         board.place_ship("A5", "B5", "C5", ship=another_ship)
 
 

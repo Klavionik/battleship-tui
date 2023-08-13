@@ -1,6 +1,7 @@
 import dataclasses
 import string
 from itertools import cycle
+from battleship import errors
 
 
 class Ship:
@@ -44,14 +45,6 @@ class Destroyer(Ship):
     hitpoints = 2
 
 
-class CellTaken(RuntimeError):
-    pass
-
-
-class CellAlreadyShot(RuntimeError):
-    pass
-
-
 @dataclasses.dataclass
 class Cell:
     COLUMNS = tuple(string.ascii_uppercase[:10])
@@ -64,7 +57,7 @@ class Cell:
 
     def hit(self):
         if self.is_shot:
-            raise CellAlreadyShot(f"You can't shot the same cell {self} twice.")
+            raise errors.CellAlreadyShot(f"You can't shot the same cell {self} twice.")
 
         self.is_shot = True
 
@@ -73,16 +66,12 @@ class Cell:
 
     def place_ship(self, ship: Ship):
         if self.ship is not None:
-            raise CellTaken(f"Cell {self} already has a ship.")
+            raise errors.CellTaken(f"Cell {self} already has a ship.")
 
         self.ship = ship
 
     def __str__(self):
         return f"{self.column}{self.row}"
-
-
-class CellNotFound(ValueError):
-    pass
 
 
 class Board:
@@ -100,12 +89,12 @@ class Board:
         try:
             col_index = Cell.COLUMNS.index(col)
         except ValueError:
-            raise CellNotFound(f"Incorrect column {col}.")
+            raise errors.CellNotFound(f"Incorrect column {col}.")
 
         try:
             row_index = Cell.ROWS.index(row)
         except ValueError:
-            raise CellNotFound(f"Incorrect row {row}.")
+            raise errors.CellNotFound(f"Incorrect row {row}.")
 
         return self.cells[row_index][col_index]
 
