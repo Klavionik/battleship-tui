@@ -49,34 +49,55 @@ class Cell:
         return f"{self.col}{self.row}"
 
 
-class Board:
-    def __init__(self, cols: int = 10, rows: int = 10) -> None:
+class Grid:
+    def __init__(self, cols: int = 10, rows: int = 10):
         self._letters = string.ascii_uppercase[:cols]
         self._numbers = tuple(range(1, rows + 1))
-        self.cells = [[Cell(col, row) for col in self._letters] for row in self._numbers]
+        self._cells = [[Cell(col, row) for col in self._letters] for row in self._numbers]
 
-    def place_ship(self, *cells: str, ship: Ship) -> None:
-        for cell_name in cells:
-            cell = self.find_cell(cell_name)
-            cell.place_ship(ship)
+    def __getitem__(self, coordinate: str) -> Cell:
+        col_index, row_index = self._parse_coordinate(coordinate)
+        return self._cells[row_index][col_index]
 
-    def find_cell(self, cell_name: str) -> Cell:
-        col, row = cell_name[0], int("".join(cell_name[1:]))
+    def _parse_coordinate(self, coordinate: str) -> tuple[int, int]:
+        """
+        Coordinate is a string where the zero element is
+        a letter in range of the board size and the other elements
+        are integers that make up a number in range of the board size.
+
+        :param coordinate: Cell coordinate (like A1, B12, H4 etc.).
+        :return:
+        """
+        try:
+            col, row = coordinate[0], int("".join(coordinate[1:]))
+        except (TypeError, ValueError):
+            raise errors.IncorrectCoordinate(f"Cannot parse coordinate {coordinate}.")
 
         try:
             col_index = self._letters.index(col)
         except ValueError:
-            raise errors.CellNotFound(f"Incorrect column {col}.")
+            raise errors.CellOutOfRange(f"No column {col} in range {self._letters}.")
 
         try:
             row_index = self._numbers.index(row)
         except ValueError:
-            raise errors.CellNotFound(f"Incorrect row {row}.")
+            raise errors.CellOutOfRange(f"No row {row} in range {self._numbers}.")
 
-        return self.cells[row_index][col_index]
+        return col_index, row_index
+
+
+class Board:
+    def __init__(self, cols: int = 10, rows: int = 10) -> None:
+        self.grid = Grid(cols, rows)
+        self.ships: list[Ship] = []
+
+    def place_ship(self, *cells: str, ship: Ship) -> None:
+        for coordinate in cells:
+            cell = self.grid[coordinate]
+            cell.place_ship(ship)
 
     def shoot(self, target: str) -> Cell:
-        cell = self.find_cell(target)
+        cell: Cell = self.grid[target]
         cell.hit()
         return cell
 

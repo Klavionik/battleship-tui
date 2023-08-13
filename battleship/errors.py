@@ -2,7 +2,11 @@ class BattleshipError(Exception):
     pass
 
 
-class CellNotFound(BattleshipError):
+class IncorrectCoordinate(BattleshipError):
+    pass
+
+
+class CellOutOfRange(BattleshipError):
     pass
 
 
