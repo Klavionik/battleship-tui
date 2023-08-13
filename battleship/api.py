@@ -1,4 +1,15 @@
+from typing import Iterable
 from battleship import domain
+
+Ship = tuple[str, int]
+
+CLASSIC_SHIP_SUITE = [
+    ("carrier", 5),
+    ("battleship", 4),
+    ("cruiser", 3),
+    ("submarine", 3),
+    ("destroyer", 2)
+]
 
 
 def new_game(player_a_name, player_b_name):
@@ -7,11 +18,5 @@ def new_game(player_a_name, player_b_name):
     return domain.Game(player_a, player_b)
 
 
-def spawn_ships():
-    return [
-        domain.Carrier(),
-        domain.Battleship(),
-        domain.Cruiser(),
-        domain.Submarine(),
-        domain.Destroyer()
-    ]
+def spawn_ships(ships: Iterable[Ship]):
+    return [domain.Ship(kind=kind, hp=hp) for kind, hp in ships]

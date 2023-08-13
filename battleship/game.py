@@ -6,13 +6,13 @@ def run_game():
     player_b_name = input("Player B name\n")
 
     game = api.new_game(player_a_name, player_b_name)
-    player_a_ships = api.spawn_ships()
+    player_a_ships = api.spawn_ships(api.CLASSIC_SHIP_SUITE)
 
     for ship in player_a_ships:
         ship_cells = input(f"Place {player_a_name}'s {ship.kind}\n").split()
         game.player_a.place_ship(*ship_cells, ship=ship)
 
-    player_b_ships = api.spawn_ships()
+    player_b_ships = api.spawn_ships(api.CLASSIC_SHIP_SUITE)
 
     for ship in player_b_ships:
         ship_cells = input(f"Place {game.player_b}'s {ship.kind}\n").split()

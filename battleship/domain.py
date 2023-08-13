@@ -4,45 +4,21 @@ from itertools import cycle
 from battleship import errors
 
 
+@dataclasses.dataclass
 class Ship:
     kind: str
-    hitpoints: int
+    hp: int
 
     def __str__(self):
         return self.kind
 
     @property
     def is_dead(self):
-        return self.hitpoints == 0
+        return self.hp == 0
 
     def hit(self):
         if not self.is_dead:
-            self.hitpoints -= 1
-
-
-class Carrier(Ship):
-    kind = "carrier"
-    hitpoints = 5
-
-
-class Battleship(Ship):
-    kind = "battleship"
-    hitpoints = 4
-
-
-class Cruiser(Ship):
-    kind = "cruiser"
-    hitpoints = 3
-
-
-class Submarine(Ship):
-    kind = "submarine"
-    hitpoints = 3
-
-
-class Destroyer(Ship):
-    kind = "destroyer"
-    hitpoints = 2
+            self.hp -= 1
 
 
 @dataclasses.dataclass
@@ -108,7 +84,7 @@ class Player:
     def __init__(self, name: str, board: Board):
         self.name = name
         self.board = board
-        self.ships = []
+        self.ships: list[Ship] = []
 
     def place_ship(self, *cells: str, ship: Ship):
         self.board.place_ship(*cells, ship=ship)
@@ -119,7 +95,7 @@ class Player:
 
     @property
     def ships_left(self):
-        return len([ship for ship in self.ships if ship.hitpoints > 0])
+        return len([ship for ship in self.ships if ship.hp > 0])
 
 
 class Turn:
