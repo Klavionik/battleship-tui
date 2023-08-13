@@ -51,3 +51,15 @@ repos:
         stages:
           - manual
         types: [python]
+
+  - repo: local
+    hooks:
+      - id: mypy
+        exclude: "tests/"
+        name: mypy
+        entry: mypy
+        args:
+          - --strict
+        language: system
+        types: [python]
+        require_serial: true

@@ -1,7 +1,7 @@
 from battleship import api
 
 
-def run_game():
+def run_game() -> None:
     player_a_name = input("Player A name\n")
     player_b_name = input("Player B name\n")
 
