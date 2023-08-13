@@ -25,11 +25,8 @@ class Ship:
 
 @dataclasses.dataclass
 class Cell:
-    COLUMNS = tuple(string.ascii_uppercase[:10])
-    ROWS = tuple(range(1, 11))
-
+    col: str
     row: int
-    column: str
     ship: Ship | None = None
     is_shot: bool = False
 
@@ -49,12 +46,14 @@ class Cell:
         self.ship = ship
 
     def __str__(self) -> str:
-        return f"{self.column}{self.row}"
+        return f"{self.col}{self.row}"
 
 
 class Board:
-    def __init__(self) -> None:
-        self.cells = [[Cell(row, column) for column in Cell.COLUMNS] for row in Cell.ROWS]
+    def __init__(self, cols: int = 10, rows: int = 10) -> None:
+        self._letters = string.ascii_uppercase[:cols]
+        self._numbers = tuple(range(1, rows + 1))
+        self.cells = [[Cell(col, row) for col in self._letters] for row in self._numbers]
 
     def place_ship(self, *cells: str, ship: Ship) -> None:
         for cell_name in cells:
@@ -65,12 +64,12 @@ class Board:
         col, row = cell_name[0], int("".join(cell_name[1:]))
 
         try:
-            col_index = Cell.COLUMNS.index(col)
+            col_index = self._letters.index(col)
         except ValueError:
             raise errors.CellNotFound(f"Incorrect column {col}.")
 
         try:
-            row_index = Cell.ROWS.index(row)
+            row_index = self._numbers.index(row)
         except ValueError:
             raise errors.CellNotFound(f"Incorrect row {row}.")
 

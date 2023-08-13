@@ -37,7 +37,7 @@ def test_ship_with_no_hp_is_dead():
 
 def test_cell_hits_bound_ship():
     ship = domain.Ship(kind="ship", hp=3)
-    cell = domain.Cell(1, "A", ship)
+    cell = domain.Cell("A", 1, ship)
 
     cell.hit()
 
@@ -46,7 +46,7 @@ def test_cell_hits_bound_ship():
 
 
 def test_cell_without_ship_is_shot():
-    cell = domain.Cell(1, "A")
+    cell = domain.Cell("A", 1)
 
     cell.hit()
 
@@ -68,7 +68,7 @@ def test_board_find_cells(row: str, col: str):
 
     cell = board.find_cell(f"{col}{row}")
 
-    assert cell.column == col
+    assert cell.col == col
     assert cell.row == row
 
 
