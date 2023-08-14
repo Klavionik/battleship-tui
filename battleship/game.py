@@ -20,14 +20,14 @@ def run_game() -> None:
 
     for turn in game:
         coord = input(f"{turn.player}'s turn: ")
-        cell = turn.fire(coord)
+        hit_ship = turn.fire(coord)
 
-        if cell.ship is None:
+        if hit_ship is None:
             print("Miss!")
             continue
 
-        if cell.ship.destroyed:
-            print(f"{turn.hostile}'s {cell.ship.kind} destroyed!")
+        if hit_ship.destroyed:
+            print(f"{turn.hostile}'s {hit_ship.kind} destroyed!")
         else:
             print(f"{turn.hostile}'s ship is hit!")
 
