@@ -30,6 +30,9 @@ class Cell:
     ship: Ship | None = None
     is_shot: bool = False
 
+    def __str__(self) -> str:
+        return self.coordinate
+
     def hit(self) -> None:
         if self.is_shot:
             raise errors.CellAlreadyShot(f"You can't shot the same cell {self} twice.")
@@ -48,9 +51,6 @@ class Cell:
     @property
     def coordinate(self) -> str:
         return f"{self.col}{self.row}"
-
-    def __str__(self) -> str:
-        return self.coordinate
 
 
 class Grid:
@@ -100,6 +100,9 @@ class Board:
         self.grid = Grid(cols, rows)
         self.ships: list[Ship] = []
 
+    def __str__(self) -> str:
+        return f"Board, {len(self.ships)} ships left"
+
     def __contains__(self, item: Ship) -> bool:
         if not isinstance(item, Ship):
             raise TypeError(f"Cannot test if board contains {type(item)}.")
@@ -141,6 +144,9 @@ class Turn:
         self.player = player
         self.hostile = hostile
 
+    def __str__(self) -> str:
+        return f"Turn <{self.player} vs. {self.hostile}>"
+
     def strike(self, target: str) -> Ship | None:
         return self.hostile.board.hit_cell(target)
 
@@ -158,6 +164,17 @@ class Game:
         }
         self.winner: Player | None = None
 
+    def __iter__(self) -> Iterator[Turn]:
+        for player, hostile in self.players:
+            yield Turn(player, hostile)
+
+            if hostile.ships_left == 0:
+                self.winner = player
+                break
+
+    def __str__(self) -> str:
+        return f"Game <{self.player_a} vs {self.player_b}> <Winner: {self.winner}>"
+
     def get_player(self, name: str) -> Player:
         try:
             return self.players_map[name]
@@ -166,11 +183,3 @@ class Game:
 
     def place_ship(self, *coordinates: str, player: str, ship: Ship) -> None:
         self.get_player(player).place_ship(*coordinates, ship=ship)
-
-    def __iter__(self) -> Iterator[Turn]:
-        for player, hostile in self.players:
-            yield Turn(player, hostile)
-
-            if hostile.ships_left == 0:
-                self.winner = player
-                break
