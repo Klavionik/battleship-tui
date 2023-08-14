@@ -73,16 +73,13 @@ def test_grid_raises_exc_if_cell_not_found(row: str, col: str):
         _ = grid[coord]
 
 
-@pytest.mark.skip(reason="Cannot check if a ship is placed until board refactoring finishes.")
 def test_board_places_ship():
     board = domain.Board()
     ship = domain.Ship(kind="ship", hp=3)
 
     board.place_ship("A3", "A4", "A5", ship=ship)
 
-    assert board.cells[2][0].ship is ship
-    assert board.cells[3][0].ship is ship
-    assert board.cells[4][0].ship is ship
+    assert ship in board
 
 
 def test_board_raises_exc_if_cell_is_taken():

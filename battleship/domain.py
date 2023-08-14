@@ -91,10 +91,18 @@ class Board:
         self.grid = Grid(cols, rows)
         self.ships: list[Ship] = []
 
+    def __contains__(self, item: Ship) -> bool:
+        if not isinstance(item, Ship):
+            raise TypeError(f"Cannot test if board contains {type(item)}.")
+
+        return item in self.ships
+
     def place_ship(self, *cells: str, ship: Ship) -> None:
         for coordinate in cells:
             cell = self.grid[coordinate]
             cell.place_ship(ship)
+
+        self.ships.append(ship)
 
     def shoot(self, target: str) -> Cell:
         cell: Cell = self.grid[target]
@@ -106,18 +114,13 @@ class Player:
     def __init__(self, name: str, board: Board) -> None:
         self.name = name
         self.board = board
-        self.ships: list[Ship] = []
-
-    def place_ship(self, *cells: str, ship: Ship) -> None:
-        self.board.place_ship(*cells, ship=ship)
-        self.ships.append(ship)
 
     def __str__(self) -> str:
         return self.name
 
     @property
     def ships_left(self) -> int:
-        return len([ship for ship in self.ships if ship.hp > 0])
+        return len([ship for ship in self.board.ships if ship.hp > 0])
 
 
 class Turn:
@@ -136,7 +139,14 @@ class Game:
         self.players: Iterator[tuple[Player, Player]] = cycle(
             zip([self.player_a, self.player_b], [self.player_b, self.player_a])
         )
+        self.players_map: dict[str, Player] = {
+            player_a.name: player_a,
+            player_b.name: player_b,
+        }
         self.winner: Player | None = None
+
+    def place_ship(self, *coordinates: str, player: str, ship: Ship) -> None:
+        self.players_map[player].board.place_ship(*coordinates, ship=ship)
 
     def __iter__(self) -> Iterator[Turn]:
         for player, hostile in self.players:
