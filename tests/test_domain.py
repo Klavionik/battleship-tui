@@ -78,6 +78,14 @@ def test_grid_raises_exc_if_cell_not_found(coord):
         _ = grid[coord]
 
 
+@pytest.mark.parametrize("bad_coord", ["", "meow", "11A", None])
+def test_grid_raises_exc_if_coord_incorrect(bad_coord):
+    grid = domain.Grid()
+
+    with pytest.raises(errors.IncorrectCoordinate):
+        _ = grid[bad_coord]
+
+
 def test_board_places_ship():
     board = domain.Board()
     ship = domain.Ship(kind="ship", hp=3)

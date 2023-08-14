@@ -79,7 +79,7 @@ class Grid:
         """
         try:
             col, row = coordinate[0], int("".join(coordinate[1:]))
-        except (TypeError, ValueError):
+        except (IndexError, TypeError, ValueError):
             raise errors.IncorrectCoordinate(f"Cannot parse coordinate {coordinate}.")
 
         try:
