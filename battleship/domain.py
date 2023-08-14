@@ -122,6 +122,9 @@ class Player:
     def ships_left(self) -> int:
         return len([ship for ship in self.board.ships if ship.hp > 0])
 
+    def place_ship(self, *coordinates: str, ship: Ship) -> None:
+        self.board.place_ship(*coordinates, ship=ship)
+
 
 class Turn:
     def __init__(self, player: Player, hostile: Player) -> None:
@@ -152,7 +155,7 @@ class Game:
             raise errors.PlayerNotFound(f"Player {name} is not in this game.")
 
     def place_ship(self, *coordinates: str, player: str, ship: Ship) -> None:
-        self.get_player(player).board.place_ship(*coordinates, ship=ship)
+        self.get_player(player).place_ship(*coordinates, ship=ship)
 
     def __iter__(self) -> Iterator[Turn]:
         for player, hostile in self.players:
