@@ -26,7 +26,7 @@ def run_game() -> None:
             print("Miss!")
             continue
 
-        if cell.ship.is_dead:
+        if cell.ship.destroyed:
             print(f"{turn.hostile}'s {cell.ship.kind} destroyed!")
         else:
             print(f"{turn.hostile}'s ship is hit!")

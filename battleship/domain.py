@@ -15,11 +15,11 @@ class Ship:
         return self.kind
 
     @property
-    def is_dead(self) -> bool:
+    def destroyed(self) -> bool:
         return self.hp == 0
 
     def hit(self) -> None:
-        if not self.is_dead:
+        if not self.destroyed:
             self.hp -= 1
 
 

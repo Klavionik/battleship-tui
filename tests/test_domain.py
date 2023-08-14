@@ -32,7 +32,7 @@ def test_ship_with_no_hp_is_dead():
 
     ship.hit()
 
-    assert ship.is_dead
+    assert ship.destroyed
 
 
 def test_cell_hits_bound_ship():
