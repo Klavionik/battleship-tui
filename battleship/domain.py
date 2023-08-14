@@ -145,8 +145,14 @@ class Game:
         }
         self.winner: Player | None = None
 
+    def get_player(self, name: str) -> Player:
+        try:
+            return self.players_map[name]
+        except KeyError:
+            raise errors.PlayerNotFound(f"Player {name} is not in this game.")
+
     def place_ship(self, *coordinates: str, player: str, ship: Ship) -> None:
-        self.players_map[player].board.place_ship(*coordinates, ship=ship)
+        self.get_player(player).board.place_ship(*coordinates, ship=ship)
 
     def __iter__(self) -> Iterator[Turn]:
         for player, hostile in self.players:
