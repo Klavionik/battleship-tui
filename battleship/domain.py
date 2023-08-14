@@ -23,12 +23,12 @@ class Ship:
             self.hp -= 1
 
 
-@dataclasses.dataclass
 class Cell:
-    col: str
-    row: int
-    ship: Ship | None = None
-    is_shot: bool = False
+    def __init__(self, col: str, row: int):
+        self.col = col
+        self.row = row
+        self.ship: Ship | None = None
+        self.is_shot = False
 
     def __str__(self) -> str:
         return self.coordinate

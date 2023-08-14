@@ -35,9 +35,19 @@ def test_ship_with_no_hp_is_destroyed():
     assert ship.destroyed
 
 
+def test_cell_can_be_assigned_ship():
+    ship = domain.Ship(kind="ship", hp=1)
+    cell = domain.Cell("A", 1)
+
+    cell.assign_ship(ship)
+
+    assert cell.ship is ship
+
+
 def test_cell_hits_bound_ship():
     ship = domain.Ship(kind="ship", hp=3)
-    cell = domain.Cell("A", 1, ship)
+    cell = domain.Cell("A", 1)
+    cell.ship = ship
 
     cell.hit()
 
