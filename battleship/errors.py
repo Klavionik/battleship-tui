@@ -20,3 +20,7 @@ class CellAlreadyShot(BattleshipError):
 
 class PlayerNotFound(BattleshipError):
     pass
+
+
+class TurnUnused(BattleshipError):
+    pass

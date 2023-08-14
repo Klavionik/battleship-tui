@@ -143,11 +143,13 @@ class Turn:
     def __init__(self, player: Player, hostile: Player) -> None:
         self.player = player
         self.hostile = hostile
+        self.called = False
 
     def __str__(self) -> str:
         return f"Turn <{self.player} vs. {self.hostile}>"
 
     def strike(self, target: str) -> Ship | None:
+        self.called = True
         return self.hostile.board.hit_cell(target)
 
 
@@ -166,7 +168,11 @@ class Game:
 
     def __iter__(self) -> Iterator[Turn]:
         for player, hostile in self.players:
-            yield Turn(player, hostile)
+            next_turn = Turn(player, hostile)
+            yield next_turn
+
+            if not next_turn.called:
+                raise errors.TurnUnused("strike() was not called on Turn.")
 
             if hostile.ships_left == 0:
                 self.winner = player
