@@ -101,8 +101,21 @@ def test_board_places_ship():
     ship = domain.Ship(kind="ship", hp=3)
 
     board.place_ship("A3", "A4", "A5", ship=ship)
+    cell_a3 = board.grid["A3"]
+    cell_a4 = board.grid["A4"]
+    cell_a5 = board.grid["A5"]
 
     assert ship in board
+    assert cell_a3.ship is ship
+    assert cell_a4.ship is ship
+    assert cell_a5.ship is ship
+
+
+def test_board_can_test_only_ship_membership():
+    board = domain.Board()
+
+    with pytest.raises(TypeError):
+        _ = "something" in board  # noqa
 
 
 def test_board_raises_exc_if_cell_is_taken():
