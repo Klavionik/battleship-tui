@@ -3,34 +3,34 @@ import pytest
 from battleship import domain, errors
 
 
-def test_ship_hit_decreases_hitpoints():
+def test_ship_can_be_damaged():
     ship = domain.Ship(kind="ship", hp=4)
 
-    ship.hit()
+    ship.damage()
 
     assert ship.hp == 3
 
-    ship.hit()
+    ship.damage()
 
     assert ship.hp == 2
 
 
-def test_ship_not_hit_after_no_hp_left():
+def test_ship_no_damage_after_no_hp_left():
     ship = domain.Ship(kind="ship", hp=1)
 
-    ship.hit()
+    ship.damage()
 
     assert ship.hp == 0
 
-    ship.hit()
+    ship.damage()
 
     assert ship.hp == 0
 
 
-def test_ship_with_no_hp_is_dead():
+def test_ship_with_no_hp_is_destroyed():
     ship = domain.Ship(kind="ship", hp=1)
 
-    ship.hit()
+    ship.damage()
 
     assert ship.destroyed
 

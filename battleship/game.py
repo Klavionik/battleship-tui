@@ -20,7 +20,7 @@ def run_game() -> None:
 
     for turn in game:
         coord = input(f"{turn.player}'s turn: ")
-        hit_ship = turn.fire(coord)
+        hit_ship = turn.strike(coord)
 
         if hit_ship is None:
             print("Miss!")

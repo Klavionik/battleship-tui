@@ -18,7 +18,7 @@ class Ship:
     def destroyed(self) -> bool:
         return self.hp == 0
 
-    def hit(self) -> None:
+    def damage(self) -> None:
         if not self.destroyed:
             self.hp -= 1
 
@@ -37,7 +37,7 @@ class Cell:
         self.is_shot = True
 
         if self.ship is not None:
-            self.ship.hit()
+            self.ship.damage()
 
     def assign_ship(self, ship: Ship) -> None:
         if self.ship is not None:
@@ -136,7 +136,7 @@ class Turn:
         self.player = player
         self.hostile = hostile
 
-    def fire(self, target: str) -> Ship | None:
+    def strike(self, target: str) -> Ship | None:
         return self.hostile.board.hit_cell(target)
 
 
