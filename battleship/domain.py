@@ -102,6 +102,7 @@ class Board:
         return item in self.ships
 
     def place_ship(self, *cells: str, ship: Ship) -> None:
+        # TODO: Check that cells make up a vertical or a horizontal line.
         for coordinate in cells:
             cell = self.grid[coordinate]
             cell.assign_ship(ship)
