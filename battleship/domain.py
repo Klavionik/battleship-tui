@@ -55,13 +55,18 @@ class Cell:
 
 class Grid:
     def __init__(self, cols: int = 10, rows: int = 10):
+        self._cols = cols
+        self._rows = rows
         self._letters = string.ascii_uppercase[:cols]
         self._numbers = tuple(range(1, rows + 1))
         self._cells = [[Cell(col, row) for col in self._letters] for row in self._numbers]
 
     def __getitem__(self, coordinate: str) -> Cell:
-        col_index, row_index = self._parse_coordinate(coordinate)
-        return self._cells[row_index][col_index]
+        col, row = self._parse_coordinate(coordinate)
+        return self._cells[row][col]
+
+    def __str__(self) -> str:
+        return f"Grid {self._cols}x{self._rows}"
 
     def _parse_coordinate(self, coordinate: str) -> tuple[int, int]:
         """
@@ -70,7 +75,7 @@ class Grid:
         are integers that make up a number in range of the board size.
 
         :param coordinate: Cell coordinate (like A1, B12, H4 etc.).
-        :return:
+        :return: Cell cols index and cell row index.
         """
         try:
             col, row = coordinate[0], int("".join(coordinate[1:]))
