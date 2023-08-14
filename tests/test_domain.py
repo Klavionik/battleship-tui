@@ -147,3 +147,30 @@ def test_board_shooting():
     board.hit_cell("J6")
 
     assert ship.hp == 3
+
+
+def test_player_can_place_ship():
+    board = domain.Board()
+    player = domain.Player(name="player", board=board)
+    ship = domain.Ship(kind="ship", hp=2)
+
+    player.place_ship("A3", "A4", ship=ship)
+
+    assert ship in board
+
+
+def test_player_ships_left_returns_alive_ships():
+    board = domain.Board()
+    player = domain.Player(name="player", board=board)
+    ship = domain.Ship(kind="ship", hp=2)
+    player.place_ship("A3", "A4", ship=ship)
+
+    assert player.ships_left == 1
+
+    board.hit_cell("A3")
+
+    assert player.ships_left == 1
+
+    board.hit_cell("A4")
+
+    assert player.ships_left == 0
