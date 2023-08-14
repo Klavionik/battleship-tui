@@ -190,3 +190,47 @@ def test_turn_strikes_hostile_ship():
     nothing = turn.strike("B10")
 
     assert nothing is None
+
+
+def test_game_gets_player_by_name():
+    player_a = domain.Player(name="player_a", board=domain.Board())
+    player_b = domain.Player(name="player_b", board=domain.Board())
+    game = domain.Game(player_a, player_b)
+
+    player = game.get_player(name="player_a")
+
+    assert player is player_a
+
+
+def test_game_raises_exc_if_player_not_found():
+    player_a = domain.Player(name="player_a", board=domain.Board())
+    player_b = domain.Player(name="player_b", board=domain.Board())
+    game = domain.Game(player_a, player_b)
+
+    with pytest.raises(errors.PlayerNotFound):
+        _ = game.get_player("notplayer")
+
+
+def test_game_alternates_turns_between_players_until_no_ships_left():
+    player_a = domain.Player(name="player_a", board=domain.Board())
+    player_a.place_ship("A1", ship=domain.Ship(kind="ship", hp=1))
+    player_b = domain.Player(name="player_b", board=domain.Board())
+    player_b.place_ship("A1", ship=domain.Ship(kind="ship", hp=1))
+    game = domain.Game(player_a, player_b)
+    it = iter(game)
+
+    turn = next(it)
+    assert turn.player == player_a
+    turn.strike("D1")  # Every turn's strike must be called.
+
+    turn = next(it)
+    assert turn.player == player_b
+    turn.strike("D2")
+
+    turn = next(it)
+    assert turn.player == player_a
+    turn.strike("D3")
+
+    turn = next(it)
+    assert turn.player == player_b
+    turn.strike("D4")
