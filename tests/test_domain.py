@@ -53,6 +53,14 @@ def test_cell_without_ship_is_shot():
     assert cell.is_shot
 
 
+def test_cell_shot_twice_raises_exc():
+    cell = domain.Cell("A", 1)
+    cell.hit()
+
+    with pytest.raises(errors.CellAlreadyShot):
+        cell.hit()
+
+
 @pytest.mark.parametrize("coord", ["A3", "B5", "I10"])
 def test_grid_find_cells(coord: str):
     grid = domain.Grid()
