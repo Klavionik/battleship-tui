@@ -63,3 +63,13 @@ repos:
         language: system
         types: [python]
         require_serial: true
+
+  - repo: local
+    hooks:
+      - id: pytest
+        name: pytest
+        entry: pytest
+        pass_filenames: false
+        language: system
+        types: [ python ]
+        require_serial: true
