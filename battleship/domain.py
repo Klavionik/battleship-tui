@@ -45,8 +45,12 @@ class Cell:
 
         self.ship = ship
 
-    def __str__(self) -> str:
+    @property
+    def coordinate(self) -> str:
         return f"{self.col}{self.row}"
+
+    def __str__(self) -> str:
+        return self.coordinate
 
 
 class Grid:

@@ -53,21 +53,18 @@ def test_cell_without_ship_is_shot():
     assert cell.is_shot
 
 
-@pytest.mark.parametrize(["row", "col"], [[3, "A"], [5, "B"], [10, "I"]])
-def test_grid_find_cells(row: str, col: str):
+@pytest.mark.parametrize("coord", ["A3", "B5", "I10"])
+def test_grid_find_cells(coord: str):
     grid = domain.Grid()
-    coord = f"{col}{row}"
 
     cell = grid[coord]
 
-    assert cell.col == col
-    assert cell.row == row
+    assert cell.coordinate == coord
 
 
-@pytest.mark.parametrize(["row", "col"], [[11, "A"], [0, "B"], [5, "V"]])
-def test_grid_raises_exc_if_cell_not_found(row: str, col: str):
+@pytest.mark.parametrize("coord", ["A11", "B0", "V5"])
+def test_grid_raises_exc_if_cell_not_found(coord):
     grid = domain.Grid()
-    coord = f"{col}{row}"
 
     with pytest.raises(errors.CellOutOfRange):
         _ = grid[coord]
