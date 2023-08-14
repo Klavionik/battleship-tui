@@ -101,10 +101,10 @@ def test_board_shooting():
     ship = domain.Ship(kind="ship", hp=4)
     board.place_ship("J7", "J8", "J9", "J10", ship=ship)
 
-    board.shoot("J7")
+    board.hit_cell("J7")
 
     assert ship.hp == 3
 
-    board.shoot("J6")
+    board.hit_cell("J6")
 
     assert ship.hp == 3

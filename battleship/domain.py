@@ -109,7 +109,7 @@ class Board:
 
         self.ships.append(ship)
 
-    def shoot(self, target: str) -> Cell:
+    def hit_cell(self, target: str) -> Cell:
         cell: Cell = self.grid[target]
         cell.hit()
         return cell
@@ -137,7 +137,7 @@ class Turn:
         self.hostile = hostile
 
     def fire(self, target: str) -> Cell:
-        return self.hostile.board.shoot(target)
+        return self.hostile.board.hit_cell(target)
 
 
 class Game:
