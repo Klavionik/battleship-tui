@@ -174,3 +174,19 @@ def test_player_ships_left_returns_alive_ships():
     board.hit_cell("A4")
 
     assert player.ships_left == 0
+
+
+def test_turn_strikes_hostile_ship():
+    player_a = domain.Player(name="player_a", board=domain.Board())
+    player_b = domain.Player(name="player_b", board=domain.Board())
+    ship = domain.Ship(kind="ship", hp=2)
+    player_a.place_ship("A3", "A4", ship=ship)
+    turn = domain.Turn(player=player_b, hostile=player_a)
+
+    hit_ship = turn.strike("A3")
+
+    assert hit_ship is ship
+
+    nothing = turn.strike("B10")
+
+    assert nothing is None
