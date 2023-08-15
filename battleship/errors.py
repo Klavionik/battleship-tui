@@ -28,3 +28,7 @@ class TurnUnused(BattleshipError):
 
 class ShipsNotPlaced(BattleshipError):
     pass
+
+
+class ShipDoesntFitCells(BattleshipError):
+    pass

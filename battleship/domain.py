@@ -111,6 +111,11 @@ class Board:
 
     def place_ship(self, *cells: str, ship: Ship) -> None:
         # TODO: Check that cells make up a vertical or a horizontal line.
+        if len(cells) != ship.hp:
+            raise errors.ShipDoesntFitCells(
+                f"Cannot place {ship.hp} HP ship onto {len(cells)} cells."
+            )
+
         for coordinate in cells:
             cell = self.grid[coordinate]
             cell.assign_ship(ship)

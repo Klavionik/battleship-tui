@@ -121,6 +121,14 @@ def test_board_places_ship():
     assert cell_a5.ship is ship
 
 
+def test_board_raises_exc_if_ship_and_cells_dont_match():
+    board = domain.Board()
+    ship = domain.Ship(kind="ship", hp=3)
+
+    with pytest.raises(errors.ShipDoesntFitCells):
+        board.place_ship("A1", "A2", ship=ship)
+
+
 def test_board_can_test_only_ship_membership():
     board = domain.Board()
 
