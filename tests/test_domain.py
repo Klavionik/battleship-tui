@@ -234,3 +234,60 @@ def test_game_alternates_turns_between_players_until_no_ships_left():
     turn = next(it)
     assert turn.player == player_b
     turn.strike("D4")
+
+
+def test_game_raises_exc_if_turn_not_used():
+    player_a = domain.Player(name="player_a", board=domain.Board())
+    player_a.place_ship("A1", ship=domain.Ship(kind="ship", hp=1))
+    player_b = domain.Player(name="player_b", board=domain.Board())
+    player_b.place_ship("A1", ship=domain.Ship(kind="ship", hp=1))
+    game = domain.Game(player_a, player_b)
+    it = iter(game)
+
+    next(it)
+
+    with pytest.raises(errors.TurnUnused):
+        next(it)
+
+
+def test_game_doesnt_start_if_both_player_have_no_ships():
+    player_a = domain.Player(name="player_a", board=domain.Board())
+    player_b = domain.Player(name="player_b", board=domain.Board())
+    game = domain.Game(player_a, player_b)
+    it = iter(game)
+
+    with pytest.raises(errors.ShipsNotPlaced):
+        next(it)
+
+
+def test_game_doesnt_start_if_only_one_player_has_ships():
+    player_a = domain.Player(name="player_a", board=domain.Board())
+    player_b = domain.Player(name="player_b", board=domain.Board())
+    game = domain.Game(player_a, player_b)
+    game.place_ship("A1", "A2", player="player_a", ship=domain.Ship(kind="ship", hp=2))
+    it = iter(game)
+
+    with pytest.raises(errors.ShipsNotPlaced):
+        next(it)
+
+
+def test_game_ends_when_player_lose_all_ships():
+    player_a_name = "player_a"
+    player_b_name = "player_b"
+    player_a = domain.Player(name=player_a_name, board=domain.Board())
+    player_b = domain.Player(name=player_b_name, board=domain.Board())
+    game = domain.Game(player_a, player_b)
+    game.place_ship("A1", "A2", player=player_a_name, ship=domain.Ship(kind="ship", hp=2))
+    game.place_ship("B1", "B2", player=player_b_name, ship=domain.Ship(kind="ship", hp=2))
+    it = iter(game)
+
+    turn = next(it)
+    turn.strike("B1")
+    turn = next(it)
+    turn.strike("A1")
+    turn = next(it)
+    turn.strike("B2")
+
+    with pytest.raises(StopIteration):
+        next(it)
+    assert game.winner == player_a
