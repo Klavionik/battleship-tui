@@ -3,6 +3,16 @@ import pytest
 from battleship import domain, errors
 
 
+@pytest.fixture
+def game():
+    player_a = domain.Player(name="player_a", board=domain.Board())
+    player_b = domain.Player(name="player_b", board=domain.Board())
+    game = domain.Game(player_a, player_b)
+    game.place_ship("A1", "A2", player="player_a", ship=domain.Ship(kind="ship", hp=2))
+    game.place_ship("B1", "B2", player="player_b", ship=domain.Ship(kind="ship", hp=2))
+    return game
+
+
 def test_ship_can_be_damaged():
     ship = domain.Ship(kind="ship", hp=4)
 
@@ -211,37 +221,27 @@ def test_game_raises_exc_if_player_not_found():
         _ = game.get_player("notplayer")
 
 
-def test_game_alternates_turns_between_players_until_no_ships_left():
-    player_a = domain.Player(name="player_a", board=domain.Board())
-    player_a.place_ship("A1", ship=domain.Ship(kind="ship", hp=1))
-    player_b = domain.Player(name="player_b", board=domain.Board())
-    player_b.place_ship("A1", ship=domain.Ship(kind="ship", hp=1))
-    game = domain.Game(player_a, player_b)
+def test_game_alternates_turns_between_players_until_no_ships_left(game):
     it = iter(game)
 
     turn = next(it)
-    assert turn.player == player_a
+    assert turn.player == game.player_a
     turn.strike("D1")  # Every turn's strike must be called.
 
     turn = next(it)
-    assert turn.player == player_b
+    assert turn.player == game.player_b
     turn.strike("D2")
 
     turn = next(it)
-    assert turn.player == player_a
+    assert turn.player == game.player_a
     turn.strike("D3")
 
     turn = next(it)
-    assert turn.player == player_b
+    assert turn.player == game.player_b
     turn.strike("D4")
 
 
-def test_game_raises_exc_if_turn_not_used():
-    player_a = domain.Player(name="player_a", board=domain.Board())
-    player_a.place_ship("A1", ship=domain.Ship(kind="ship", hp=1))
-    player_b = domain.Player(name="player_b", board=domain.Board())
-    player_b.place_ship("A1", ship=domain.Ship(kind="ship", hp=1))
-    game = domain.Game(player_a, player_b)
+def test_game_raises_exc_if_turn_not_used(game):
     it = iter(game)
 
     next(it)
@@ -271,14 +271,7 @@ def test_game_doesnt_start_if_only_one_player_has_ships():
         next(it)
 
 
-def test_game_ends_when_player_lose_all_ships():
-    player_a_name = "player_a"
-    player_b_name = "player_b"
-    player_a = domain.Player(name=player_a_name, board=domain.Board())
-    player_b = domain.Player(name=player_b_name, board=domain.Board())
-    game = domain.Game(player_a, player_b)
-    game.place_ship("A1", "A2", player=player_a_name, ship=domain.Ship(kind="ship", hp=2))
-    game.place_ship("B1", "B2", player=player_b_name, ship=domain.Ship(kind="ship", hp=2))
+def test_game_ends_when_player_lose_all_ships(game):
     it = iter(game)
 
     turn = next(it)
@@ -290,4 +283,5 @@ def test_game_ends_when_player_lose_all_ships():
 
     with pytest.raises(StopIteration):
         next(it)
-    assert game.winner == player_a
+
+    assert game.winner == game.player_a
