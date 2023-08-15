@@ -1,7 +1,8 @@
 import dataclasses
+import itertools
 import string
 from itertools import cycle
-from typing import Iterator
+from typing import Iterable, Iterator
 
 from battleship import errors
 
@@ -53,6 +54,37 @@ class Cell:
         return f"{self.col}{self.row}"
 
 
+def parse_coordinate(coordinate: str) -> tuple[str, int]:
+    try:
+        col, row = coordinate[0], int("".join(coordinate[1:]))
+    except (IndexError, TypeError, ValueError):
+        raise errors.IncorrectCoordinate(f"Cannot parse coordinate {coordinate}.")
+
+    return col, row
+
+
+def is_valid_position(coordinates: Iterable[str]) -> None:
+    """
+    Validates that given coordinates make up either a
+    horizontal or a vertical line with no gaps in between.
+
+    Examples:
+        A2, A3, A4 is valid. A2, A4, A5 is not.
+        B3, C3, D3 is valid. B3, C3, E3 is not.
+    """
+    parsed_coordinates = [parse_coordinate(coord) for coord in coordinates]
+    sorted_coordinates = sorted(parsed_coordinates)
+
+    for curr, next_ in itertools.pairwise(sorted_coordinates):
+        curr_col, curr_row = curr
+        col_codepoint = ord(curr_col)
+        next_valid_hor = chr(col_codepoint + 1), curr_row
+        next_valid_ver = chr(col_codepoint), curr_row + 1
+
+        if next_ not in [next_valid_hor, next_valid_ver]:
+            raise errors.InvalidPosition(f"Position {coordinates} is invalid.")
+
+
 class Grid:
     def __init__(self, cols: int = 10, rows: int = 10):
         self._cols = cols
@@ -62,13 +94,13 @@ class Grid:
         self._cells = [[Cell(col, row) for col in self._letters] for row in self._numbers]
 
     def __getitem__(self, coordinate: str) -> Cell:
-        col, row = self._parse_coordinate(coordinate)
+        col, row = self._check_coordinate(coordinate)
         return self._cells[row][col]
 
     def __str__(self) -> str:
         return f"Grid {self._cols}x{self._rows}"
 
-    def _parse_coordinate(self, coordinate: str) -> tuple[int, int]:
+    def _check_coordinate(self, coordinate: str) -> tuple[int, int]:
         """
         Coordinate is a string where the zero element is
         a letter in range of the board size and the other elements
@@ -77,10 +109,7 @@ class Grid:
         :param coordinate: Cell coordinate (like A1, B12, H4 etc.).
         :return: Cell cols index and cell row index.
         """
-        try:
-            col, row = coordinate[0], int("".join(coordinate[1:]))
-        except (IndexError, TypeError, ValueError):
-            raise errors.IncorrectCoordinate(f"Cannot parse coordinate {coordinate}.")
+        col, row = parse_coordinate(coordinate)
 
         try:
             col_index = self._letters.index(col)
@@ -110,11 +139,12 @@ class Board:
         return item in self.ships
 
     def place_ship(self, *cells: str, ship: Ship) -> None:
-        # TODO: Check that cells make up a vertical or a horizontal line.
         if len(cells) != ship.hp:
             raise errors.ShipDoesntFitCells(
                 f"Cannot place {ship.hp} HP ship onto {len(cells)} cells."
             )
+
+        is_valid_position(cells)
 
         for coordinate in cells:
             cell = self.grid[coordinate]
