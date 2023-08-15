@@ -167,6 +167,11 @@ class Game:
         self.winner: Player | None = None
 
     def __iter__(self) -> Iterator[Turn]:
+        if self.player_a.ships_left == 0 or self.player_b.ships_left == 0:
+            raise errors.ShipsNotPlaced(
+                "You should place at least 1 ship for every player before starting the game."
+            )
+
         for player, hostile in self.players:
             next_turn = Turn(player, hostile)
             yield next_turn

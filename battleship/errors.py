@@ -24,3 +24,7 @@ class PlayerNotFound(BattleshipError):
 
 class TurnUnused(BattleshipError):
     pass
+
+
+class ShipsNotPlaced(BattleshipError):
+    pass
