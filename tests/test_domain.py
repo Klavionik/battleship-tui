@@ -73,12 +73,23 @@ def test_cell_without_ship_is_shot():
     assert cell.is_shot
 
 
-def test_cell_shot_twice_raises_exc():
+def test_cell_cannot_be_shot_twice():
     cell = domain.Cell("A", 1)
     cell.hit()
 
     with pytest.raises(errors.CellAlreadyShot):
         cell.hit()
+
+
+def test_cell_cannot_assign_ship_twice():
+    cell = domain.Cell("A", 1)
+    ship = domain.Ship(kind="ship", hp=3)
+    another_ship = domain.Ship(kind="ship", hp=3)
+
+    cell.assign_ship(ship)
+
+    with pytest.raises(errors.CellTaken):
+        cell.assign_ship(another_ship)
 
 
 @pytest.mark.parametrize("coord", ["A3", "B5", "I10"])
@@ -134,23 +145,6 @@ def test_board_can_test_only_ship_membership():
 
     with pytest.raises(TypeError):
         _ = "something" in board  # noqa
-
-
-def test_board_raises_exc_if_cell_is_taken():
-    board = domain.Board()
-    ship = domain.Ship(kind="ship", hp=3)
-    another_ship = domain.Ship(kind="ship", hp=3)
-
-    board.place_ship("A3", "A4", "A5", ship=ship)
-
-    with pytest.raises(errors.CellTaken):
-        board.place_ship("A3", "A4", "A5", ship=another_ship)
-
-    with pytest.raises(errors.CellTaken):
-        board.place_ship("A5", "A6", "A7", ship=another_ship)
-
-    with pytest.raises(errors.CellTaken):
-        board.place_ship("A5", "B5", "C5", ship=another_ship)
 
 
 def test_board_shooting():
