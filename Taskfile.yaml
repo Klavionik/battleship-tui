@@ -1,0 +1,13 @@
+# https://taskfile.dev
+
+version: '3'
+
+tasks:
+  test: pytest
+  mypy: mypy --strict battleship
+  coverage: coverage run -m pytest
+  cov-report:
+    cmds:
+      - task: coverage
+      - coverage html
+      - python -m webbrowser -t htmlcov/index.html
