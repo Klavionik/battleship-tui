@@ -175,6 +175,7 @@ class Player:
     def __init__(self, name: str, board: Board) -> None:
         self.name = name
         self.board = board
+        self.ready = False
 
     def __str__(self) -> str:
         return self.name
@@ -212,14 +213,11 @@ class Game:
             player_a.name: player_a,
             player_b.name: player_b,
         }
-        self.ready = False
         self.winner: Player | None = None
 
     def __iter__(self) -> Iterator[Turn]:
-        if not self.ready:
-            raise errors.ShipsNotPlaced(
-                "You should place ships for every player before starting the game."
-            )
+        if not (self.player_a.ready and self.player_b.ready):
+            raise errors.ShipsNotPlaced("Players should place ships before starting the game.")
 
         for player, hostile in self.players:
             next_turn = Turn(player, hostile)
@@ -258,4 +256,4 @@ class Game:
             if not ship_spawned:
                 raise RuntimeError(f"You forgot to call spawn callback to spawn {ship}.")
 
-        self.ready = True
+        player_.ready = True

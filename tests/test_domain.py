@@ -260,6 +260,14 @@ def test_game_doesnt_start_if_ships_not_placed():
     with pytest.raises(errors.ShipsNotPlaced):
         next(it)
 
+    for _, spawn in game.spawn_ships(player="player_a"):
+        spawn(["A1", "A2"])
+
+    it = iter(game)
+
+    with pytest.raises(errors.ShipsNotPlaced):
+        next(it)
+
 
 def test_game_ends_when_player_lose_all_ships(game):
     it = iter(game)
