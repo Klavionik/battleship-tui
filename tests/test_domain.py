@@ -129,7 +129,7 @@ def test_board_places_ship():
     board = domain.Board()
     ship = domain.Ship(kind="ship", hp=3)
 
-    board.place_ship("A3", "A4", "A5", ship=ship)
+    board.place_ship(["A3", "A4", "A5"], ship=ship)
     cell_a3 = board.grid["A3"]
     cell_a4 = board.grid["A4"]
     cell_a5 = board.grid["A5"]
@@ -145,7 +145,7 @@ def test_board_raises_exc_if_ship_and_cells_dont_match():
     ship = domain.Ship(kind="ship", hp=3)
 
     with pytest.raises(errors.ShipDoesntFitCells):
-        board.place_ship("A1", "A2", ship=ship)
+        board.place_ship(["A1", "A2"], ship=ship)
 
 
 def test_board_raises_exc_if_invalid_position():
@@ -153,13 +153,13 @@ def test_board_raises_exc_if_invalid_position():
     ship = domain.Ship(kind="ship", hp=3)
 
     with pytest.raises(errors.InvalidPosition):
-        board.place_ship("A1", "A2", "A4", ship=ship)
+        board.place_ship(["A1", "A2", "A4"], ship=ship)
 
     with pytest.raises(errors.InvalidPosition):
-        board.place_ship("B1", "C1", "E1", ship=ship)
+        board.place_ship(["B1", "C1", "E1"], ship=ship)
 
     with pytest.raises(errors.InvalidPosition):
-        board.place_ship("B1", "C1", "C3", ship=ship)
+        board.place_ship(["B1", "C1", "C3"], ship=ship)
 
 
 def test_board_can_test_only_ship_membership():
@@ -172,7 +172,7 @@ def test_board_can_test_only_ship_membership():
 def test_board_shooting():
     board = domain.Board()
     ship = domain.Ship(kind="ship", hp=4)
-    board.place_ship("J7", "J8", "J9", "J10", ship=ship)
+    board.place_ship(["J7", "J8", "J9", "J10"], ship=ship)
 
     board.hit_cell("J7")
 
@@ -187,7 +187,7 @@ def test_player_ships_left_returns_alive_ships():
     board = domain.Board()
     player = domain.Player(name="player", board=board)
     ship = domain.Ship(kind="ship", hp=2)
-    board.place_ship("A3", "A4", ship=ship)
+    board.place_ship(["A3", "A4"], ship=ship)
 
     assert player.ships_left == 1
 
@@ -205,7 +205,7 @@ def test_turn_strikes_hostile_ship():
     player_a = domain.Player(name="player_a", board=player_a_board)
     player_b = domain.Player(name="player_b", board=domain.Board())
     ship = domain.Ship(kind="ship", hp=2)
-    player_a_board.place_ship("A3", "A4", ship=ship)
+    player_a_board.place_ship(["A3", "A4"], ship=ship)
     turn = domain.Turn(player=player_b, hostile=player_a)
 
     hit_ship = turn.strike("A3")

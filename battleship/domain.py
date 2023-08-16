@@ -2,14 +2,14 @@ import dataclasses
 import itertools
 import string
 from itertools import cycle
-from typing import Callable, Iterable, Iterator, TypeAlias
+from typing import Callable, Collection, Iterable, Iterator, TypeAlias
 
 from battleship import errors
 
 Kind: TypeAlias = str
 Hitpoints: TypeAlias = int
 ShipConfig: TypeAlias = tuple[Kind, Hitpoints]
-SpawnCallback: TypeAlias = Callable[[Iterable[str]], None]
+SpawnCallback: TypeAlias = Callable[[Collection[str]], None]
 
 CLASSIC_SHIP_SUITE = [
     ("carrier", 5),
@@ -151,15 +151,15 @@ class Board:
 
         return item in self.ships
 
-    def place_ship(self, *cells: str, ship: Ship) -> None:
-        if len(cells) != ship.hp:
+    def place_ship(self, position: Collection[str], ship: Ship) -> None:
+        if len(position) != ship.hp:
             raise errors.ShipDoesntFitCells(
-                f"Cannot place {ship.hp} HP ship onto {len(cells)} cells."
+                f"Cannot place {ship.hp} HP ship onto {len(position)} cells."
             )
 
-        is_valid_position(cells)
+        is_valid_position(position)
 
-        for coordinate in cells:
+        for coordinate in position:
             cell = self.grid[coordinate]
             cell.assign_ship(ship)
 
@@ -246,9 +246,9 @@ class Game:
             ship = Ship(kind, hp)
             ship_spawned = False
 
-            def spawn_callback(position: Iterable[str]) -> None:
+            def spawn_callback(position: Collection[str]) -> None:
                 nonlocal ship_spawned
-                player_.board.place_ship(*position, ship=ship)  # noqa: B023
+                player_.board.place_ship(position, ship=ship)  # noqa: B023
                 ship_spawned = True
 
             yield ship, spawn_callback
