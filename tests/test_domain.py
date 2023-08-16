@@ -283,3 +283,13 @@ def test_game_ends_when_player_lose_all_ships(game):
         next(it)
 
     assert game.winner == game.player_a
+
+
+def test_game_raises_exc_if_spawn_cb_not_called():
+    player_a = domain.Player(name="player_a", board=domain.Board())
+    player_b = domain.Player(name="player_b", board=domain.Board())
+    game = domain.Game(player_a, player_b, TEST_SHIP_SUITE)
+
+    with pytest.raises(RuntimeError):
+        for _ in game.spawn_ships(player="player_a"):
+            pass
