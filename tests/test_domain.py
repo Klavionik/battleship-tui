@@ -148,6 +148,20 @@ def test_board_raises_exc_if_ship_and_cells_dont_match():
         board.place_ship("A1", "A2", ship=ship)
 
 
+def test_board_raises_exc_if_invalid_position():
+    board = domain.Board()
+    ship = domain.Ship(kind="ship", hp=3)
+
+    with pytest.raises(errors.InvalidPosition):
+        board.place_ship("A1", "A2", "A4", ship=ship)
+
+    with pytest.raises(errors.InvalidPosition):
+        board.place_ship("B1", "C1", "E1", ship=ship)
+
+    with pytest.raises(errors.InvalidPosition):
+        board.place_ship("B1", "C1", "C3", ship=ship)
+
+
 def test_board_can_test_only_ship_membership():
     board = domain.Board()
 
