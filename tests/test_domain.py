@@ -2,14 +2,22 @@ import pytest
 
 from battleship import domain, errors
 
+TEST_SHIP_SUITE = [
+    ("ship", 2),
+]
+
 
 @pytest.fixture
 def game():
     player_a = domain.Player(name="player_a", board=domain.Board())
     player_b = domain.Player(name="player_b", board=domain.Board())
-    game = domain.Game(player_a, player_b)
-    game.place_ship("A1", "A2", player="player_a", ship=domain.Ship(kind="ship", hp=2))
-    game.place_ship("B1", "B2", player="player_b", ship=domain.Ship(kind="ship", hp=2))
+    game = domain.Game(player_a, player_b, TEST_SHIP_SUITE)
+
+    for _, spawn in game.spawn_ships(player="player_a"):
+        spawn(["A1", "A2"])
+
+    for _, spawn in game.spawn_ships(player="player_b"):
+        spawn(["B1", "B2"])
     return game
 
 
@@ -161,21 +169,11 @@ def test_board_shooting():
     assert ship.hp == 3
 
 
-def test_player_can_place_ship():
-    board = domain.Board()
-    player = domain.Player(name="player", board=board)
-    ship = domain.Ship(kind="ship", hp=2)
-
-    player.place_ship("A3", "A4", ship=ship)
-
-    assert ship in board
-
-
 def test_player_ships_left_returns_alive_ships():
     board = domain.Board()
     player = domain.Player(name="player", board=board)
     ship = domain.Ship(kind="ship", hp=2)
-    player.place_ship("A3", "A4", ship=ship)
+    board.place_ship("A3", "A4", ship=ship)
 
     assert player.ships_left == 1
 
@@ -189,10 +187,11 @@ def test_player_ships_left_returns_alive_ships():
 
 
 def test_turn_strikes_hostile_ship():
-    player_a = domain.Player(name="player_a", board=domain.Board())
+    player_a_board = domain.Board()
+    player_a = domain.Player(name="player_a", board=player_a_board)
     player_b = domain.Player(name="player_b", board=domain.Board())
     ship = domain.Ship(kind="ship", hp=2)
-    player_a.place_ship("A3", "A4", ship=ship)
+    player_a_board.place_ship("A3", "A4", ship=ship)
     turn = domain.Turn(player=player_b, hostile=player_a)
 
     hit_ship = turn.strike("A3")
@@ -207,7 +206,7 @@ def test_turn_strikes_hostile_ship():
 def test_game_gets_player_by_name():
     player_a = domain.Player(name="player_a", board=domain.Board())
     player_b = domain.Player(name="player_b", board=domain.Board())
-    game = domain.Game(player_a, player_b)
+    game = domain.Game(player_a, player_b, TEST_SHIP_SUITE)
 
     player = game.get_player(name="player_a")
 
@@ -217,7 +216,7 @@ def test_game_gets_player_by_name():
 def test_game_raises_exc_if_player_not_found():
     player_a = domain.Player(name="player_a", board=domain.Board())
     player_b = domain.Player(name="player_b", board=domain.Board())
-    game = domain.Game(player_a, player_b)
+    game = domain.Game(player_a, player_b, TEST_SHIP_SUITE)
 
     with pytest.raises(errors.PlayerNotFound):
         _ = game.get_player("notplayer")
@@ -252,21 +251,10 @@ def test_game_raises_exc_if_turn_not_used(game):
         next(it)
 
 
-def test_game_doesnt_start_if_both_player_have_no_ships():
+def test_game_doesnt_start_if_ships_not_placed():
     player_a = domain.Player(name="player_a", board=domain.Board())
     player_b = domain.Player(name="player_b", board=domain.Board())
-    game = domain.Game(player_a, player_b)
-    it = iter(game)
-
-    with pytest.raises(errors.ShipsNotPlaced):
-        next(it)
-
-
-def test_game_doesnt_start_if_only_one_player_has_ships():
-    player_a = domain.Player(name="player_a", board=domain.Board())
-    player_b = domain.Player(name="player_b", board=domain.Board())
-    game = domain.Game(player_a, player_b)
-    game.place_ship("A1", "A2", player="player_a", ship=domain.Ship(kind="ship", hp=2))
+    game = domain.Game(player_a, player_b, TEST_SHIP_SUITE)
     it = iter(game)
 
     with pytest.raises(errors.ShipsNotPlaced):

@@ -6,17 +6,14 @@ def run_game() -> None:
     player_b_name = input("Player B name\n")
 
     game = api.new_game(player_a_name, player_b_name)
-    player_a_ships = api.spawn_ships()
 
-    for ship in player_a_ships:
-        ship_cells = input(f"Place {player_a_name}'s {ship.kind}\n").split()
-        game.place_ship(*ship_cells, player=player_a_name, ship=ship)
+    for ship, spawn in game.spawn_ships(player_a_name):
+        position = input(f"Place {player_a_name}'s {ship}\n").split()
+        spawn(position)
 
-    player_b_ships = api.spawn_ships()
-
-    for ship in player_b_ships:
-        ship_cells = input(f"Place {game.player_b}'s {ship.kind}\n").split()
-        game.place_ship(*ship_cells, player=player_b_name, ship=ship)
+    for ship, spawn in game.spawn_ships(player_b_name):
+        position = input(f"Place {player_b_name}'s {ship}\n").split()
+        spawn(position)
 
     for turn in game:
         coord = input(f"{turn.player}'s turn: ")

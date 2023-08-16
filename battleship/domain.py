@@ -2,9 +2,22 @@ import dataclasses
 import itertools
 import string
 from itertools import cycle
-from typing import Iterable, Iterator
+from typing import Callable, Iterable, Iterator, TypeAlias
 
 from battleship import errors
+
+Kind: TypeAlias = str
+Hitpoints: TypeAlias = int
+ShipConfig: TypeAlias = tuple[Kind, Hitpoints]
+SpawnCallback: TypeAlias = Callable[[Iterable[str]], None]
+
+CLASSIC_SHIP_SUITE = [
+    ("carrier", 5),
+    ("battleship", 4),
+    ("cruiser", 3),
+    ("submarine", 3),
+    ("destroyer", 2),
+]
 
 
 @dataclasses.dataclass
@@ -170,9 +183,6 @@ class Player:
     def ships_left(self) -> int:
         return len([ship for ship in self.board.ships if ship.hp > 0])
 
-    def place_ship(self, *coordinates: str, ship: Ship) -> None:
-        self.board.place_ship(*coordinates, ship=ship)
-
 
 class Turn:
     def __init__(self, player: Player, hostile: Player) -> None:
@@ -189,9 +199,12 @@ class Turn:
 
 
 class Game:
-    def __init__(self, player_a: Player, player_b: Player) -> None:
+    def __init__(
+        self, player_a: Player, player_b: Player, ship_suite: Iterable[ShipConfig]
+    ) -> None:
         self.player_a = player_a
         self.player_b = player_b
+        self.ship_suite = ship_suite
         self.players: Iterator[tuple[Player, Player]] = cycle(
             zip([self.player_a, self.player_b], [self.player_b, self.player_a])
         )
@@ -199,12 +212,13 @@ class Game:
             player_a.name: player_a,
             player_b.name: player_b,
         }
+        self.ready = False
         self.winner: Player | None = None
 
     def __iter__(self) -> Iterator[Turn]:
-        if self.player_a.ships_left == 0 or self.player_b.ships_left == 0:
+        if not self.ready:
             raise errors.ShipsNotPlaced(
-                "You should place at least 1 ship for every player before starting the game."
+                "You should place ships for every player before starting the game."
             )
 
         for player, hostile in self.players:
@@ -227,5 +241,21 @@ class Game:
         except KeyError:
             raise errors.PlayerNotFound(f"Player {name} is not in this game.")
 
-    def place_ship(self, *coordinates: str, player: str, ship: Ship) -> None:
-        self.get_player(player).place_ship(*coordinates, ship=ship)
+    def spawn_ships(self, player: str) -> Iterator[tuple[Ship, SpawnCallback]]:
+        player_ = self.get_player(player)
+
+        for kind, hp in self.ship_suite:
+            ship = Ship(kind, hp)
+            ship_spawned = False
+
+            def spawn_callback(position: Iterable[str]) -> None:
+                nonlocal ship_spawned
+                player_.board.place_ship(*position, ship=ship)  # noqa: B023
+                ship_spawned = True
+
+            yield ship, spawn_callback
+
+            if not ship_spawned:
+                raise RuntimeError(f"You forgot to call spawn callback to spawn {ship}.")
+
+        self.ready = True
