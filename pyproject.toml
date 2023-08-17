@@ -7,6 +7,7 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.11"
+websockets = "^11.0.3"
 
 [tool.black]
 line-length = 100
@@ -18,6 +19,7 @@ profile = "black"
 pytest = "^7.4.0"
 mypy = "^1.5.0"
 coverage = "^7.3.0"
+watchdog = {extras = ["watchmedo"], version = "^3.0.0"}
 
 [build-system]
 requires = ["poetry-core"]
