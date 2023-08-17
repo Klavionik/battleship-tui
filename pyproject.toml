@@ -8,6 +8,8 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = "^3.11"
 websockets = "^11.0.3"
+rich = "^13.5.2"
+loguru = "^0.7.0"
 
 [tool.black]
 line-length = 100
