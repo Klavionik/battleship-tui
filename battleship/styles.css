@@ -1,0 +1,23 @@
+.panel {
+  background: $panel;
+  margin: 2 4;
+  padding: 3;
+  border: panel orange;
+  border-title-align: center;
+}
+
+.center {
+  align: center middle;
+}
+
+Login Input {
+  margin-top: 1;
+}
+
+Menu Button {
+  margin-top: 1;
+}
+
+Menu .panel * {
+  width: auto;
+}

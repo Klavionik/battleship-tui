@@ -1,40 +1,59 @@
-# type: ignore
-import argparse
+import asyncio
 import json
+from typing import Any, Callable, Optional, ParamSpec, Self, TypeVar
 
-from rich.console import Console
-from rich.prompt import Prompt
-from websockets.sync.client import ClientConnection, connect
+from pyee import EventEmitter
+from pyee.asyncio import AsyncIOEventEmitter
 
-from battleship.server import GameEvent
+# noinspection PyProtectedMember
+from websockets.client import connect
 
-parser = argparse.ArgumentParser()
-parser.add_argument("--host", type=str, default="localhost")
-parser.add_argument("--port", type=int, default=8000)
+from battleship.server import Event, GameEvent
 
-console = Console()
-
-connection = None
+P = ParamSpec("P")
+T = TypeVar("T")
 
 
-def send_new_player(nickname: str, ws: ClientConnection) -> None:
-    ws.send(json.dumps({"kind": GameEvent.NEW_PLAYER, "payload": {"nickname": nickname}}))
+class Client:
+    def __init__(self, host: str, port: int) -> None:
+        self._host = host
+        self._port = port
+        self._emitter: EventEmitter = AsyncIOEventEmitter()
+        self.nickname: Optional[str] = None
 
+    async def __aenter__(self) -> Self:
+        self._ws = await connect(f"ws://{self._host}:{self._port}")
+        self._worker_task = asyncio.create_task(self._worker())
+        return self
 
-def run_client(host: str, port: int) -> None:
-    nickname = Prompt.ask("Your nickname")
+    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+        self._worker_task.done()
+        await self._ws.close()
 
-    with connect(f"ws://{host}:{port}") as ws:
-        send_new_player(nickname, ws)
-        console.print(f"Connected to the server as {nickname}")
+    async def disconnect(self) -> None:
+        await self._send(dict(kind=GameEvent.DISCONNECT))
 
-        for message in ws:
-            print(message)
+    async def connect(self, nickname: str) -> None:
+        await self._send(dict(kind=GameEvent.CONNECT, payload={"nickname": nickname}))
+        self.nickname = nickname
 
+    def on(self, event: GameEvent | str) -> Callable[[Callable[P, T]], Callable[P, T]]:
+        def decorator(func: Callable[P, T]) -> Callable[P, T]:
+            self._emitter.add_listener(event, func)
+            return func
 
-if __name__ == "__main__":
-    args = parser.parse_args()
-    try:
-        run_client(args.host, args.port)
-    except KeyboardInterrupt:
-        connection.close()
+        return decorator
+
+    async def _worker(self) -> None:
+        if self._ws is None:
+            return
+
+        async for message in self._ws:
+            event = Event(**json.loads(message))
+            self._emitter.emit(event.kind, event)
+
+    async def _send(self, event: dict[str, Any]) -> None:
+        if self._ws is None:
+            return
+
+        await self._ws.send(json.dumps(event))

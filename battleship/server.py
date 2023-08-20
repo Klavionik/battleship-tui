@@ -1,7 +1,8 @@
-# type: ignore
+# mypy: ignore-errors
 import argparse
 import dataclasses
 import json
+import secrets
 from enum import StrEnum
 from typing import Any, Iterator, Optional
 
@@ -16,9 +17,14 @@ parser.add_argument("--port", type=int, default=8000)
 
 
 class GameEvent(StrEnum):
-    NEW_PLAYER = "new_player"
+    CONNECT = "connect"
+    CONNECTED = "connected"
+    DISCONNECT = "disconnect"
     NEW_GAME = "new_game"
-    PLAYERS_CONNECTED = "players_connected"
+    NEW_GAME_CREATED = "new_game_created"
+    JOIN_GAME = "join_game"
+    PLAYER_JOINED = "player_joined"
+    PLACE_SHIP = "place_ship"
     SHIP_PLACED = "ship_placed"
     GAME_READY = "game_ready"
     PLAYER_MOVE = "player_move"
@@ -48,15 +54,15 @@ class Session:
 
 
 connections: set["ConnectionHandler"] = set()
-players: set[Player] = set()
-queue: list[Session] = list()
+players: dict["ConnectionHandler", Player] = dict()
+queue: dict[str, Session] = dict()
 games: dict[str, Session] = dict()
 
 
 @dataclasses.dataclass
 class Event:
     kind: GameEvent
-    payload: dict[str, Any]
+    payload: Optional[dict[str, Any]] = None
 
 
 class ConnectionHandler:
@@ -82,12 +88,30 @@ class ConnectionHandler:
         for event in self.events():
             logger.info(f"New event {event}")
             match event:
-                case Event(kind=GameEvent.NEW_PLAYER):
+                case Event(kind=GameEvent.CONNECT):
                     player = Player(event.payload["nickname"])
-                    players.add(player)
+                    players[self] = player
                     logger.info(f"New player {player.nickname}")
+                    self.send_event(
+                        Event(kind=GameEvent.CONNECTED, payload={"nickname": player.nickname})
+                    )
+                case Event(kind=GameEvent.DISCONNECT):
+                    player = players.pop(self)
+                    logger.info(f"Player {player.nickname} disconnected")
+                case Event(kind=GameEvent.NEW_GAME):
+                    session = Session(secrets.token_urlsafe(8), players[self])
+                    queue[session.id] = session
+
+                    for connection in connections:
+                        connection.send_event(
+                            Event(
+                                kind=GameEvent.NEW_GAME_CREATED,
+                                payload={"host": session.host, "id": session.id},
+                            )
+                        )
 
         logger.info("Connection closed")
+        connections.remove(self)
 
 
 def run_server(host: str, port: int) -> None:
