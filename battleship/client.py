@@ -1,12 +1,12 @@
 import asyncio
 import json
-from typing import Any, Callable, Optional, ParamSpec, Self, TypeVar
+from typing import Any, Callable, Optional, ParamSpec, TypeVar
 
 from pyee import EventEmitter
 from pyee.asyncio import AsyncIOEventEmitter
 
 # noinspection PyProtectedMember
-from websockets.client import connect
+from websockets.client import WebSocketClientProtocol, connect
 
 from battleship.server import Event, GameEvent
 
@@ -19,23 +19,25 @@ class Client:
         self._host = host
         self._port = port
         self._emitter: EventEmitter = AsyncIOEventEmitter()
-        self.nickname: Optional[str] = None
+        self._ws: Optional[WebSocketClientProtocol] = None
+        self._worker: Optional[asyncio.Task[None]] = None
 
-    async def __aenter__(self) -> Self:
+    async def connect(self) -> None:
         self._ws = await connect(f"ws://{self._host}:{self._port}")
-        self._worker_task = asyncio.create_task(self._worker())
-        return self
-
-    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
-        self._worker_task.done()
-        await self._ws.close()
+        self._worker = asyncio.create_task(self._run_worker())
 
     async def disconnect(self) -> None:
-        await self._send(dict(kind=GameEvent.DISCONNECT))
+        if self._ws:
+            await self._ws.close()
 
-    async def connect(self, nickname: str) -> None:
-        await self._send(dict(kind=GameEvent.CONNECT, payload={"nickname": nickname}))
-        self.nickname = nickname
+        if self._worker:
+            self._worker.done()
+
+    async def logout(self) -> None:
+        await self._send(dict(kind=GameEvent.LOGOUT))
+
+    async def login(self, nickname: str) -> None:
+        await self._send(dict(kind=GameEvent.LOGIN, payload={"nickname": nickname}))
 
     def on(self, event: GameEvent | str) -> Callable[[Callable[P, T]], Callable[P, T]]:
         def decorator(func: Callable[P, T]) -> Callable[P, T]:
@@ -44,9 +46,9 @@ class Client:
 
         return decorator
 
-    async def _worker(self) -> None:
+    async def _run_worker(self) -> None:
         if self._ws is None:
-            return
+            raise RuntimeError("Cannot run worker, no connection.")
 
         async for message in self._ws:
             event = Event(**json.loads(message))
@@ -54,6 +56,6 @@ class Client:
 
     async def _send(self, event: dict[str, Any]) -> None:
         if self._ws is None:
-            return
+            raise RuntimeError("Cannot send an event, no connection.")
 
         await self._ws.send(json.dumps(event))

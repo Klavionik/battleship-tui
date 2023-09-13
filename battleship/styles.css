@@ -10,14 +10,14 @@
   align: center middle;
 }
 
-Login Input {
+LoginScreen Input {
   margin-top: 1;
 }
 
-Menu Button {
+MenuScreen Button {
   margin-top: 1;
 }
 
-Menu .panel * {
+MenuScreen .panel * {
   width: auto;
 }

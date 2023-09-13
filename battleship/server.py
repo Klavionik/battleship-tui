@@ -17,9 +17,9 @@ parser.add_argument("--port", type=int, default=8000)
 
 
 class GameEvent(StrEnum):
-    CONNECT = "connect"
-    CONNECTED = "connected"
-    DISCONNECT = "disconnect"
+    LOGIN = "login"
+    LOGGED_IN = "logged_in"
+    LOGOUT = "logout"
     NEW_GAME = "new_game"
     NEW_GAME_CREATED = "new_game_created"
     JOIN_GAME = "join_game"
@@ -62,7 +62,7 @@ games: dict[str, Session] = dict()
 @dataclasses.dataclass
 class Event:
     kind: GameEvent
-    payload: Optional[dict[str, Any]] = None
+    payload: dict[str, Any] = dataclasses.field(default_factory=dict)
 
 
 class ConnectionHandler:
@@ -86,18 +86,16 @@ class ConnectionHandler:
         self._connection = connection
 
         for event in self.events():
-            logger.info(f"New event {event}")
+            logger.info(event)
             match event:
-                case Event(kind=GameEvent.CONNECT):
+                case Event(kind=GameEvent.LOGIN):
                     player = Player(event.payload["nickname"])
                     players[self] = player
-                    logger.info(f"New player {player.nickname}")
                     self.send_event(
-                        Event(kind=GameEvent.CONNECTED, payload={"nickname": player.nickname})
+                        Event(kind=GameEvent.LOGGED_IN, payload={"nickname": player.nickname})
                     )
-                case Event(kind=GameEvent.DISCONNECT):
-                    player = players.pop(self)
-                    logger.info(f"Player {player.nickname} disconnected")
+                case Event(kind=GameEvent.LOGOUT):
+                    players.pop(self)
                 case Event(kind=GameEvent.NEW_GAME):
                     session = Session(secrets.token_urlsafe(8), players[self])
                     queue[session.id] = session

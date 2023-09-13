@@ -5,17 +5,23 @@ from textual import on
 from textual.app import App, ComposeResult
 from textual.containers import Container
 from textual.message import Message
+from textual.reactive import reactive
 from textual.screen import Screen
-from textual.widgets import Button, Footer, Header, Input, Static
+from textual.widgets import Button, Input, Static
 
 from battleship.client import Client
-from battleship.server import GameEvent
+from battleship.server import Event, GameEvent
 
 
-class Menu(Static):
+class MenuScreen(Screen[None]):
+    nickname = reactive("")
+
+    class Logout(Message):
+        pass
+
     def compose(self) -> ComposeResult:
         container = Container(
-            Static(f"Logged in as [b]{self.app.nickname}[/b]"),  # type: ignore
+            Static(f"Logged in as [b]{self.nickname}[/b]"),
             Button(label="New game", id="new_game"),
             Button(label="Join", id="join"),
             Button(label="Logout", id="logout"),
@@ -24,24 +30,16 @@ class Menu(Static):
         container.border_title = "Menu"
         yield container
 
-
-class MenuScreen(Screen[None]):
-    class Logout(Message):
-        pass
-
-    def compose(self) -> ComposeResult:
-        yield Menu()
-
     @on(Button.Pressed, "#logout")
     async def emit_logout(self) -> None:
         self.post_message(self.Logout())
 
 
-class Login(Static):
+class LoginScreen(Screen[None]):
     WELCOME_TEXT = "Welcome to Battleship! Enter your nickname and press Enter to connect."
     BINDINGS = [("Enter", "connect", "Connect")]
 
-    class Connect(Message):
+    class Login(Message):
         def __init__(self, nickname: str):
             self.nickname = nickname
             super().__init__()
@@ -53,12 +51,11 @@ class Login(Static):
 
     @on(Input.Submitted)
     def emit_connect(self, event: Input.Submitted) -> None:
-        self.post_message(self.Connect(event.value))
+        self.post_message(self.Login(event.value))
 
 
 class BattleshipApp(App[None]):
     CSS_PATH = "styles.css"
-    SCREENS = {"menu": MenuScreen()}
     BINDINGS = [("ctrl+q", "quit", "Quit")]
     TITLE = "Battleship"
     SUB_TITLE = "Multiplayer Game"
@@ -66,9 +63,11 @@ class BattleshipApp(App[None]):
     def __init__(self, *args: Any, client: Client, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
 
-        @client.on(GameEvent.CONNECTED)
-        async def on_connected(_: Any) -> None:
-            await self.push_screen("menu")
+        @client.on(GameEvent.LOGGED_IN)
+        async def on_connected(event: Event) -> None:
+            menu = MenuScreen()
+            menu.nickname = event.payload["nickname"]
+            await self.switch_screen(menu)
 
         @client.on("error")
         async def on_error(error: Any) -> None:
@@ -76,28 +75,37 @@ class BattleshipApp(App[None]):
 
         self.client = client
 
-    def compose(self) -> ComposeResult:
-        yield Header()
-        yield Login()
-        yield Footer()
+    async def on_mount(self) -> None:
+        await self.client.connect()
+        await self.push_screen(LoginScreen())
 
-    @on(Login.Connect)
-    async def connect(self, event: Login.Connect) -> None:
+    async def on_unmount(self) -> None:
+        await self.client.disconnect()
+
+    @on(LoginScreen.Login)
+    async def login(self, event: LoginScreen.Login) -> None:
         self.log("Connecting...")
-        await self.client.connect(event.nickname)
-        self.nickname = event.nickname
+        await self.client.login(event.nickname)
 
     @on(MenuScreen.Logout)
     async def disconnect(self) -> None:
-        await self.client.disconnect()
-        self.pop_screen()
+        await self.client.logout()
+        await self.switch_screen(LoginScreen())
 
 
 async def _run() -> None:
-    async with Client("localhost", 8000) as client:
-        app = BattleshipApp(client=client)
+    client = Client("localhost", 8000)
+    app = BattleshipApp(client=client)
+
+    try:
         await app.run_async()
+    finally:
+        await client.disconnect()
 
 
 def run() -> None:
     asyncio.run(_run())
+
+
+if __name__ == "__main__":
+    run()
