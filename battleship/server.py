@@ -1,34 +1,18 @@
 # mypy: ignore-errors
 import argparse
-import dataclasses
 import json
 import secrets
-from enum import StrEnum
-from typing import Any, Iterator, Optional
+from typing import Iterator, Optional
 
 from loguru import logger
 from websockets.sync.server import ServerConnection, serve
 
 from battleship import domain
+from battleship.shared.events import ClientEvent, EventMessage, ServerEvent
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--host", type=str, default="localhost")
 parser.add_argument("--port", type=int, default=8000)
-
-
-class GameEvent(StrEnum):
-    LOGIN = "login"
-    LOGGED_IN = "logged_in"
-    LOGOUT = "logout"
-    NEW_GAME = "new_game"
-    NEW_GAME_CREATED = "new_game_created"
-    JOIN_GAME = "join_game"
-    PLAYER_JOINED = "player_joined"
-    PLACE_SHIP = "place_ship"
-    SHIP_PLACED = "ship_placed"
-    GAME_READY = "game_ready"
-    PLAYER_MOVE = "player_move"
-    GAME_ENDED = "game_ended"
 
 
 class Player:
@@ -59,12 +43,6 @@ queue: dict[str, Session] = dict()
 games: dict[str, Session] = dict()
 
 
-@dataclasses.dataclass
-class Event:
-    kind: GameEvent
-    payload: dict[str, Any] = dataclasses.field(default_factory=dict)
-
-
 class ConnectionHandler:
     def __init__(self):
         self._connection: Optional[ServerConnection] = None
@@ -72,12 +50,12 @@ class ConnectionHandler:
     def close(self):
         self._connection.close()
 
-    def send_event(self, event: Event):
-        self._connection.send(json.dumps(dataclasses.asdict(event)))
+    def send_event(self, event: EventMessage):
+        self._connection.send(event.as_json())
 
-    def events(self) -> Iterator[Event]:
+    def events(self) -> Iterator[EventMessage]:
         for message in self._connection:
-            yield Event(**json.loads(message))
+            yield EventMessage(**json.loads(message))
 
     def __call__(self, connection: ServerConnection):
         logger.info("New connection received")
@@ -88,22 +66,22 @@ class ConnectionHandler:
         for event in self.events():
             logger.info(event)
             match event:
-                case Event(kind=GameEvent.LOGIN):
+                case EventMessage(kind=ClientEvent.LOGIN):
                     player = Player(event.payload["nickname"])
                     players[self] = player
                     self.send_event(
-                        Event(kind=GameEvent.LOGGED_IN, payload={"nickname": player.nickname})
+                        EventMessage(kind=ServerEvent.LOGIN, payload={"nickname": player.nickname})
                     )
-                case Event(kind=GameEvent.LOGOUT):
+                case EventMessage(kind=ClientEvent.LOGOUT):
                     players.pop(self)
-                case Event(kind=GameEvent.NEW_GAME):
+                case EventMessage(kind=ClientEvent.NEW_GAME):
                     session = Session(secrets.token_urlsafe(8), players[self])
                     queue[session.id] = session
 
                     for connection in connections:
                         connection.send_event(
-                            Event(
-                                kind=GameEvent.NEW_GAME_CREATED,
+                            EventMessage(
+                                kind=ServerEvent.NEW_GAME,
                                 payload={"host": session.host, "id": session.id},
                             )
                         )

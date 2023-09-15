@@ -1,6 +1,6 @@
 import asyncio
 import json
-from typing import Any, Callable, Optional, ParamSpec, TypeVar
+from typing import Callable, Optional, ParamSpec, TypeVar
 
 from pyee import EventEmitter
 from pyee.asyncio import AsyncIOEventEmitter
@@ -8,7 +8,7 @@ from pyee.asyncio import AsyncIOEventEmitter
 # noinspection PyProtectedMember
 from websockets.client import WebSocketClientProtocol, connect
 
-from battleship.server import Event, GameEvent
+from battleship.shared.events import ClientEvent, Event, EventMessage, EventMessageData
 
 P = ParamSpec("P")
 T = TypeVar("T")
@@ -34,12 +34,12 @@ class Client:
             self._worker.done()
 
     async def logout(self) -> None:
-        await self._send(dict(kind=GameEvent.LOGOUT))
+        await self._send(dict(kind=ClientEvent.LOGOUT))
 
     async def login(self, nickname: str) -> None:
-        await self._send(dict(kind=GameEvent.LOGIN, payload={"nickname": nickname}))
+        await self._send(dict(kind=ClientEvent.LOGIN, payload={"nickname": nickname}))
 
-    def on(self, event: GameEvent | str) -> Callable[[Callable[P, T]], Callable[P, T]]:
+    def on(self, event: Event | str) -> Callable[[Callable[P, T]], Callable[P, T]]:
         def decorator(func: Callable[P, T]) -> Callable[P, T]:
             self._emitter.add_listener(event, func)
             return func
@@ -51,11 +51,11 @@ class Client:
             raise RuntimeError("Cannot run worker, no connection.")
 
         async for message in self._ws:
-            event = Event(**json.loads(message))
-            self._emitter.emit(event.kind, event)
+            msg = EventMessage.from_raw(message)
+            self._emitter.emit(msg.kind, msg.payload)
 
-    async def _send(self, event: dict[str, Any]) -> None:
+    async def _send(self, msg: EventMessageData) -> None:
         if self._ws is None:
-            raise RuntimeError("Cannot send an event, no connection.")
+            raise RuntimeError("Cannot send a message, no connection.")
 
-        await self._ws.send(json.dumps(event))
+        await self._ws.send(json.dumps(msg))

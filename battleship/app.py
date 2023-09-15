@@ -10,7 +10,7 @@ from textual.screen import Screen
 from textual.widgets import Button, Input, Static
 
 from battleship.client import Client
-from battleship.server import Event, GameEvent
+from battleship.shared.events import EventPayload, ServerEvent
 
 
 class MenuScreen(Screen[None]):
@@ -63,10 +63,10 @@ class BattleshipApp(App[None]):
     def __init__(self, *args: Any, client: Client, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
 
-        @client.on(GameEvent.LOGGED_IN)
-        async def on_connected(event: Event) -> None:
+        @client.on(ServerEvent.LOGIN)
+        async def on_connected(payload: EventPayload) -> None:
             menu = MenuScreen()
-            menu.nickname = event.payload["nickname"]
+            menu.nickname = payload["nickname"]
             await self.switch_screen(menu)
 
         @client.on("error")
