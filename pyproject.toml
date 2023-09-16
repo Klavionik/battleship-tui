@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "battleship"
 version = "0.1.0"
-description = "Online TUI Battleship."
+description = "Play Battleship The Game in your terminal."
 authors = ["Roman Vlasenko <klavionik@gmail.com>"]
 readme = "README.md"
 

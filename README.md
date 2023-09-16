@@ -1,1 +1,1 @@
-# Online TUI Battleship The Game
+# Battleship The Game
