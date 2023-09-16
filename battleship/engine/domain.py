@@ -4,7 +4,7 @@ import string
 from itertools import cycle
 from typing import Callable, Collection, Iterable, Iterator, TypeAlias
 
-from battleship import errors
+from battleship.engine import errors
 
 Kind: TypeAlias = str
 Hitpoints: TypeAlias = int

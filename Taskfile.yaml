@@ -12,4 +12,4 @@ tasks:
       - coverage html
       - python -m webbrowser -t htmlcov/index.html
   app:dev: poetry run textual run --dev -c battleship
-  server:dev: poetry run watchmedo auto-restart --directory battleship --pattern "server.py" --signal SIGTERM python battleship/server.py
+  server:dev: poetry run watchmedo auto-restart --directory battleship --pattern "*.py" --signal SIGTERM python battleship/server/realtime.py

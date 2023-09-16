@@ -14,7 +14,13 @@ P = ParamSpec("P")
 T = TypeVar("T")
 
 
-class Client:
+class RealtimeClient:
+    """
+    Wraps WebSockets connection and provides a convenient interface
+    for sending client events to the realtime server. Receives
+    server events and publishes them via an event emitter.
+    """
+
     def __init__(self, host: str, port: int) -> None:
         self._host = host
         self._port = port

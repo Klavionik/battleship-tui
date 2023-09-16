@@ -9,7 +9,7 @@ from textual.reactive import reactive
 from textual.screen import Screen
 from textual.widgets import Button, Input, Static
 
-from battleship.client import Client
+from battleship.client import RealtimeClient
 from battleship.shared.events import EventPayload, ServerEvent
 
 
@@ -60,7 +60,7 @@ class BattleshipApp(App[None]):
     TITLE = "Battleship"
     SUB_TITLE = "Multiplayer Game"
 
-    def __init__(self, *args: Any, client: Client, **kwargs: Any) -> None:
+    def __init__(self, *args: Any, client: RealtimeClient, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
 
         @client.on(ServerEvent.LOGIN)
@@ -94,7 +94,7 @@ class BattleshipApp(App[None]):
 
 
 async def _run() -> None:
-    client = Client("localhost", 8000)
+    client = RealtimeClient("localhost", 8000)
     app = BattleshipApp(client=client)
 
     try:

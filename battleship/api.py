@@ -1,6 +1,6 @@
 from typing import Iterable
 
-from battleship import domain
+from battleship.engine import domain
 
 
 def new_game(

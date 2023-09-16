@@ -1,6 +1,6 @@
 import pytest
 
-from battleship import domain, errors
+from battleship.engine import domain, errors
 
 TEST_SHIP_SUITE = [
     ("ship", 2),

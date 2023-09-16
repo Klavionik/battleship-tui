@@ -7,7 +7,7 @@ from typing import Iterator, Optional
 from loguru import logger
 from websockets.sync.server import ServerConnection, serve
 
-from battleship import domain
+from battleship.engine import domain
 from battleship.shared.events import ClientEvent, EventMessage, ServerEvent
 
 parser = argparse.ArgumentParser()
