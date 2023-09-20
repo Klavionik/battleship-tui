@@ -57,10 +57,8 @@ repos:
       - id: mypy
         name: mypy
         entry: mypy
-        pass_filenames: false
         args:
           - --strict
-          - battleship
         language: system
         types: [python]
         require_serial: true
