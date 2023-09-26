@@ -6,9 +6,9 @@ from typing import Callable, Collection, Iterable, Iterator, TypeAlias
 
 from battleship.engine import errors
 
-Kind: TypeAlias = str
+ShipType: TypeAlias = str
 Hitpoints: TypeAlias = int
-ShipConfig: TypeAlias = tuple[Kind, Hitpoints]
+ShipConfig: TypeAlias = tuple[ShipType, Hitpoints]
 SpawnCallback: TypeAlias = Callable[[Collection[str]], None]
 
 CLASSIC_SHIP_SUITE = [
@@ -22,11 +22,8 @@ CLASSIC_SHIP_SUITE = [
 
 @dataclasses.dataclass
 class Ship:
-    kind: str
+    type: str
     hp: int
-
-    def __str__(self) -> str:
-        return self.kind
 
     @property
     def destroyed(self) -> bool:

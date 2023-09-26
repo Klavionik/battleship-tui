@@ -22,7 +22,7 @@ def game():
 
 
 def test_ship_can_be_damaged():
-    ship = domain.Ship(kind="ship", hp=4)
+    ship = domain.Ship(type="ship", hp=4)
 
     ship.damage()
 
@@ -34,7 +34,7 @@ def test_ship_can_be_damaged():
 
 
 def test_ship_no_damage_after_no_hp_left():
-    ship = domain.Ship(kind="ship", hp=1)
+    ship = domain.Ship(type="ship", hp=1)
 
     ship.damage()
 
@@ -46,7 +46,7 @@ def test_ship_no_damage_after_no_hp_left():
 
 
 def test_ship_with_no_hp_is_destroyed():
-    ship = domain.Ship(kind="ship", hp=1)
+    ship = domain.Ship(type="ship", hp=1)
 
     ship.damage()
 
@@ -54,7 +54,7 @@ def test_ship_with_no_hp_is_destroyed():
 
 
 def test_cell_can_be_assigned_ship():
-    ship = domain.Ship(kind="ship", hp=1)
+    ship = domain.Ship(type="ship", hp=1)
     cell = domain.Cell("A", 1)
 
     cell.assign_ship(ship)
@@ -63,7 +63,7 @@ def test_cell_can_be_assigned_ship():
 
 
 def test_cell_hits_bound_ship():
-    ship = domain.Ship(kind="ship", hp=3)
+    ship = domain.Ship(type="ship", hp=3)
     cell = domain.Cell("A", 1)
     cell.ship = ship
 
@@ -91,8 +91,8 @@ def test_cell_cannot_be_shot_twice():
 
 def test_cell_cannot_assign_ship_twice():
     cell = domain.Cell("A", 1)
-    ship = domain.Ship(kind="ship", hp=3)
-    another_ship = domain.Ship(kind="ship", hp=3)
+    ship = domain.Ship(type="ship", hp=3)
+    another_ship = domain.Ship(type="ship", hp=3)
 
     cell.assign_ship(ship)
 
@@ -127,7 +127,7 @@ def test_board_raises_exc_if_coord_incorrect(bad_coord):
 
 def test_board_places_ship():
     board = domain.Board()
-    ship = domain.Ship(kind="ship", hp=3)
+    ship = domain.Ship(type="ship", hp=3)
 
     board.place_ship(["A3", "A4", "A5"], ship=ship)
     cell_a3 = board["A3"]
@@ -142,7 +142,7 @@ def test_board_places_ship():
 
 def test_board_raises_exc_if_ship_and_cells_dont_match():
     board = domain.Board()
-    ship = domain.Ship(kind="ship", hp=3)
+    ship = domain.Ship(type="ship", hp=3)
 
     with pytest.raises(errors.ShipDoesntFitCells):
         board.place_ship(["A1", "A2"], ship=ship)
@@ -150,7 +150,7 @@ def test_board_raises_exc_if_ship_and_cells_dont_match():
 
 def test_board_raises_exc_if_invalid_position():
     board = domain.Board()
-    ship = domain.Ship(kind="ship", hp=3)
+    ship = domain.Ship(type="ship", hp=3)
 
     with pytest.raises(errors.InvalidPosition):
         board.place_ship(["A1", "A2", "A4"], ship=ship)
@@ -171,7 +171,7 @@ def test_board_can_test_only_ship_membership():
 
 def test_board_shooting():
     board = domain.Board()
-    ship = domain.Ship(kind="ship", hp=4)
+    ship = domain.Ship(type="ship", hp=4)
     board.place_ship(["J7", "J8", "J9", "J10"], ship=ship)
 
     board.hit_cell("J7")
@@ -186,7 +186,7 @@ def test_board_shooting():
 def test_player_ships_left_returns_alive_ships():
     board = domain.Board()
     player = domain.Player(name="player", board=board)
-    ship = domain.Ship(kind="ship", hp=2)
+    ship = domain.Ship(type="ship", hp=2)
     board.place_ship(["A3", "A4"], ship=ship)
 
     assert player.ships_left == 1
@@ -204,7 +204,7 @@ def test_turn_strikes_hostile_ship():
     player_a_board = domain.Board()
     player_a = domain.Player(name="player_a", board=player_a_board)
     player_b = domain.Player(name="player_b", board=domain.Board())
-    ship = domain.Ship(kind="ship", hp=2)
+    ship = domain.Ship(type="ship", hp=2)
     player_a_board.place_ship(["A3", "A4"], ship=ship)
     turn = domain.Turn(player=player_b, hostile=player_a)
 
