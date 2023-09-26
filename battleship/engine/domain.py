@@ -98,22 +98,28 @@ def is_valid_position(coordinates: Iterable[str]) -> None:
             raise errors.InvalidPosition(f"Position {coordinates} is invalid.")
 
 
-class Grid:
-    def __init__(self, cols: int = 10, rows: int = 10):
+class Board:
+    def __init__(self, cols: int = 10, rows: int = 10) -> None:
         self._cols = cols
         self._rows = rows
         self._letters = string.ascii_uppercase[:cols]
         self._numbers = tuple(range(1, rows + 1))
-        self._cells = [[Cell(col, row) for col in self._letters] for row in self._numbers]
-
-    def __getitem__(self, coordinate: str) -> Cell:
-        col, row = self._check_coordinate(coordinate)
-        return self._cells[row][col]
+        self.grid = [[Cell(col, row) for col in self._letters] for row in self._numbers]
+        self.ships: list[Ship] = []
 
     def __str__(self) -> str:
-        return f"Grid {self._cols}x{self._rows}"
+        return f"Board, {len(self.ships)} ships left"
 
-    def _check_coordinate(self, coordinate: str) -> tuple[int, int]:
+    def __contains__(self, item: Ship) -> bool:
+        if not isinstance(item, Ship):
+            raise TypeError(f"Cannot test if board contains {type(item)}.")
+
+        return item in self.ships
+
+    def __getitem__(self, coordinate: str) -> Cell:
+        return self.get_cell(coordinate)
+
+    def _coordinate_to_index(self, coordinate: str) -> tuple[int, int]:
         """
         Coordinate is a string where the zero element is
         a letter in range of the board size and the other elements
@@ -136,20 +142,9 @@ class Grid:
 
         return col_index, row_index
 
-
-class Board:
-    def __init__(self, cols: int = 10, rows: int = 10) -> None:
-        self.grid = Grid(cols, rows)
-        self.ships: list[Ship] = []
-
-    def __str__(self) -> str:
-        return f"Board, {len(self.ships)} ships left"
-
-    def __contains__(self, item: Ship) -> bool:
-        if not isinstance(item, Ship):
-            raise TypeError(f"Cannot test if board contains {type(item)}.")
-
-        return item in self.ships
+    def get_cell(self, coordinate: str) -> Cell:
+        col, row = self._coordinate_to_index(coordinate)
+        return self.grid[row][col]
 
     def place_ship(self, position: Collection[str], ship: Ship) -> None:
         if len(position) != ship.hp:
@@ -160,13 +155,13 @@ class Board:
         is_valid_position(position)
 
         for coordinate in position:
-            cell = self.grid[coordinate]
+            cell = self.get_cell(coordinate)
             cell.assign_ship(ship)
 
         self.ships.append(ship)
 
-    def hit_cell(self, target: str) -> Ship | None:
-        cell: Cell = self.grid[target]
+    def hit_cell(self, coordinate: str) -> Ship | None:
+        cell = self.get_cell(coordinate)
         cell.hit()
         return cell.ship
 

@@ -101,28 +101,28 @@ def test_cell_cannot_assign_ship_twice():
 
 
 @pytest.mark.parametrize("coord", ["A3", "B5", "I10"])
-def test_grid_find_cells(coord: str):
-    grid = domain.Grid()
+def test_board_find_cells(coord: str):
+    board = domain.Board()
 
-    cell = grid[coord]
+    cell = board[coord]
 
     assert cell.coordinate == coord
 
 
 @pytest.mark.parametrize("coord", ["A11", "B0", "V5"])
-def test_grid_raises_exc_if_cell_not_found(coord):
-    grid = domain.Grid()
+def test_board_raises_exc_if_cell_not_found(coord):
+    board = domain.Board()
 
     with pytest.raises(errors.CellOutOfRange):
-        _ = grid[coord]
+        _ = board[coord]
 
 
 @pytest.mark.parametrize("bad_coord", ["", "meow", "11A", None])
-def test_grid_raises_exc_if_coord_incorrect(bad_coord):
-    grid = domain.Grid()
+def test_board_raises_exc_if_coord_incorrect(bad_coord):
+    board = domain.Board()
 
     with pytest.raises(errors.IncorrectCoordinate):
-        _ = grid[bad_coord]
+        _ = board[bad_coord]
 
 
 def test_board_places_ship():
@@ -130,9 +130,9 @@ def test_board_places_ship():
     ship = domain.Ship(kind="ship", hp=3)
 
     board.place_ship(["A3", "A4", "A5"], ship=ship)
-    cell_a3 = board.grid["A3"]
-    cell_a4 = board.grid["A4"]
-    cell_a5 = board.grid["A5"]
+    cell_a3 = board["A3"]
+    cell_a4 = board["A4"]
+    cell_a5 = board["A5"]
 
     assert ship in board
     assert cell_a3.ship is ship

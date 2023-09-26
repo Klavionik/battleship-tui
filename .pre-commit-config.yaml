@@ -59,6 +59,7 @@ repos:
         entry: mypy
         args:
           - --strict
+        exclude: "^tests/"
         language: system
         types: [python]
         require_serial: true
