@@ -18,10 +18,6 @@ class CellAlreadyShot(BattleshipError):
     pass
 
 
-class PlayerNotFound(BattleshipError):
-    pass
-
-
 class TurnUnused(BattleshipError):
     pass
 

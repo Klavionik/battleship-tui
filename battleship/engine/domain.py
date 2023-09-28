@@ -211,17 +211,12 @@ class Game:
         self.players: Iterator[tuple[Player, Player]] = cycle(
             zip([self.player_a, self.player_b], [self.player_b, self.player_a])
         )
-        self.players_map: dict[str, Player] = {
-            player_a.name: player_a,
-            player_b.name: player_b,
-        }
         self.winner: Player | None = None
 
     def __str__(self) -> str:
         return f"Game <{self.player_a} vs {self.player_b}> <Winner: {self.winner}>"
 
-    def add_ship(self, player_name: str, position: Collection[str], ship_type: ShipType) -> None:
-        player = self.get_player(player_name)
+    def add_ship(self, player: Player, position: Collection[str], ship_type: ShipType) -> None:
         ship = self._spawn_ship(ship_type)
         max_ships = self._max_ships_for_type(ship_type)
 
@@ -232,14 +227,7 @@ class Game:
 
         player.add_ship(position, ship)
 
-    def get_player(self, name: str) -> Player:
-        try:
-            return self.players_map[name]
-        except KeyError:
-            raise errors.PlayerNotFound(f"Player {name} is not in this game.")
-
-    def is_fleet_ready(self, player_name: str) -> bool:
-        player = self.get_player(player_name)
+    def is_fleet_ready(self, player: Player) -> bool:
         return player.ships == self.reference_fleet
 
     def _spawn_ship(self, ship_type: str) -> Ship:
