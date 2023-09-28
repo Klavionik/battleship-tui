@@ -356,3 +356,25 @@ def test_player_can_count_ships_by_type():
     player.add_ship(["A2", "A3"], domain.Ship("ship", 2))
 
     assert player.count_ships(ship_type="ship") == 1
+
+
+def test_game_fleet_not_ready():
+    player_a = domain.Player(name="player_a", board=domain.Board())
+    player_b = domain.Player(name="player_b", board=domain.Board())
+    game = domain.Game(player_a, player_b, TEST_SHIP_SUITE)
+
+    assert not game.is_fleet_ready(player_a.name)
+
+
+def test_game_fleet_ready():
+    player_a = domain.Player(name="player_a", board=domain.Board())
+    player_b = domain.Player(name="player_b", board=domain.Board())
+    game = domain.Game(player_a, player_b, TEST_SHIP_SUITE + TEST_SHIP_SUITE)
+
+    game.place_ship(player_a.name, position=["A2", "A3"], ship_type="ship")
+
+    assert not game.is_fleet_ready(player_a.name)
+
+    game.place_ship(player_a.name, position=["B2", "B3"], ship_type="ship")
+
+    assert game.is_fleet_ready(player_a.name)

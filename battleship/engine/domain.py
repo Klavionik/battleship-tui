@@ -182,6 +182,10 @@ class Player:
     def ships_alive(self) -> int:
         return len([ship for ship in self.board.ships if not ship.destroyed])
 
+    @property
+    def ships(self) -> list[Ship]:
+        return self.board.ships
+
 
 class Turn:
     def __init__(self, player: Player, hostile: Player) -> None:
@@ -204,6 +208,7 @@ class Game:
         self.player_a = player_a
         self.player_b = player_b
         self.ship_suite = ship_suite
+        self.reference_fleet = [Ship(*ship_config) for ship_config in ship_suite]
         self.players: Iterator[tuple[Player, Player]] = cycle(
             zip([self.player_a, self.player_b], [self.player_b, self.player_a])
         )
@@ -268,6 +273,10 @@ class Game:
 
         player_.ready = True
 
+    def is_fleet_ready(self, player_name: str) -> bool:
+        player = self.get_player(player_name)
+        return player.ships == self.reference_fleet
+
     def _spawn_ship(self, ship_type: str) -> Ship:
         try:
             ship_config = next(
@@ -278,4 +287,4 @@ class Game:
             raise errors.ShipNotFound(f"Cannot spawn a ship of type {ship_type}.")
 
     def _max_ships_for_type(self, ship_type: ShipType) -> int:
-        return len([ship for ship in self.ship_suite if ship[0] == ship_type])
+        return len([ship for ship in self.reference_fleet if ship.type == ship_type])
