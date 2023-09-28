@@ -172,9 +172,15 @@ class Player:
     def __str__(self) -> str:
         return self.name
 
+    def add_ship(self, position: Collection[str], ship: Ship) -> None:
+        self.board.place_ship(position, ship)
+
+    def count_ships(self, ship_type: ShipType) -> int:
+        return len([ship for ship in self.board.ships if ship.type == ship_type])
+
     @property
-    def ships_left(self) -> int:
-        return len([ship for ship in self.board.ships if ship.hp > 0])
+    def ships_alive(self) -> int:
+        return len([ship for ship in self.board.ships if not ship.destroyed])
 
 
 class Turn:
@@ -218,12 +224,24 @@ class Game:
             if not next_turn.called:
                 raise errors.TurnUnused("strike() was not called on Turn.")
 
-            if hostile.ships_left == 0:
+            if hostile.ships_alive == 0:
                 self.winner = player
                 break
 
     def __str__(self) -> str:
         return f"Game <{self.player_a} vs {self.player_b}> <Winner: {self.winner}>"
+
+    def place_ship(self, player_name: str, position: Collection[str], ship_type: ShipType) -> None:
+        player = self.get_player(player_name)
+        ship = self._spawn_ship(ship_type)
+        max_ships = self._max_ships_for_type(ship_type)
+
+        if player.count_ships(ship_type) >= max_ships:
+            raise errors.ShipLimitExceeded(
+                f"You can put only {max_ships} ships of type {ship_type}."
+            )
+
+        player.add_ship(position, ship)
 
     def get_player(self, name: str) -> Player:
         try:
@@ -249,3 +267,15 @@ class Game:
                 raise RuntimeError(f"You forgot to call spawn callback to spawn {ship}.")
 
         player_.ready = True
+
+    def _spawn_ship(self, ship_type: str) -> Ship:
+        try:
+            ship_config = next(
+                ship_config for ship_config in self.ship_suite if ship_config[0] == ship_type
+            )
+            return Ship(*ship_config)
+        except StopIteration:
+            raise errors.ShipNotFound(f"Cannot spawn a ship of type {ship_type}.")
+
+    def _max_ships_for_type(self, ship_type: ShipType) -> int:
+        return len([ship for ship in self.ship_suite if ship[0] == ship_type])

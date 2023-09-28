@@ -34,5 +34,13 @@ class ShipDoesntFitCells(BattleshipError):
     pass
 
 
+class ShipNotFound(BattleshipError):
+    pass
+
+
+class ShipLimitExceeded(BattleshipError):
+    pass
+
+
 class InvalidPosition(BattleshipError):
     pass

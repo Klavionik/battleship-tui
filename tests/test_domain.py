@@ -189,15 +189,15 @@ def test_player_ships_left_returns_alive_ships():
     ship = domain.Ship(type="ship", hp=2)
     board.place_ship(["A3", "A4"], ship=ship)
 
-    assert player.ships_left == 1
+    assert player.ships_alive == 1
 
     board.hit_cell("A3")
 
-    assert player.ships_left == 1
+    assert player.ships_alive == 1
 
     board.hit_cell("A4")
 
-    assert player.ships_left == 0
+    assert player.ships_alive == 0
 
 
 def test_turn_strikes_hostile_ship():
@@ -307,3 +307,52 @@ def test_game_raises_exc_if_spawn_cb_not_called():
     with pytest.raises(RuntimeError):
         for _ in game.spawn_ships(player="player_a"):
             pass
+
+
+def test_game_can_place_ship():
+    player_a = domain.Player(name="player_a", board=domain.Board())
+    player_b = domain.Player(name="player_b", board=domain.Board())
+    game = domain.Game(player_a, player_b, TEST_SHIP_SUITE)
+
+    game.place_ship(player_a.name, position=["A3", "A4"], ship_type="ship")
+
+    assert domain.Ship("ship", 2) in player_a.board
+
+
+def test_game_raises_exc_if_ship_limit_exceeded():
+    player_a = domain.Player(name="player_a", board=domain.Board())
+    player_b = domain.Player(name="player_b", board=domain.Board())
+    game = domain.Game(player_a, player_b, TEST_SHIP_SUITE)
+
+    game.place_ship(player_a.name, position=["A3", "A4"], ship_type="ship")
+
+    with pytest.raises(errors.ShipLimitExceeded):
+        game.place_ship(player_a.name, position=["A3", "A4"], ship_type="ship")
+
+
+def test_game_raises_exc_if_ship_type_is_not_in_suite():
+    player_a = domain.Player(name="player_a", board=domain.Board())
+    player_b = domain.Player(name="player_b", board=domain.Board())
+    game = domain.Game(player_a, player_b, TEST_SHIP_SUITE)
+
+    with pytest.raises(errors.ShipNotFound):
+        game.place_ship(player_a.name, position=["A3", "A4"], ship_type="notship")
+
+
+def test_player_can_add_ship():
+    player = domain.Player("player", board=domain.Board())
+    ship = domain.Ship("ship", 2)
+
+    player.add_ship(["A2", "A3"], ship)
+
+    assert ship in player.board
+
+
+def test_player_can_count_ships_by_type():
+    player = domain.Player("player", board=domain.Board())
+
+    assert player.count_ships(ship_type="ship") == 0
+
+    player.add_ship(["A2", "A3"], domain.Ship("ship", 2))
+
+    assert player.count_ships(ship_type="ship") == 1
