@@ -7,20 +7,6 @@ TEST_SHIP_SUITE = [
 ]
 
 
-@pytest.fixture
-def game():
-    player_a = domain.Player(name="player_a", board=domain.Board())
-    player_b = domain.Player(name="player_b", board=domain.Board())
-    game = domain.Game(player_a, player_b, TEST_SHIP_SUITE)
-
-    for _, spawn in game.spawn_ships(player="player_a"):
-        spawn(["A1", "A2"])
-
-    for _, spawn in game.spawn_ships(player="player_b"):
-        spawn(["B1", "B2"])
-    return game
-
-
 def test_ship_can_be_damaged():
     ship = domain.Ship(type="ship", hp=4)
 
@@ -236,85 +222,12 @@ def test_game_raises_exc_if_player_not_found():
         _ = game.get_player("notplayer")
 
 
-def test_game_alternates_turns_between_players_until_no_ships_left(game):
-    it = iter(game)
-
-    turn = next(it)
-    assert turn.player == game.player_a
-    turn.strike("D1")  # Every turn's strike must be called.
-
-    turn = next(it)
-    assert turn.player == game.player_b
-    turn.strike("D2")
-
-    turn = next(it)
-    assert turn.player == game.player_a
-    turn.strike("D3")
-
-    turn = next(it)
-    assert turn.player == game.player_b
-    turn.strike("D4")
-
-
-def test_game_raises_exc_if_turn_not_used(game):
-    it = iter(game)
-
-    next(it)
-
-    with pytest.raises(errors.TurnUnused):
-        next(it)
-
-
-def test_game_doesnt_start_if_ships_not_placed():
-    player_a = domain.Player(name="player_a", board=domain.Board())
-    player_b = domain.Player(name="player_b", board=domain.Board())
-    game = domain.Game(player_a, player_b, TEST_SHIP_SUITE)
-    it = iter(game)
-
-    with pytest.raises(errors.ShipsNotPlaced):
-        next(it)
-
-    for _, spawn in game.spawn_ships(player="player_a"):
-        spawn(["A1", "A2"])
-
-    it = iter(game)
-
-    with pytest.raises(errors.ShipsNotPlaced):
-        next(it)
-
-
-def test_game_ends_when_player_lose_all_ships(game):
-    it = iter(game)
-
-    turn = next(it)
-    turn.strike("B1")
-    turn = next(it)
-    turn.strike("A1")
-    turn = next(it)
-    turn.strike("B2")
-
-    with pytest.raises(StopIteration):
-        next(it)
-
-    assert game.winner == game.player_a
-
-
-def test_game_raises_exc_if_spawn_cb_not_called():
-    player_a = domain.Player(name="player_a", board=domain.Board())
-    player_b = domain.Player(name="player_b", board=domain.Board())
-    game = domain.Game(player_a, player_b, TEST_SHIP_SUITE)
-
-    with pytest.raises(RuntimeError):
-        for _ in game.spawn_ships(player="player_a"):
-            pass
-
-
 def test_game_can_place_ship():
     player_a = domain.Player(name="player_a", board=domain.Board())
     player_b = domain.Player(name="player_b", board=domain.Board())
     game = domain.Game(player_a, player_b, TEST_SHIP_SUITE)
 
-    game.place_ship(player_a.name, position=["A3", "A4"], ship_type="ship")
+    game.add_ship(player_a.name, position=["A3", "A4"], ship_type="ship")
 
     assert domain.Ship("ship", 2) in player_a.board
 
@@ -324,10 +237,10 @@ def test_game_raises_exc_if_ship_limit_exceeded():
     player_b = domain.Player(name="player_b", board=domain.Board())
     game = domain.Game(player_a, player_b, TEST_SHIP_SUITE)
 
-    game.place_ship(player_a.name, position=["A3", "A4"], ship_type="ship")
+    game.add_ship(player_a.name, position=["A3", "A4"], ship_type="ship")
 
     with pytest.raises(errors.ShipLimitExceeded):
-        game.place_ship(player_a.name, position=["A3", "A4"], ship_type="ship")
+        game.add_ship(player_a.name, position=["A3", "A4"], ship_type="ship")
 
 
 def test_game_raises_exc_if_ship_type_is_not_in_suite():
@@ -336,7 +249,7 @@ def test_game_raises_exc_if_ship_type_is_not_in_suite():
     game = domain.Game(player_a, player_b, TEST_SHIP_SUITE)
 
     with pytest.raises(errors.ShipNotFound):
-        game.place_ship(player_a.name, position=["A3", "A4"], ship_type="notship")
+        game.add_ship(player_a.name, position=["A3", "A4"], ship_type="notship")
 
 
 def test_player_can_add_ship():
@@ -371,10 +284,10 @@ def test_game_fleet_ready():
     player_b = domain.Player(name="player_b", board=domain.Board())
     game = domain.Game(player_a, player_b, TEST_SHIP_SUITE + TEST_SHIP_SUITE)
 
-    game.place_ship(player_a.name, position=["A2", "A3"], ship_type="ship")
+    game.add_ship(player_a.name, position=["A2", "A3"], ship_type="ship")
 
     assert not game.is_fleet_ready(player_a.name)
 
-    game.place_ship(player_a.name, position=["B2", "B3"], ship_type="ship")
+    game.add_ship(player_a.name, position=["B2", "B3"], ship_type="ship")
 
     assert game.is_fleet_ready(player_a.name)

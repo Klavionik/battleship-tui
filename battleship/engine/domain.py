@@ -167,7 +167,6 @@ class Player:
     def __init__(self, name: str, board: Board) -> None:
         self.name = name
         self.board = board
-        self.ready = False
 
     def __str__(self) -> str:
         return self.name
@@ -218,25 +217,10 @@ class Game:
         }
         self.winner: Player | None = None
 
-    def __iter__(self) -> Iterator[Turn]:
-        if not (self.player_a.ready and self.player_b.ready):
-            raise errors.ShipsNotPlaced("Players should place ships before starting the game.")
-
-        for player, hostile in self.players:
-            next_turn = Turn(player, hostile)
-            yield next_turn
-
-            if not next_turn.called:
-                raise errors.TurnUnused("strike() was not called on Turn.")
-
-            if hostile.ships_alive == 0:
-                self.winner = player
-                break
-
     def __str__(self) -> str:
         return f"Game <{self.player_a} vs {self.player_b}> <Winner: {self.winner}>"
 
-    def place_ship(self, player_name: str, position: Collection[str], ship_type: ShipType) -> None:
+    def add_ship(self, player_name: str, position: Collection[str], ship_type: ShipType) -> None:
         player = self.get_player(player_name)
         ship = self._spawn_ship(ship_type)
         max_ships = self._max_ships_for_type(ship_type)
@@ -253,25 +237,6 @@ class Game:
             return self.players_map[name]
         except KeyError:
             raise errors.PlayerNotFound(f"Player {name} is not in this game.")
-
-    def spawn_ships(self, player: str) -> Iterator[tuple[Ship, SpawnCallback]]:
-        player_ = self.get_player(player)
-
-        for kind, hp in self.ship_suite:
-            ship = Ship(kind, hp)
-            ship_spawned = False
-
-            def spawn_callback(position: Collection[str]) -> None:
-                nonlocal ship_spawned
-                player_.board.place_ship(position, ship=ship)  # noqa: B023
-                ship_spawned = True
-
-            yield ship, spawn_callback
-
-            if not ship_spawned:
-                raise RuntimeError(f"You forgot to call spawn callback to spawn {ship}.")
-
-        player_.ready = True
 
     def is_fleet_ready(self, player_name: str) -> bool:
         player = self.get_player(player_name)
