@@ -1,8 +1,10 @@
 import dataclasses
+import enum
 import itertools
+import random
 import string
 from itertools import cycle
-from typing import Callable, Collection, Iterable, Iterator, TypeAlias
+from typing import Callable, Collection, Iterable, TypeAlias
 
 from battleship.engine import errors
 
@@ -18,6 +20,11 @@ CLASSIC_SHIP_SUITE = [
     ("submarine", 3),
     ("destroyer", 2),
 ]
+
+
+class FireOrder(enum.StrEnum):
+    ALTERNATE = "alternate"
+    UNTIL_MISS = "until_miss"
 
 
 @dataclasses.dataclass
@@ -186,35 +193,45 @@ class Player:
         return self.board.ships
 
 
-class Turn:
-    def __init__(self, player: Player, hostile: Player) -> None:
-        self.player = player
-        self.hostile = hostile
-        self.called = False
+@dataclasses.dataclass
+class FireAttempt:
+    actor: Player
+    coordinate: str
+    subject: Player
+    ship: Ship | None
 
-    def __str__(self) -> str:
-        return f"Turn <{self.player} vs. {self.hostile}>"
+    @property
+    def hit(self) -> bool:
+        return not self.miss
 
-    def strike(self, target: str) -> Ship | None:
-        self.called = True
-        return self.hostile.board.hit_cell(target)
+    @property
+    def miss(self) -> bool:
+        return self.ship is None
 
 
 class Game:
     def __init__(
-        self, player_a: Player, player_b: Player, ship_suite: Iterable[ShipConfig]
+        self,
+        player_a: Player,
+        player_b: Player,
+        ship_suite: Iterable[ShipConfig],
+        fire_order: FireOrder = FireOrder.ALTERNATE,
+        salvo_mode: bool = False,
     ) -> None:
-        self.player_a = player_a
-        self.player_b = player_b
-        self.ship_suite = ship_suite
-        self.reference_fleet = [Ship(*ship_config) for ship_config in ship_suite]
-        self.players: Iterator[tuple[Player, Player]] = cycle(
-            zip([self.player_a, self.player_b], [self.player_b, self.player_a])
-        )
-        self.winner: Player | None = None
+        self._player_a = player_a
+        self._player_b = player_b
+        self._players = {player_a, player_b}
+        self._ship_suite = ship_suite
+        self._fire_order = fire_order
+        self._salvo_mode = salvo_mode
+        self._reference_fleet = [Ship(*ship_config) for ship_config in ship_suite]
+        self._player_cycle = cycle(random.sample([player_a, player_b], k=2))
+        self._current_player = next(self._player_cycle)
+        self._started = False
+        self._winner: Player | None = None
 
     def __str__(self) -> str:
-        return f"Game <{self.player_a} vs {self.player_b}> <Winner: {self.winner}>"
+        return f"Game <{self._player_a} vs {self._player_b}> <Winner: {self._winner}>"
 
     def add_ship(self, player: Player, position: Collection[str], ship_type: ShipType) -> None:
         ship = self._spawn_ship(ship_type)
@@ -228,16 +245,85 @@ class Game:
         player.add_ship(position, ship)
 
     def is_fleet_ready(self, player: Player) -> bool:
-        return player.ships == self.reference_fleet
+        return player.ships == self._reference_fleet
 
     def _spawn_ship(self, ship_type: str) -> Ship:
         try:
             ship_config = next(
-                ship_config for ship_config in self.ship_suite if ship_config[0] == ship_type
+                ship_config for ship_config in self._ship_suite if ship_config[0] == ship_type
             )
             return Ship(*ship_config)
         except StopIteration:
             raise errors.ShipNotFound(f"Cannot spawn a ship of type {ship_type}.")
 
     def _max_ships_for_type(self, ship_type: ShipType) -> int:
-        return len([ship for ship in self.reference_fleet if ship.type == ship_type])
+        return len([ship for ship in self._reference_fleet if ship.type == ship_type])
+
+    @property
+    def current_player(self) -> Player:
+        return self._current_player
+
+    @property
+    def player_under_attack(self) -> Player:
+        return (self._players - {self.current_player}).pop()
+
+    @property
+    def winner(self) -> Player | None:
+        return self._winner
+
+    @property
+    def started(self) -> bool:
+        return self._started
+
+    @property
+    def ended(self) -> bool:
+        return self._winner is not None
+
+    def start(self) -> None:
+        if not (self.is_fleet_ready(self._player_a) and self.is_fleet_ready(self._player_b)):
+            raise errors.ShipsNotPlaced("There are still some ships to be placed before start.")
+
+        self._started = True
+
+    def fire(self, shots: Collection[str]) -> list[FireAttempt]:
+        if not self._started:
+            raise errors.GameNotStarted("Place ships and call `start()` before firing.")
+
+        if self.ended:
+            raise errors.GameEnded(f"{self.winner} won this game.")
+
+        if len(shots) > 1 and not self._salvo_mode:
+            raise errors.TooManyShots("Multiple shots in one turn permitted only in salvo mode.")
+
+        if self._salvo_mode and (len(shots) != self.current_player.ships_alive):
+            raise errors.IncorrectShots(
+                f"Number of shots {len(shots)} must be equal "
+                f"to the number of alive ships {self.current_player.ships_alive}."
+            )
+
+        fire_attempts: list[FireAttempt] = []
+
+        for shot in shots:
+            maybe_ship = self.player_under_attack.board.hit_cell(shot)
+            attempt = FireAttempt(
+                actor=self.current_player,
+                coordinate=shot,
+                subject=self.player_under_attack,
+                ship=maybe_ship,
+            )
+            fire_attempts.append(attempt)
+
+        if self.player_under_attack.ships_alive == 0:
+            self._winner = self.current_player
+            return fire_attempts
+
+        missed = all(attempt.miss for attempt in fire_attempts)
+
+        if (
+            self._fire_order == FireOrder.ALTERNATE
+            or self._fire_order == FireOrder.UNTIL_MISS
+            and missed
+        ):
+            self._current_player = next(self._player_cycle)
+
+        return fire_attempts

@@ -18,10 +18,6 @@ class CellAlreadyShot(BattleshipError):
     pass
 
 
-class TurnUnused(BattleshipError):
-    pass
-
-
 class ShipsNotPlaced(BattleshipError):
     pass
 
@@ -39,4 +35,20 @@ class ShipLimitExceeded(BattleshipError):
 
 
 class InvalidPosition(BattleshipError):
+    pass
+
+
+class GameNotStarted(BattleshipError):
+    pass
+
+
+class GameEnded(BattleshipError):
+    pass
+
+
+class TooManyShots(BattleshipError):
+    pass
+
+
+class IncorrectShots(BattleshipError):
     pass

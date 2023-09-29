@@ -1,3 +1,5 @@
+import random
+
 import pytest
 
 from battleship.engine import domain, errors
@@ -186,23 +188,6 @@ def test_player_ships_left_returns_alive_ships():
     assert player.ships_alive == 0
 
 
-def test_turn_strikes_hostile_ship():
-    player_a_board = domain.Board()
-    player_a = domain.Player(name="player_a", board=player_a_board)
-    player_b = domain.Player(name="player_b", board=domain.Board())
-    ship = domain.Ship(type="ship", hp=2)
-    player_a_board.place_ship(["A3", "A4"], ship=ship)
-    turn = domain.Turn(player=player_b, hostile=player_a)
-
-    hit_ship = turn.strike("A3")
-
-    assert hit_ship is ship
-
-    nothing = turn.strike("B10")
-
-    assert nothing is None
-
-
 def test_game_can_place_ship():
     player_a = domain.Player(name="player_a", board=domain.Board())
     player_b = domain.Player(name="player_b", board=domain.Board())
@@ -272,3 +257,239 @@ def test_game_fleet_ready():
     game.add_ship(player_a, position=["B2", "B3"], ship_type="ship")
 
     assert game.is_fleet_ready(player_a)
+
+
+def test_game_starts_if_fleets_ready():
+    player_a = domain.Player(name="player_a", board=domain.Board())
+    player_b = domain.Player(name="player_b", board=domain.Board())
+    game = domain.Game(player_a, player_b, TEST_SHIP_SUITE)
+    game.add_ship(player_a, position=["A2", "A3"], ship_type="ship")
+    game.add_ship(player_b, position=["A2", "A3"], ship_type="ship")
+
+    game.start()
+
+    assert game.started
+
+
+def test_game_cannot_start_if_fleets_not_ready():
+    player_a = domain.Player(name="player_a", board=domain.Board())
+    player_b = domain.Player(name="player_b", board=domain.Board())
+    game = domain.Game(player_a, player_b, TEST_SHIP_SUITE)
+
+    with pytest.raises(errors.ShipsNotPlaced):
+        game.start()
+
+    assert not game.started
+
+
+def test_game_current_player_and_player_under_attack_differs():
+    random.seed(42)
+    player_a = domain.Player(name="player_a", board=domain.Board())
+    player_b = domain.Player(name="player_b", board=domain.Board())
+    game = domain.Game(player_a, player_b, TEST_SHIP_SUITE)
+
+    assert game.current_player is player_a
+    assert game.player_under_attack is player_b
+
+
+def test_game_cannot_fire_if_not_started():
+    player_a = domain.Player(name="player_a", board=domain.Board())
+    player_b = domain.Player(name="player_b", board=domain.Board())
+    game = domain.Game(player_a, player_b, TEST_SHIP_SUITE)
+
+    with pytest.raises(errors.GameNotStarted):
+        game.fire(["A1"])
+
+
+def test_game_cannot_fire_multiple_shots_if_not_salvo_mode():
+    player_a = domain.Player(name="player_a", board=domain.Board())
+    player_b = domain.Player(name="player_b", board=domain.Board())
+    game = domain.Game(player_a, player_b, TEST_SHIP_SUITE)
+    game.add_ship(player_a, position=["A2", "A3"], ship_type="ship")
+    game.add_ship(player_b, position=["B2", "B3"], ship_type="ship")
+    game.start()
+
+    with pytest.raises(errors.TooManyShots):
+        game.fire(["A1", "A2"])
+
+
+def test_game_shots_count_must_match_ships_count():
+    player_a = domain.Player(name="player_a", board=domain.Board())
+    player_b = domain.Player(name="player_b", board=domain.Board())
+    game = domain.Game(player_a, player_b, TEST_SHIP_SUITE, salvo_mode=True)
+    game.add_ship(player_a, position=["A2", "A3"], ship_type="ship")
+    game.add_ship(player_b, position=["B2", "B3"], ship_type="ship")
+    game.start()
+
+    with pytest.raises(errors.IncorrectShots):
+        game.fire(["A1", "A2"])
+
+
+def test_game_fire_returns_correct_fire_attempt_if_miss():
+    random.seed(42)
+    player_a = domain.Player(name="player_a", board=domain.Board())
+    player_b = domain.Player(name="player_b", board=domain.Board())
+    game = domain.Game(player_a, player_b, TEST_SHIP_SUITE)
+    game.add_ship(player_a, position=["A2", "A3"], ship_type="ship")
+    game.add_ship(player_b, position=["B2", "B3"], ship_type="ship")
+    game.start()
+    attempt: domain.FireAttempt  # type: ignore
+
+    fire_attempts = game.fire(["B4"])
+
+    assert len(fire_attempts) == 1
+
+    [attempt] = fire_attempts
+
+    assert attempt.actor is player_a
+    assert attempt.subject is player_b
+    assert attempt.miss
+
+
+def test_game_fire_returns_correct_fire_attempt_if_hit():
+    random.seed(42)
+    player_a = domain.Player(name="player_a", board=domain.Board())
+    player_b = domain.Player(name="player_b", board=domain.Board())
+    game = domain.Game(player_a, player_b, TEST_SHIP_SUITE)
+    game.add_ship(player_a, position=["A2", "A3"], ship_type="ship")
+    game.add_ship(player_b, position=["B2", "B3"], ship_type="ship")
+    game.start()
+    attempt: domain.FireAttempt  # type: ignore
+
+    fire_attempts = game.fire(["B2"])
+
+    assert len(fire_attempts) == 1
+
+    [attempt] = fire_attempts
+
+    assert attempt.actor is player_a
+    assert attempt.subject is player_b
+    assert attempt.hit
+
+
+def test_game_fire_returns_correct_fire_attempts_salvo_mode():
+    random.seed(42)
+    player_a = domain.Player(name="player_a", board=domain.Board())
+    player_b = domain.Player(name="player_b", board=domain.Board())
+    game = domain.Game(player_a, player_b, TEST_SHIP_SUITE + TEST_SHIP_SUITE, salvo_mode=True)
+    game.add_ship(player_a, position=["A2", "A3"], ship_type="ship")
+    game.add_ship(player_a, position=["C4", "D4"], ship_type="ship")
+    game.add_ship(player_b, position=["B2", "B3"], ship_type="ship")
+    game.add_ship(player_b, position=["F4", "G4"], ship_type="ship")
+    game.start()
+    attempt_hit: domain.FireAttempt  # type: ignore
+    attempt_miss: domain.FireAttempt  # type: ignore
+
+    fire_attempts = game.fire(["B2", "G5"])
+
+    assert len(fire_attempts) == 2
+
+    attempt_hit, attempt_miss = fire_attempts
+
+    assert attempt_miss.actor is attempt_hit.actor is player_a
+    assert attempt_miss.subject is attempt_hit.subject is player_b
+    assert attempt_hit.hit
+    assert attempt_miss.miss
+
+
+def test_game_alternates_players_after_every_shot():
+    random.seed(42)
+    player_a = domain.Player(name="player_a", board=domain.Board())
+    player_b = domain.Player(name="player_b", board=domain.Board())
+    game = domain.Game(player_a, player_b, TEST_SHIP_SUITE)
+    game.add_ship(player_a, position=["A2", "A3"], ship_type="ship")
+    game.add_ship(player_b, position=["B2", "B3"], ship_type="ship")
+    game.start()
+
+    assert game.current_player is player_a
+    assert game.player_under_attack is player_b
+
+    game.fire(["B2"])
+
+    assert game.current_player is player_b
+    assert game.player_under_attack is player_a
+
+    game.fire(["A5"])
+
+    assert game.current_player is player_a
+    assert game.player_under_attack is player_b
+
+
+def test_game_alternates_players_after_first_miss():
+    random.seed(42)
+    player_a = domain.Player(name="player_a", board=domain.Board())
+    player_b = domain.Player(name="player_b", board=domain.Board())
+    game = domain.Game(player_a, player_b, TEST_SHIP_SUITE, fire_order=domain.FireOrder.UNTIL_MISS)
+    game.add_ship(player_a, position=["A2", "A3"], ship_type="ship")
+    game.add_ship(player_b, position=["B2", "B3"], ship_type="ship")
+    game.start()
+
+    assert game.current_player is player_a
+    assert game.player_under_attack is player_b
+
+    game.fire(["B2"])
+
+    assert game.current_player is player_a
+    assert game.player_under_attack is player_b
+
+    game.fire(["B1"])
+
+    assert game.current_player is player_b
+    assert game.player_under_attack is player_a
+
+
+def test_game_alternates_players_after_first_miss_salve_mode():
+    random.seed(42)
+    player_a = domain.Player(name="player_a", board=domain.Board())
+    player_b = domain.Player(name="player_b", board=domain.Board())
+    game = domain.Game(
+        player_a,
+        player_b,
+        TEST_SHIP_SUITE + TEST_SHIP_SUITE,
+        fire_order=domain.FireOrder.UNTIL_MISS,
+        salvo_mode=True,
+    )
+    game.add_ship(player_a, position=["A2", "A3"], ship_type="ship")
+    game.add_ship(player_a, position=["C4", "D4"], ship_type="ship")
+    game.add_ship(player_b, position=["B2", "B3"], ship_type="ship")
+    game.add_ship(player_b, position=["F4", "G4"], ship_type="ship")
+    game.start()
+
+    assert game.current_player is player_a
+    assert game.player_under_attack is player_b
+
+    game.fire(["B2", "C3"])  # One hit, one miss.
+
+    assert game.current_player is player_a
+    assert game.player_under_attack is player_b
+
+    game.fire(["B1", "F5"])  # Both miss.
+
+    assert game.current_player is player_b
+    assert game.player_under_attack is player_a
+
+
+def test_game_ends_if_player_has_no_more_ships():
+    random.seed(42)
+    player_a = domain.Player(name="player_a", board=domain.Board())
+    player_b = domain.Player(name="player_b", board=domain.Board())
+    game = domain.Game(player_a, player_b, TEST_SHIP_SUITE + TEST_SHIP_SUITE)
+    game.add_ship(player_a, position=["A2", "A3"], ship_type="ship")
+    game.add_ship(player_a, position=["C4", "D4"], ship_type="ship")
+    game.add_ship(player_b, position=["B2", "B3"], ship_type="ship")
+    game.add_ship(player_b, position=["F4", "G4"], ship_type="ship")
+    game.start()
+
+    game.fire(["B2"])  # Player A hit.
+    game.fire(["A4"])  # Player B missed.
+    game.fire(["B3"])  # Player A hit. Ship sunk.
+    game.fire(["D4"])  # Player B hit.
+    game.fire(["F4"])  # Player A hit.
+    game.fire(["C4"])  # Player B hit. Ship sunk.
+    game.fire(["G4"])  # Player A hit. Ship sunk.
+
+    assert game.winner is player_a
+    assert game.ended
+
+    with pytest.raises(errors.GameEnded):
+        game.fire(["A1"])
