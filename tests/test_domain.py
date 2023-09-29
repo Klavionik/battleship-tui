@@ -172,18 +172,16 @@ def test_board_shooting():
 
 
 def test_player_ships_left_returns_alive_ships():
-    board = domain.Board()
-    player = domain.Player(name="player", board=board)
-    ship = domain.Ship(type="ship", hp=2)
-    board.place_ship(["A3", "A4"], ship=ship)
+    player = domain.Player(name="player", board=domain.Board())
+    player.add_ship(["A3", "A4"], ship=domain.Ship(type="ship", hp=2))
 
     assert player.ships_alive == 1
 
-    board.hit_cell("A3")
+    player.attack("A3")
 
     assert player.ships_alive == 1
 
-    board.hit_cell("A4")
+    player.attack("A4")
 
     assert player.ships_alive == 0
 

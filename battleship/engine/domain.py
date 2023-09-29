@@ -181,6 +181,9 @@ class Player:
     def add_ship(self, position: Collection[str], ship: Ship) -> None:
         self.board.place_ship(position, ship)
 
+    def attack(self, coordinate: str) -> Ship | None:
+        return self.board.hit_cell(coordinate)
+
     def count_ships(self, ship_type: ShipType) -> int:
         return len([ship for ship in self.board.ships if ship.type == ship_type])
 
@@ -304,7 +307,7 @@ class Game:
         fire_attempts: list[FireAttempt] = []
 
         for shot in shots:
-            maybe_ship = self.player_under_attack.board.hit_cell(shot)
+            maybe_ship = self.player_under_attack.attack(shot)
             attempt = FireAttempt(
                 actor=self.current_player,
                 coordinate=shot,
