@@ -103,11 +103,10 @@ def is_valid_position(coordinates: Iterable[str]) -> None:
 
 
 class Board:
-    def __init__(self, cols: int = 10, rows: int = 10) -> None:
-        self._cols = cols
-        self._rows = rows
-        self._letters = string.ascii_uppercase[:cols]
-        self._numbers = tuple(range(1, rows + 1))
+    def __init__(self, size: int = 10) -> None:
+        self._size = size
+        self._letters = string.ascii_uppercase[:size]
+        self._numbers = tuple(range(1, size + 1))
         self.grid = [[Cell(col, row) for col in self._letters] for row in self._numbers]
         self.ships: list[Ship] = []
 
