@@ -60,7 +60,7 @@ class Cell:
         if self.ship is not None:
             self.ship.damage()
 
-    def assign_ship(self, ship: Ship) -> None:
+    def set_ship(self, ship: Ship) -> None:
         if self.ship is not None:
             raise errors.CellTaken(f"Cell {self} already has a ship.")
 
@@ -159,7 +159,7 @@ class Board:
 
         for coordinate in position:
             cell = self.get_cell(coordinate)
-            cell.assign_ship(ship)
+            cell.set_ship(ship)
 
         self.ships.append(ship)
 

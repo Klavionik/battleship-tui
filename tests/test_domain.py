@@ -45,7 +45,7 @@ def test_cell_can_be_assigned_ship():
     ship = domain.Ship(type="ship", hp=1)
     cell = domain.Cell("A", 1)
 
-    cell.assign_ship(ship)
+    cell.set_ship(ship)
 
     assert cell.ship is ship
 
@@ -82,10 +82,10 @@ def test_cell_cannot_assign_ship_twice():
     ship = domain.Ship(type="ship", hp=3)
     another_ship = domain.Ship(type="ship", hp=3)
 
-    cell.assign_ship(ship)
+    cell.set_ship(ship)
 
     with pytest.raises(errors.CellTaken):
-        cell.assign_ship(another_ship)
+        cell.set_ship(another_ship)
 
 
 @pytest.mark.parametrize("coord", ["A3", "B5", "I10"])
