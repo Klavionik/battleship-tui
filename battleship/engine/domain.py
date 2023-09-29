@@ -170,9 +170,9 @@ class Board:
 
 
 class Player:
-    def __init__(self, name: str, board: Board) -> None:
+    def __init__(self, name: str, board: Board | None = None) -> None:
         self.name = name
-        self.board = board
+        self.board = board or Board()
 
     def __str__(self) -> str:
         return self.name
