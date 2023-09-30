@@ -21,15 +21,7 @@ class Algorithm(ABC):
 
 class RandomAlgorithm(Algorithm):
     def find_next_targets(self, board: domain.Board, count: int) -> list[domain.Cell]:
-        candidates: list[domain.Cell] = []
-
-        for row in board.grid:
-            for cell in row:
-                if cell.is_shot:
-                    continue
-
-                candidates.append(cell)
-
+        candidates = [cell for cell in board.cells if not cell.is_shot]
         return random.sample(candidates, k=min(len(candidates), count))
 
 
@@ -50,37 +42,34 @@ class Autoplacer:
 
     def place(self, ship_type: domain.ShipType) -> list[str]:
         ship_hp = self.ship_hp_map[ship_type]
-        candidates: list[str] = []
-        cells = [cell for row in self.board.grid for cell in row if cell.ship is None]
-        arranged = False
+        position: list[str] = []
+        empty_cells = [cell for cell in self.board.cells if cell.ship is None]
 
-        while not arranged:
+        while len(position) != ship_hp:
             direction = random.choice(list(ShipDirection))
-            next_cell: domain.Cell = random.choice(cells)
+            next_cell: domain.Cell = random.choice(empty_cells)
 
             for _ in range(ship_hp):
+                match direction:
+                    case ShipDirection.UP:
+                        coord = next_cell.uppper_coordinate
+                    case ShipDirection.DOWN:
+                        coord = next_cell.lower_coordinate
+                    case ShipDirection.LEFT:
+                        coord = next_cell.left_coordinate
+                    case _:
+                        coord = next_cell.right_coordinate
+
                 try:
-                    match direction:
-                        case ShipDirection.UP:
-                            coord = next_cell.uppper_coordinate
-                        case ShipDirection.DOWN:
-                            coord = next_cell.lower_coordinate
-                        case ShipDirection.LEFT:
-                            coord = next_cell.left_coordinate
-                        case _:
-                            coord = next_cell.right_coordinate
-
                     next_cell = self.board.get_cell(coord)
-
-                    if next_cell.ship is not None:
-                        candidates.clear()
-                        break
-
-                    candidates.append(next_cell.coordinate)
                 except errors.CellOutOfRange:
-                    candidates.clear()
+                    position.clear()
                     break
-            else:
-                arranged = True
 
-        return candidates
+                if next_cell.ship is not None:
+                    position.clear()
+                    break
+
+                position.append(next_cell.coordinate)
+
+        return position

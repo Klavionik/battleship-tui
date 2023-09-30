@@ -1,5 +1,7 @@
 import random
 
+import pytest
+
 from battleship.engine import ai, domain
 
 
@@ -25,12 +27,23 @@ def test_random_algorithm_doesnt_target_shot_cells():
     assert targets == [board.grid[1][0], board.grid[1][1]]
 
 
-def test_autoplace_can_arrange_a_fleet():
+@pytest.mark.parametrize("ship", [*domain.CLASSIC_SHIP_SUITE])
+def test_autoplacer_position_matches_ship_hp(ship):
+    type_, hp = ship
     board = domain.Board()
-    suite = domain.CLASSIC_SHIP_SUITE
-    arranger = ai.Autoplacer(board, suite)
+    autoplacer = ai.Autoplacer(board, domain.CLASSIC_SHIP_SUITE)
 
-    for type_, hp in random.sample(suite, k=len(suite)):
-        ship = domain.Ship(type_, hp)
-        posiiton = arranger.place(type_)
-        board.place_ship(posiiton, ship)
+    position = autoplacer.place(ship_type=type_)
+
+    assert len(position) == hp
+
+
+@pytest.mark.parametrize("ship", [*domain.CLASSIC_SHIP_SUITE])
+def test_autoplacer_position_is_valid(ship):
+    type_, hp = ship
+    board = domain.Board()
+    autoplacer = ai.Autoplacer(board, domain.CLASSIC_SHIP_SUITE)
+
+    position = autoplacer.place(ship_type=type_)
+
+    assert domain.is_valid_position(position) is None

@@ -3,6 +3,7 @@ import enum
 import itertools
 import random
 import string
+from functools import cached_property
 from itertools import cycle
 from typing import Callable, Collection, Iterable, TypeAlias
 
@@ -160,6 +161,10 @@ class Board:
             raise errors.CellOutOfRange(f"No row {row} in range {self._numbers}.")
 
         return col_index, row_index
+
+    @cached_property
+    def cells(self) -> list[Cell]:
+        return [cell for row in self.grid for cell in row]
 
     def get_cell(self, coordinate: str) -> Cell:
         col, row = self._coordinate_to_index(coordinate)
