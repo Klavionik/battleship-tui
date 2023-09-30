@@ -491,3 +491,12 @@ def test_game_ends_if_player_has_no_more_ships():
 
     with pytest.raises(errors.GameEnded):
         game.fire(["A1"])
+
+
+def test_cell_knows_its_neighbors():
+    cell = domain.Cell(col="B", row=2)
+
+    assert cell.uppper_coordinate == "B1"
+    assert cell.lower_coordinate == "B3"
+    assert cell.right_coordinate == "C2"
+    assert cell.left_coordinate == "A2"

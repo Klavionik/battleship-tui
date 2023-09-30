@@ -70,6 +70,22 @@ class Cell:
     def coordinate(self) -> str:
         return f"{self.col}{self.row}"
 
+    @property
+    def left_coordinate(self) -> str:
+        return f"{chr(ord(self.col) - 1)}{self.row}"
+
+    @property
+    def right_coordinate(self) -> str:
+        return f"{chr(ord(self.col) + 1)}{self.row}"
+
+    @property
+    def uppper_coordinate(self) -> str:
+        return f"{self.col}{self.row - 1}"
+
+    @property
+    def lower_coordinate(self) -> str:
+        return f"{self.col}{self.row + 1}"
+
 
 def parse_coordinate(coordinate: str) -> tuple[str, int]:
     try:
