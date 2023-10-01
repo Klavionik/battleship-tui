@@ -1,7 +1,6 @@
 # mypy: ignore-errors
-import queue
+import asyncio
 import string
-from time import sleep
 from typing import Callable
 
 from rich.emoji import EMOJI
@@ -26,7 +25,7 @@ class Simulator:
     def __init__(
         self,
         game: domain.Game,
-        q: queue.Queue,
+        q: asyncio.Queue,
         callback: Callable[[domain.Player], None],
         logger: Callable[[Text], None],
     ):
@@ -45,7 +44,7 @@ class Simulator:
 
             self.update_callback(player)
 
-    def run(self):
+    async def run(self):
         self.autoplace()
         callers = {
             self.game.current_player: ai.TargetCaller(self.game.player_under_attack.board),
@@ -56,7 +55,7 @@ class Simulator:
         self.log(Text("Game started", style="bold yellow"))
         moves_count = 0
 
-        while event := self.queue.get():
+        while event := await self.queue.get():
             if event is STOP:
                 self.log(Text("Stop simulation", style="bold red"))
                 return
@@ -156,7 +155,7 @@ class SimulatorApp(App):
         super().__init__(*args, **kwargs)
         self.game: domain.Game = game_factory()
         self.game_factory = game_factory
-        self.game_queue: queue.Queue = queue.Queue()
+        self.game_queue = asyncio.Queue()
         self._run_simulator = False
         self._footer = Footer()
         self._fast_forward = False
@@ -183,12 +182,12 @@ class SimulatorApp(App):
         self._run_simulator = False
         self.update_bindings(step_simulation_bindings)
 
-    def action_move(self):
+    async def action_move(self):
         if self.game.ended:
-            self.game_queue.put(False)
+            await self.game_queue.put(False)
             return
 
-        self.game_queue.put(True)
+        await self.game_queue.put(True)
 
     def action_fast_forward(self):
         self._fast_forward = not self._fast_forward
@@ -196,16 +195,16 @@ class SimulatorApp(App):
     def action_run(self):
         self._run_simulator = True
 
-        def runner():
+        async def runner():
             while self._run_simulator:
                 if self.game.ended:
-                    self.game_queue.put(False)
+                    await self.game_queue.put(False)
                     return
 
-                self.game_queue.put(True)
-                sleep(0.05 if self._fast_forward else 1)
+                await self.game_queue.put(True)
+                await asyncio.sleep(0.05 if self._fast_forward else 1)
 
-        self.run_worker(runner, thread=True)
+        self.run_worker(runner)
         self.update_bindings(run_simulation_bindings)
 
     def update_bindings(self, new_bindings: list[tuple[str, str, str]]):
@@ -233,7 +232,7 @@ class SimulatorApp(App):
             callback=self.refresh_board,
             logger=self.write_log,
         )
-        self.run_worker(simulator.run, thread=True)
+        self.run_worker(simulator.run)
 
     def refresh_board(self, player: domain.Player):
         [widget] = [widget for widget in self.query(GameBoard) if widget.player == player.name]
@@ -254,4 +253,4 @@ def make_game():
 
 if __name__ == "__main__":
     app = SimulatorApp(game_factory=make_game)
-    app.run()
+    asyncio.run(app.run_async(), debug=True)
