@@ -241,12 +241,12 @@ class Game:
         fire_order: FireOrder = FireOrder.ALTERNATE,
         salvo_mode: bool = False,
     ) -> None:
+        self.players = {player_a, player_b}
+        self.ship_suite = ship_suite
+        self.fire_order = fire_order
+        self.salvo_mode = salvo_mode
         self._player_a = player_a
         self._player_b = player_b
-        self._players = {player_a, player_b}
-        self._ship_suite = ship_suite
-        self._fire_order = fire_order
-        self._salvo_mode = salvo_mode
         self._reference_fleet = [Ship(*ship_config) for ship_config in ship_suite]
         self._player_cycle = cycle(random.sample([player_a, player_b], k=2))
         self._current_player = next(self._player_cycle)
@@ -273,7 +273,7 @@ class Game:
     def _spawn_ship(self, ship_type: str) -> Ship:
         try:
             ship_config = next(
-                ship_config for ship_config in self._ship_suite if ship_config[0] == ship_type
+                ship_config for ship_config in self.ship_suite if ship_config[0] == ship_type
             )
             return Ship(*ship_config)
         except StopIteration:
@@ -288,7 +288,7 @@ class Game:
 
     @property
     def player_under_attack(self) -> Player:
-        return (self._players - {self.current_player}).pop()
+        return (self.players - {self.current_player}).pop()
 
     @property
     def winner(self) -> Player | None:
@@ -315,10 +315,10 @@ class Game:
         if self.ended:
             raise errors.GameEnded(f"{self.winner} won this game.")
 
-        if len(shots) > 1 and not self._salvo_mode:
+        if len(shots) > 1 and not self.salvo_mode:
             raise errors.TooManyShots("Multiple shots in one turn permitted only in salvo mode.")
 
-        if self._salvo_mode and (len(shots) != self.current_player.ships_alive):
+        if self.salvo_mode and (len(shots) != self.current_player.ships_alive):
             raise errors.IncorrectShots(
                 f"Number of shots {len(shots)} must be equal "
                 f"to the number of alive ships {self.current_player.ships_alive}."
@@ -343,8 +343,8 @@ class Game:
         missed = all(attempt.miss for attempt in fire_attempts)
 
         if (
-            self._fire_order == FireOrder.ALTERNATE
-            or self._fire_order == FireOrder.UNTIL_MISS
+            self.fire_order == FireOrder.ALTERNATE
+            or self.fire_order == FireOrder.UNTIL_MISS
             and missed
         ):
             self._current_player = next(self._player_cycle)
