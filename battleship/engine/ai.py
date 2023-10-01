@@ -1,7 +1,7 @@
 import enum
 import random
 from abc import ABC, abstractmethod
-from typing import Collection, Iterable
+from typing import Iterable
 
 from battleship.engine import domain, errors
 
@@ -30,7 +30,7 @@ class TargetCaller:
         self.enemy = enemy_board
         self.algorithm = algorithm or RandomAlgorithm()
 
-    def call_out(self, *, count: int = 1) -> Collection[str]:
+    def call_out(self, *, count: int = 1) -> list[str]:
         cells = self.algorithm.find_next_targets(self.enemy, count)
         return [cell.coordinate for cell in cells]
 
