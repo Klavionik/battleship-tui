@@ -496,7 +496,7 @@ def test_game_ends_if_player_has_no_more_ships():
 def test_cell_knows_its_neighbors():
     cell = domain.Cell(col="B", row=2)
 
-    assert cell.uppper_coordinate == "B1"
+    assert cell.upper_coordinate == "B1"
     assert cell.lower_coordinate == "B3"
     assert cell.right_coordinate == "C2"
     assert cell.left_coordinate == "A2"

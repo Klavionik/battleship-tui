@@ -49,8 +49,8 @@ class Cell:
         self.ship: Ship | None = None
         self.is_shot = False
 
-    def __str__(self) -> str:
-        return self.coordinate
+    def __repr__(self) -> str:
+        return f"Cell <{self.coordinate}>"
 
     def hit(self) -> None:
         if self.is_shot:
@@ -80,7 +80,7 @@ class Cell:
         return f"{chr(ord(self.col) + 1)}{self.row}"
 
     @property
-    def uppper_coordinate(self) -> str:
+    def upper_coordinate(self) -> str:
         return f"{self.col}{self.row - 1}"
 
     @property

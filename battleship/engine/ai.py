@@ -52,7 +52,7 @@ class Autoplacer:
             for _ in range(ship_hp):
                 match direction:
                     case ShipDirection.UP:
-                        coord = next_cell.uppper_coordinate
+                        coord = next_cell.upper_coordinate
                     case ShipDirection.DOWN:
                         coord = next_cell.lower_coordinate
                     case ShipDirection.LEFT:
