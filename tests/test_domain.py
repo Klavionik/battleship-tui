@@ -493,10 +493,16 @@ def test_game_ends_if_player_has_no_more_ships():
         game.fire(["A1"])
 
 
-def test_cell_knows_its_neighbors():
-    cell = domain.Cell(col="B", row=2)
+def test_board_gets_adjacent_cell():
+    board = domain.Board(size=5)
+    cell = domain.Cell(col="B", row=1)
 
-    assert cell.upper_coordinate == "B1"
-    assert cell.lower_coordinate == "B3"
-    assert cell.right_coordinate == "C2"
-    assert cell.left_coordinate == "A2"
+    up = board.get_adjacent_cell(cell, domain.Direction.UP)
+    down = board.get_adjacent_cell(cell, domain.Direction.DOWN)
+    right = board.get_adjacent_cell(cell, domain.Direction.RIGHT)
+    left = board.get_adjacent_cell(cell, domain.Direction.LEFT)
+
+    assert up is None
+    assert down.coordinate == "B2"
+    assert right.coordinate == "C1"
+    assert left.coordinate == "A1"

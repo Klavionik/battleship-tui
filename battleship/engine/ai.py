@@ -1,16 +1,8 @@
-import enum
 import random
 from collections import deque
 from typing import Iterable
 
-from battleship.engine import domain, errors
-
-
-class ShipDirection(enum.StrEnum):
-    UP = "up"
-    DOWN = "down"
-    LEFT = "left"
-    RIGHT = "right"
+from battleship.engine import domain
 
 
 class TargetCaller:
@@ -46,20 +38,14 @@ class TargetCaller:
         return random.sample(candidates, k=min(len(candidates), count))
 
     def _find_neighbor_cells(self, cell: domain.Cell) -> list[domain.Cell]:
-        directions = ["upper", "lower", "right", "left"]
-        coordinates = [getattr(cell, f"{direction}_coordinate") for direction in directions]
         cells = []
 
-        for coord in coordinates:
-            try:
-                cell = self.enemy.get_cell(coord)
-            except errors.CellOutOfRange:
-                pass
-            else:
-                if cell.is_shot or cell in self.next_targets:
-                    continue
+        for direction in list(domain.Direction):
+            candidate = self.enemy.get_adjacent_cell(cell, direction)  # type: ignore[arg-type]
+            if candidate is None or candidate.is_shot or candidate in self.next_targets:
+                continue
 
-                cells.append(cell)
+            cells.append(candidate)
 
         return cells
 
@@ -75,30 +61,17 @@ class Autoplacer:
         empty_cells = [cell for cell in self.board.cells if cell.ship is None]
 
         while len(position) != ship_hp:
-            direction = random.choice(list(ShipDirection))
-            next_cell: domain.Cell = random.choice(empty_cells)
+            direction: domain.Direction = random.choice(list(domain.Direction))  # type: ignore
+            start_cell = random.choice(empty_cells)
 
             for _ in range(ship_hp):
-                match direction:
-                    case ShipDirection.UP:
-                        coord = next_cell.upper_coordinate
-                    case ShipDirection.DOWN:
-                        coord = next_cell.lower_coordinate
-                    case ShipDirection.LEFT:
-                        coord = next_cell.left_coordinate
-                    case _:
-                        coord = next_cell.right_coordinate
+                next_cell = self.board.get_adjacent_cell(start_cell, direction)
 
-                try:
-                    next_cell = self.board.get_cell(coord)
-                except errors.CellOutOfRange:
-                    position.clear()
-                    break
-
-                if next_cell.ship is not None:
+                if next_cell is None or next_cell.ship is not None:
                     position.clear()
                     break
 
                 position.append(next_cell.coordinate)
+                start_cell = next_cell
 
         return position

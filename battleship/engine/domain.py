@@ -23,6 +23,13 @@ CLASSIC_SHIP_SUITE = [
 ]
 
 
+class Direction(enum.StrEnum):
+    UP = "up"
+    DOWN = "down"
+    RIGHT = "right"
+    LEFT = "left"
+
+
 class FireOrder(enum.StrEnum):
     ALTERNATE = "alternate"
     UNTIL_MISS = "until_miss"
@@ -70,22 +77,6 @@ class Cell:
     @property
     def coordinate(self) -> str:
         return f"{self.col}{self.row}"
-
-    @property
-    def left_coordinate(self) -> str:
-        return f"{chr(ord(self.col) - 1)}{self.row}"
-
-    @property
-    def right_coordinate(self) -> str:
-        return f"{chr(ord(self.col) + 1)}{self.row}"
-
-    @property
-    def upper_coordinate(self) -> str:
-        return f"{self.col}{self.row - 1}"
-
-    @property
-    def lower_coordinate(self) -> str:
-        return f"{self.col}{self.row + 1}"
 
 
 def parse_coordinate(coordinate: str) -> tuple[str, int]:
@@ -165,6 +156,24 @@ class Board:
     @cached_property
     def cells(self) -> list[Cell]:
         return [cell for row in self.grid for cell in row]
+
+    def get_adjacent_cell(self, cell: Cell, direction: Direction) -> Cell | None:
+        coordinate = ""
+
+        match direction:
+            case Direction.UP:
+                coordinate = f"{cell.col}{cell.row - 1}"
+            case Direction.DOWN:
+                coordinate = f"{cell.col}{cell.row + 1}"
+            case Direction.RIGHT:
+                coordinate = f"{chr(ord(cell.col) + 1)}{cell.row}"
+            case Direction.LEFT:
+                coordinate = f"{chr(ord(cell.col) - 1)}{cell.row}"
+
+        try:
+            return self.get_cell(coordinate)
+        except errors.CellOutOfRange:
+            return None
 
     def get_cell(self, coordinate: str) -> Cell:
         col, row = self._coordinate_to_index(coordinate)
