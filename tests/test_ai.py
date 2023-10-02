@@ -13,18 +13,18 @@ def test_target_caller_calls_correct_amount_of_targets():
     assert len(target_caller.call_out(count=5)) == 5
 
 
-def test_random_algorithm_doesnt_target_shot_cells():
+def test_target_caller_doesnt_target_shot_cells():
     random.seed(42)
     board = domain.Board(size=2)
-    algorithm = ai.RandomAlgorithm()
+    caller = ai.TargetCaller(board)
 
     board.grid[0][0].hit()
     board.grid[0][1].hit()
 
     # Request 4 targets, but only 2 cells are not shot yet.
-    targets = algorithm.find_next_targets(board, count=4)
+    targets = caller.call_out(count=4)
 
-    assert targets == [board.grid[1][0], board.grid[1][1]]
+    assert targets == [board.grid[1][0].coordinate, board.grid[1][1].coordinate]
 
 
 @pytest.mark.parametrize("ship", [*domain.CLASSIC_SHIP_SUITE])
