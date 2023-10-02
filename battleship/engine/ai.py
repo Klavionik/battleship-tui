@@ -60,6 +60,8 @@ class Autoplacer:
         position: list[str] = []
         empty_cells = [cell for cell in self.board.cells if cell.ship is None]
 
+        # TODO: This loop hangs if there is no valid position for a ship.
+        # Probably I should try all 4 directions for every start_cell and then mark it as visited.
         while len(position) != ship_hp:
             direction: domain.Direction = random.choice(list(domain.Direction))  # type: ignore
             start_cell = random.choice(empty_cells)
