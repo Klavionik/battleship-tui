@@ -121,12 +121,6 @@ class Board:
     def __str__(self) -> str:
         return f"Board, {len(self.ships)} ships left"
 
-    def __contains__(self, item: Ship) -> bool:
-        if not isinstance(item, Ship):
-            raise TypeError(f"Cannot test if board contains {type(item)}.")
-
-        return item in self.ships
-
     def __getitem__(self, coordinate: str) -> Cell:
         return self.get_cell(coordinate)
 
@@ -188,8 +182,7 @@ class Board:
         is_valid_position(position)
 
         for coordinate in position:
-            cell = self.get_cell(coordinate)
-            cell.set_ship(ship)
+            self.get_cell(coordinate).set_ship(ship)
 
         self.ships.append(ship)
 

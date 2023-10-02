@@ -6,8 +6,8 @@ from battleship.engine import domain
 
 
 class TargetCaller:
-    def __init__(self, enemy: domain.Board) -> None:
-        self.enemy = enemy
+    def __init__(self, board: domain.Board) -> None:
+        self.board = board
         self.next_targets: deque[domain.Cell] = deque()
 
     def call_out(self, *, count: int = 1) -> list[str]:
@@ -17,7 +17,7 @@ class TargetCaller:
     def provide_feedback(self, outcome: Iterable[domain.FireAttempt]) -> None:
         for attempt in outcome:
             if attempt.hit and not attempt.ship.destroyed:  # type: ignore
-                neighbors = self._find_neighbor_cells(self.enemy.get_cell(attempt.coordinate))
+                neighbors = self._find_neighbor_cells(self.board.get_cell(attempt.coordinate))
                 self.next_targets.extend(neighbors)
 
     def _get_targets(self, count: int) -> list[domain.Cell]:
@@ -34,14 +34,14 @@ class TargetCaller:
         return targets
 
     def _find_random_targets(self, count: int) -> list[domain.Cell]:
-        candidates = [cell for cell in self.enemy.cells if not cell.is_shot]
+        candidates = [cell for cell in self.board.cells if not cell.is_shot]
         return random.sample(candidates, k=min(len(candidates), count))
 
     def _find_neighbor_cells(self, cell: domain.Cell) -> list[domain.Cell]:
         cells = []
 
         for direction in list(domain.Direction):
-            candidate = self.enemy.get_adjacent_cell(cell, direction)  # type: ignore[arg-type]
+            candidate = self.board.get_adjacent_cell(cell, direction)  # type: ignore[arg-type]
             if candidate is None or candidate.is_shot or candidate in self.next_targets:
                 continue
 

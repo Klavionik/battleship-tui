@@ -122,7 +122,7 @@ def test_board_places_ship():
     cell_a4 = board["A4"]
     cell_a5 = board["A5"]
 
-    assert ship in board
+    assert ship in board.ships
     assert cell_a3.ship is ship
     assert cell_a4.ship is ship
     assert cell_a5.ship is ship
@@ -148,13 +148,6 @@ def test_board_raises_exc_if_invalid_position():
 
     with pytest.raises(errors.InvalidPosition):
         board.place_ship(["B1", "C1", "C3"], ship=ship)
-
-
-def test_board_can_test_only_ship_membership():
-    board = domain.Board()
-
-    with pytest.raises(TypeError):
-        _ = "something" in board  # noqa
 
 
 def test_board_shooting():
@@ -193,7 +186,7 @@ def test_game_can_place_ship():
 
     game.add_ship(player_a, position=["A3", "A4"], ship_type="ship")
 
-    assert domain.Ship("ship", 2) in player_a.board
+    assert domain.Ship("ship", 2) in player_a.ships
 
 
 def test_game_raises_exc_if_ship_limit_exceeded():
@@ -222,7 +215,7 @@ def test_player_can_add_ship():
 
     player.add_ship(["A2", "A3"], ship)
 
-    assert ship in player.board
+    assert ship in player.ships
 
 
 def test_player_can_count_ships_by_type():
