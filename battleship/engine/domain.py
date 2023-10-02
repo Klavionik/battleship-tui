@@ -219,7 +219,7 @@ class Player:
 
 
 @dataclasses.dataclass
-class FireAttempt:
+class Shot:
     actor: Player
     coordinate: str
     subject: Player
@@ -310,39 +310,39 @@ class Game:
 
         self._started = True
 
-    def fire(self, shots: Collection[str]) -> list[FireAttempt]:
+    def fire(self, coordinates: Collection[str]) -> list[Shot]:
         if not self._started:
             raise errors.GameNotStarted("Place ships and call `start()` before firing.")
 
         if self.ended:
             raise errors.GameEnded(f"{self.winner} won this game.")
 
-        if len(shots) > 1 and not self.salvo_mode:
+        if len(coordinates) > 1 and not self.salvo_mode:
             raise errors.TooManyShots("Multiple shots in one turn permitted only in salvo mode.")
 
-        if self.salvo_mode and (len(shots) != self.current_player.ships_alive):
+        if self.salvo_mode and (len(coordinates) != self.current_player.ships_alive):
             raise errors.IncorrectShots(
-                f"Number of shots {len(shots)} must be equal "
+                f"Number of shots {len(coordinates)} must be equal "
                 f"to the number of alive ships {self.current_player.ships_alive}."
             )
 
-        fire_attempts: list[FireAttempt] = []
+        shots: list[Shot] = []
 
-        for shot in shots:
-            maybe_ship = self.player_under_attack.attack(shot)
-            attempt = FireAttempt(
+        for coordinate in coordinates:
+            maybe_ship = self.player_under_attack.attack(coordinate)
+            shot = Shot(
                 actor=self.current_player,
-                coordinate=shot,
+                coordinate=coordinate,
                 subject=self.player_under_attack,
                 ship=maybe_ship,
             )
-            fire_attempts.append(attempt)
+            shots.append(shot)
 
         if self.player_under_attack.ships_alive == 0:
             self._winner = self.current_player
-            return fire_attempts
+            return shots
 
-        missed = all(attempt.miss for attempt in fire_attempts)
+        missed = all(shot.miss for shot in shots)
 
         if (
             self.firing_order == FiringOrder.ALTERNATE
@@ -351,4 +351,4 @@ class Game:
         ):
             self._current_player = next(self._player_cycle)
 
-        return fire_attempts
+        return shots

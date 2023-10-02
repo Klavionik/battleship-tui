@@ -14,10 +14,10 @@ class TargetCaller:
         cells = self._get_targets(count)
         return [cell.coordinate for cell in cells]
 
-    def provide_feedback(self, outcome: Iterable[domain.FireAttempt]) -> None:
-        for attempt in outcome:
-            if attempt.hit and not attempt.ship.destroyed:  # type: ignore
-                neighbors = self._find_neighbor_cells(self.board.get_cell(attempt.coordinate))
+    def provide_feedback(self, shots: Iterable[domain.Shot]) -> None:
+        for shot in shots:
+            if shot.hit and not shot.ship.destroyed:  # type: ignore
+                neighbors = self._find_neighbor_cells(self.board.get_cell(shot.coordinate))
                 self.next_targets.extend(neighbors)
 
     def _get_targets(self, count: int) -> list[domain.Cell]:

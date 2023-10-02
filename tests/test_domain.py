@@ -324,7 +324,7 @@ def test_game_fire_returns_correct_fire_attempt_if_miss():
     game.add_ship(player_a, position=["A2", "A3"], ship_type="ship")
     game.add_ship(player_b, position=["B2", "B3"], ship_type="ship")
     game.start()
-    attempt: domain.FireAttempt  # type: ignore
+    attempt: domain.Result  # type: ignore
 
     fire_attempts = game.fire(["B4"])
 
@@ -345,7 +345,7 @@ def test_game_fire_returns_correct_fire_attempt_if_hit():
     game.add_ship(player_a, position=["A2", "A3"], ship_type="ship")
     game.add_ship(player_b, position=["B2", "B3"], ship_type="ship")
     game.start()
-    attempt: domain.FireAttempt  # type: ignore
+    attempt: domain.Result  # type: ignore
 
     fire_attempts = game.fire(["B2"])
 
@@ -368,8 +368,8 @@ def test_game_fire_returns_correct_fire_attempts_salvo_mode():
     game.add_ship(player_b, position=["B2", "B3"], ship_type="ship")
     game.add_ship(player_b, position=["F4", "G4"], ship_type="ship")
     game.start()
-    attempt_hit: domain.FireAttempt  # type: ignore
-    attempt_miss: domain.FireAttempt  # type: ignore
+    attempt_hit: domain.Result  # type: ignore
+    attempt_miss: domain.Result  # type: ignore
 
     fire_attempts = game.fire(["B2", "G5"])
 
