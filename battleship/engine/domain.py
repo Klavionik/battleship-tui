@@ -30,7 +30,7 @@ class Direction(enum.StrEnum):
     LEFT = "left"
 
 
-class FireOrder(enum.StrEnum):
+class FiringOrder(enum.StrEnum):
     ALTERNATE = "alternate"
     UNTIL_MISS = "until_miss"
 
@@ -240,12 +240,12 @@ class Game:
         player_a: Player,
         player_b: Player,
         ship_suite: Iterable[ShipConfig],
-        fire_order: FireOrder = FireOrder.ALTERNATE,
+        firing_order: FiringOrder = FiringOrder.ALTERNATE,
         salvo_mode: bool = False,
     ) -> None:
         self.players = {player_a, player_b}
         self.ship_suite = ship_suite
-        self.fire_order = fire_order
+        self.firing_order = firing_order
         self.salvo_mode = salvo_mode
         self._player_a = player_a
         self._player_b = player_b
@@ -345,8 +345,8 @@ class Game:
         missed = all(attempt.miss for attempt in fire_attempts)
 
         if (
-            self.fire_order == FireOrder.ALTERNATE
-            or self.fire_order == FireOrder.UNTIL_MISS
+            self.firing_order == FiringOrder.ALTERNATE
+            or self.firing_order == FiringOrder.UNTIL_MISS
             and missed
         ):
             self._current_player = next(self._player_cycle)

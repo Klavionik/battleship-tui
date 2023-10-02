@@ -410,7 +410,9 @@ def test_game_alternates_players_after_first_miss():
     random.seed(42)
     player_a = domain.Player(name="player_a")
     player_b = domain.Player(name="player_b")
-    game = domain.Game(player_a, player_b, TEST_SHIP_SUITE, fire_order=domain.FireOrder.UNTIL_MISS)
+    game = domain.Game(
+        player_a, player_b, TEST_SHIP_SUITE, firing_order=domain.FiringOrder.UNTIL_MISS
+    )
     game.add_ship(player_a, position=["A2", "A3"], ship_type="ship")
     game.add_ship(player_b, position=["B2", "B3"], ship_type="ship")
     game.start()
@@ -437,7 +439,7 @@ def test_game_alternates_players_after_first_miss_salve_mode():
         player_a,
         player_b,
         TEST_SHIP_SUITE + TEST_SHIP_SUITE,
-        fire_order=domain.FireOrder.UNTIL_MISS,
+        firing_order=domain.FiringOrder.UNTIL_MISS,
         salvo_mode=True,
     )
     game.add_ship(player_a, position=["A2", "A3"], ship_type="ship")
