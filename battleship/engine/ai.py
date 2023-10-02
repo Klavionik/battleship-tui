@@ -1,6 +1,7 @@
 import enum
 import random
 from abc import ABC, abstractmethod
+from collections import deque
 from typing import Iterable
 
 from battleship.engine import domain, errors
@@ -23,6 +24,48 @@ class RandomAlgorithm(Algorithm):
     def find_next_targets(self, board: domain.Board, count: int) -> list[domain.Cell]:
         candidates = [cell for cell in board.cells if not cell.is_shot]
         return random.sample(candidates, k=min(len(candidates), count))
+
+
+class PursuingAlgorithm(RandomAlgorithm):
+    def __init__(self) -> None:
+        self.next_targets: deque[domain.Cell] = deque()
+
+    def find_next_targets(self, board: domain.Board, count: int) -> list[domain.Cell]:
+        targets: list[domain.Cell] = []
+
+        while len(self.next_targets) and len(targets) != count:
+            next_target = self.next_targets.popleft()
+            targets.append(next_target)
+
+        if len(targets) != count:
+            random_targets = super().find_next_targets(board, count - len(targets))
+            targets.extend(random_targets)
+
+        return targets
+
+    def feed_back(self, board: domain.Board, firing_attempts: Iterable[domain.FireAttempt]) -> None:
+        for attempt in firing_attempts:
+            if attempt.hit and not attempt.ship.destroyed:  # type: ignore
+                neighbors = self._find_candidate_cells(board, board.get_cell(attempt.coordinate))
+                self.next_targets.extend(neighbors)
+
+    def _find_candidate_cells(self, board: domain.Board, cell: domain.Cell) -> list[domain.Cell]:
+        directions = ["upper", "lower", "right", "left"]
+        coordinates = [getattr(cell, f"{direction}_coordinate") for direction in directions]
+        cells = []
+
+        for coord in coordinates:
+            try:
+                cell = board.get_cell(coord)
+            except errors.CellOutOfRange:
+                pass
+            else:
+                if cell.is_shot or cell in self.next_targets:
+                    continue
+
+                cells.append(cell)
+
+        return cells
 
 
 class TargetCaller:
