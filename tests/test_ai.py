@@ -2,7 +2,7 @@ import random
 
 import pytest
 
-from battleship.engine import ai, domain
+from battleship.engine import ai, domain, errors
 
 
 def test_target_caller_calls_correct_amount_of_targets():
@@ -68,9 +68,9 @@ def test_autoplacer_position_is_valid(ship):
     assert domain.is_valid_position(position) is None
 
 
-@pytest.mark.skip(reason="Infinite loop yet to handle")
 def test_autoplacer_raises_error_if_no_place_for_ship():
     board = domain.Board(size=4)
-    autoplacer = ai.Autoplacer(board, domain.CLASSIC_SHIP_SUITE)
+    autoplacer = ai.Autoplacer(board, [("carrier", 5)])
 
-    autoplacer.place("carrier")
+    with pytest.raises(errors.CannotPlaceShip):
+        autoplacer.place("carrier")

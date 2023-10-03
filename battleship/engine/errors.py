@@ -52,3 +52,7 @@ class TooManyShots(BattleshipError):
 
 class IncorrectShots(BattleshipError):
     pass
+
+
+class CannotPlaceShip(BattleshipError):
+    pass

@@ -2,7 +2,7 @@ import random
 from collections import deque
 from typing import Iterable
 
-from battleship.engine import domain
+from battleship.engine import domain, errors
 
 
 class TargetCaller:
@@ -59,21 +59,32 @@ class Autoplacer:
         ship_hp = self.ship_hp_map[ship_type]
         position: list[str] = []
         empty_cells = [cell for cell in self.board.cells if cell.ship is None]
+        directions = list[domain.Direction](domain.Direction)
+        random.shuffle(empty_cells)
+        random.shuffle(directions)
 
-        # TODO: This loop hangs if there is no valid position for a ship.
-        # Probably I should try all 4 directions for every start_cell and then mark it as visited.
-        while len(position) != ship_hp:
-            direction: domain.Direction = random.choice(list(domain.Direction))  # type: ignore
-            start_cell = random.choice(empty_cells)
+        for cell in empty_cells:  # Get next random cell.
+            for direction in directions:  # Get next random direction.
+                start_cell = cell  # For every direction, build from this random cell.
+                # Try to found enough empty cells to place the ship in this direction.
+                for _ in range(ship_hp):
+                    # Get the next cell in this direction.
+                    next_cell = self.board.get_adjacent_cell(start_cell, direction)
 
-            for _ in range(ship_hp):
-                next_cell = self.board.get_adjacent_cell(start_cell, direction)
+                    # If there is no cell or the cell is taken,
+                    # clear the progress and try another direction.
+                    if next_cell is None or next_cell.ship is not None:
+                        position.clear()
+                        break
 
-                if next_cell is None or next_cell.ship is not None:
-                    position.clear()
-                    break
+                    # Otherwise, save the coordinate.
+                    position.append(next_cell.coordinate)
 
-                position.append(next_cell.coordinate)
-                start_cell = next_cell
+                    # If there is enough cells to place the ship, return the position.
+                    if len(position) == ship_hp:
+                        return position
 
-        return position
+                    # Otherwise, move forward in this direction.
+                    start_cell = next_cell
+
+        raise errors.CannotPlaceShip(f"Cannot find suitable position for {ship_type}.")
