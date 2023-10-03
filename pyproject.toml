@@ -23,11 +23,11 @@ line-length = 100
 profile = "black"
 
 [tool.poetry.group.dev.dependencies]
-pytest = "^7.4.0"
 mypy = "^1.5.0"
 coverage = "^7.3.0"
 watchdog = {extras = ["watchmedo"], version = "^3.0.0"}
 textual-dev = "^1.1.0"
+pytest = "^7.4.2"
 
 [build-system]
 requires = ["poetry-core"]
