@@ -66,3 +66,11 @@ def test_autoplacer_position_is_valid(ship):
     position = autoplacer.place(ship_type=type_)
 
     assert domain.is_valid_position(position) is None
+
+
+@pytest.mark.skip(reason="Infinite loop yet to handle")
+def test_autoplacer_raises_error_if_no_place_for_ship():
+    board = domain.Board(size=4)
+    autoplacer = ai.Autoplacer(board, domain.CLASSIC_SHIP_SUITE)
+
+    autoplacer.place("carrier")
