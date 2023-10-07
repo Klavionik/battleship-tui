@@ -1,0 +1,74 @@
+MainMenu #content {
+  layout: horizontal;
+  margin: 0 4;
+  align: center middle;
+}
+
+MainMenu #text {
+  width: 1fr;
+  margin: 0;
+  margin-right: 4;
+}
+
+MainMenu #menu {
+  width: 1fr;
+  height: auto;
+  margin-top: 1;
+  margin-left: 4;
+}
+
+MainMenu ListItem {
+  align-horizontal: center;
+  padding: 1;
+}
+
+Singleplayer #content {
+  layout: horizontal;
+  align-vertical: middle;
+  margin: 0 4;
+}
+
+Singleplayer #text {
+  width: 1fr;
+  margin: 0;
+  margin-right: 4;
+}
+
+Singleplayer #options {
+  width: 1fr;
+  height: auto;
+  margin-top: 1;
+  margin-left: 4;
+}
+
+Singleplayer #options > * {
+  margin-bottom: 1;
+}
+
+Singleplayer #options #roster {
+  padding: 1;
+  width: 100%;
+  border: tall $secondary;
+}
+
+#roster:focus, #firing_order:focus {
+  border: none;
+}
+
+#salvo_mode:focus {
+  border: tall transparent;
+}
+
+Singleplayer #options #salvo_mode {
+  width: 100%;
+}
+
+Singleplayer #options #firing_order {
+  padding: 1;
+  width: 100%;
+  border: tall $secondary;
+}
+
+Singleplayer #options Button {
+  margin-left: 1;
+}

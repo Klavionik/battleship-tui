@@ -1,22 +1,13 @@
-import asyncio
-
 from textual.app import App
+
+from battleship.tui import screens
 
 
 class BattleshipApp(App[None]):
-    BINDINGS = [("ctrl+q", "quit", "Quit"), ("F1", "help", "Help")]
+    BINDINGS = [("ctrl+q", "quit", "Quit"), ("F1", "show_help", "Help")]
     TITLE = "Battleship"
     SUB_TITLE = "The Game"
+    CSS_PATH = "styles.tcss"
 
-
-async def _run() -> None:
-    app = BattleshipApp()
-    await app.run_async()
-
-
-def run() -> None:
-    asyncio.run(_run())
-
-
-if __name__ == "__main__":
-    run()
+    def on_mount(self) -> None:
+        self.push_screen(screens.MainMenu())
