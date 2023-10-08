@@ -5,22 +5,9 @@ import random
 import string
 from functools import cached_property
 from itertools import cycle
-from typing import Callable, Collection, Iterable, TypeAlias
+from typing import Collection, Iterable
 
-from battleship.engine import errors
-
-ShipType: TypeAlias = str
-Hitpoints: TypeAlias = int
-ShipConfig: TypeAlias = tuple[ShipType, Hitpoints]
-SpawnCallback: TypeAlias = Callable[[Collection[str]], None]
-
-CLASSIC_SHIP_SUITE = [
-    ("carrier", 5),
-    ("battleship", 4),
-    ("cruiser", 3),
-    ("submarine", 3),
-    ("destroyer", 2),
-]
+from battleship.engine import errors, roster
 
 
 class Direction(enum.StrEnum):
@@ -206,7 +193,7 @@ class Player:
     def attack(self, coordinate: str) -> Ship | None:
         return self.board.hit_cell(coordinate)
 
-    def count_ships(self, ship_type: ShipType) -> int:
+    def count_ships(self, ship_type: roster.ShipType) -> int:
         return len([ship for ship in self.board.ships if ship.type == ship_type])
 
     @property
@@ -239,17 +226,17 @@ class Game:
         self,
         player_a: Player,
         player_b: Player,
-        ship_suite: Iterable[ShipConfig],
+        roster: roster.Roster,
         firing_order: FiringOrder = FiringOrder.ALTERNATE,
         salvo_mode: bool = False,
     ) -> None:
         self.players = {player_a, player_b}
-        self.ship_suite = ship_suite
+        self.roster = roster
         self.firing_order = firing_order
         self.salvo_mode = salvo_mode
         self._player_a = player_a
         self._player_b = player_b
-        self._reference_fleet = [Ship(*ship_config) for ship_config in ship_suite]
+        self._reference_fleet = [Ship(item.type, item.hp) for item in roster.items]
         self._player_cycle = cycle(random.sample([player_a, player_b], k=2))
         self._current_player = next(self._player_cycle)
         self._started = False
@@ -258,7 +245,9 @@ class Game:
     def __str__(self) -> str:
         return f"Game <{self._player_a} vs {self._player_b}> <Winner: {self._winner}>"
 
-    def add_ship(self, player: Player, position: Collection[str], ship_type: ShipType) -> None:
+    def add_ship(
+        self, player: Player, position: Collection[str], ship_type: roster.ShipType
+    ) -> None:
         ship = self._spawn_ship(ship_type)
         max_ships = self._max_ships_for_type(ship_type)
 
@@ -272,16 +261,14 @@ class Game:
     def is_fleet_ready(self, player: Player) -> bool:
         return player.ships == self._reference_fleet
 
-    def _spawn_ship(self, ship_type: str) -> Ship:
+    def _spawn_ship(self, ship_type: roster.ShipType) -> Ship:
         try:
-            ship_config = next(
-                ship_config for ship_config in self.ship_suite if ship_config[0] == ship_type
-            )
-            return Ship(*ship_config)
+            roster_item = next(item for item in self.roster.items if item.type == ship_type)
+            return Ship(*roster_item)
         except StopIteration:
-            raise errors.ShipNotFound(f"Cannot spawn a ship of type {ship_type}.")
+            raise errors.ShipNotFound(f"No ship of type {ship_type} in the roster.")
 
-    def _max_ships_for_type(self, ship_type: ShipType) -> int:
+    def _max_ships_for_type(self, ship_type: roster.ShipType) -> int:
         return len([ship for ship in self._reference_fleet if ship.type == ship_type])
 
     @property

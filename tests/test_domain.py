@@ -2,11 +2,14 @@ import random
 
 import pytest
 
-from battleship.engine import domain, errors
+from battleship.engine import domain, errors, roster
 
-TEST_SHIP_SUITE = [
-    ("ship", 2),
-]
+
+@roster.register
+def test():
+    return [
+        ("ship", 2),
+    ]
 
 
 def test_ship_can_be_damaged():
@@ -182,7 +185,7 @@ def test_player_ships_left_returns_alive_ships():
 def test_game_can_place_ship():
     player_a = domain.Player(name="player_a")
     player_b = domain.Player(name="player_b")
-    game = domain.Game(player_a, player_b, TEST_SHIP_SUITE)
+    game = domain.Game(player_a, player_b, roster.get_roster("test"))
 
     game.add_ship(player_a, position=["A3", "A4"], ship_type="ship")
 
@@ -192,7 +195,7 @@ def test_game_can_place_ship():
 def test_game_raises_exc_if_ship_limit_exceeded():
     player_a = domain.Player(name="player_a")
     player_b = domain.Player(name="player_b")
-    game = domain.Game(player_a, player_b, TEST_SHIP_SUITE)
+    game = domain.Game(player_a, player_b, roster.get_roster("test"))
 
     game.add_ship(player_a, position=["A3", "A4"], ship_type="ship")
 
@@ -203,7 +206,7 @@ def test_game_raises_exc_if_ship_limit_exceeded():
 def test_game_raises_exc_if_ship_type_is_not_in_suite():
     player_a = domain.Player(name="player_a")
     player_b = domain.Player(name="player_b")
-    game = domain.Game(player_a, player_b, TEST_SHIP_SUITE)
+    game = domain.Game(player_a, player_b, roster.get_roster("test"))
 
     with pytest.raises(errors.ShipNotFound):
         game.add_ship(player_a, position=["A3", "A4"], ship_type="notship")
@@ -231,7 +234,7 @@ def test_player_can_count_ships_by_type():
 def test_game_fleet_not_ready():
     player_a = domain.Player(name="player_a")
     player_b = domain.Player(name="player_b")
-    game = domain.Game(player_a, player_b, TEST_SHIP_SUITE)
+    game = domain.Game(player_a, player_b, roster.get_roster("test"))
 
     assert not game.is_fleet_ready(player_a)
 
@@ -239,7 +242,7 @@ def test_game_fleet_not_ready():
 def test_game_fleet_ready():
     player_a = domain.Player(name="player_a")
     player_b = domain.Player(name="player_b")
-    game = domain.Game(player_a, player_b, TEST_SHIP_SUITE + TEST_SHIP_SUITE)
+    game = domain.Game(player_a, player_b, roster.get_roster("test") + roster.get_roster("test"))
 
     game.add_ship(player_a, position=["A2", "A3"], ship_type="ship")
 
@@ -253,7 +256,7 @@ def test_game_fleet_ready():
 def test_game_starts_if_fleets_ready():
     player_a = domain.Player(name="player_a")
     player_b = domain.Player(name="player_b")
-    game = domain.Game(player_a, player_b, TEST_SHIP_SUITE)
+    game = domain.Game(player_a, player_b, roster.get_roster("test"))
     game.add_ship(player_a, position=["A2", "A3"], ship_type="ship")
     game.add_ship(player_b, position=["A2", "A3"], ship_type="ship")
 
@@ -265,7 +268,7 @@ def test_game_starts_if_fleets_ready():
 def test_game_cannot_start_if_fleets_not_ready():
     player_a = domain.Player(name="player_a")
     player_b = domain.Player(name="player_b")
-    game = domain.Game(player_a, player_b, TEST_SHIP_SUITE)
+    game = domain.Game(player_a, player_b, roster.get_roster("test"))
 
     with pytest.raises(errors.ShipsNotPlaced):
         game.start()
@@ -277,7 +280,7 @@ def test_game_current_player_and_player_under_attack_differs():
     random.seed(42)
     player_a = domain.Player(name="player_a")
     player_b = domain.Player(name="player_b")
-    game = domain.Game(player_a, player_b, TEST_SHIP_SUITE)
+    game = domain.Game(player_a, player_b, roster.get_roster("test"))
 
     assert game.current_player is player_a
     assert game.player_under_attack is player_b
@@ -286,7 +289,7 @@ def test_game_current_player_and_player_under_attack_differs():
 def test_game_cannot_fire_if_not_started():
     player_a = domain.Player(name="player_a")
     player_b = domain.Player(name="player_b")
-    game = domain.Game(player_a, player_b, TEST_SHIP_SUITE)
+    game = domain.Game(player_a, player_b, roster.get_roster("test"))
 
     with pytest.raises(errors.GameNotStarted):
         game.fire(["A1"])
@@ -295,7 +298,7 @@ def test_game_cannot_fire_if_not_started():
 def test_game_cannot_fire_multiple_shots_if_not_salvo_mode():
     player_a = domain.Player(name="player_a")
     player_b = domain.Player(name="player_b")
-    game = domain.Game(player_a, player_b, TEST_SHIP_SUITE)
+    game = domain.Game(player_a, player_b, roster.get_roster("test"))
     game.add_ship(player_a, position=["A2", "A3"], ship_type="ship")
     game.add_ship(player_b, position=["B2", "B3"], ship_type="ship")
     game.start()
@@ -307,7 +310,7 @@ def test_game_cannot_fire_multiple_shots_if_not_salvo_mode():
 def test_game_shots_count_must_match_ships_count():
     player_a = domain.Player(name="player_a")
     player_b = domain.Player(name="player_b")
-    game = domain.Game(player_a, player_b, TEST_SHIP_SUITE, salvo_mode=True)
+    game = domain.Game(player_a, player_b, roster.get_roster("test"), salvo_mode=True)
     game.add_ship(player_a, position=["A2", "A3"], ship_type="ship")
     game.add_ship(player_b, position=["B2", "B3"], ship_type="ship")
     game.start()
@@ -320,7 +323,7 @@ def test_game_fire_returns_correct_fire_attempt_if_miss():
     random.seed(42)
     player_a = domain.Player(name="player_a")
     player_b = domain.Player(name="player_b")
-    game = domain.Game(player_a, player_b, TEST_SHIP_SUITE)
+    game = domain.Game(player_a, player_b, roster.get_roster("test"))
     game.add_ship(player_a, position=["A2", "A3"], ship_type="ship")
     game.add_ship(player_b, position=["B2", "B3"], ship_type="ship")
     game.start()
@@ -341,7 +344,7 @@ def test_game_fire_returns_correct_fire_attempt_if_hit():
     random.seed(42)
     player_a = domain.Player(name="player_a")
     player_b = domain.Player(name="player_b")
-    game = domain.Game(player_a, player_b, TEST_SHIP_SUITE)
+    game = domain.Game(player_a, player_b, roster.get_roster("test"))
     game.add_ship(player_a, position=["A2", "A3"], ship_type="ship")
     game.add_ship(player_b, position=["B2", "B3"], ship_type="ship")
     game.start()
@@ -362,7 +365,9 @@ def test_game_fire_returns_correct_fire_attempts_salvo_mode():
     random.seed(42)
     player_a = domain.Player(name="player_a")
     player_b = domain.Player(name="player_b")
-    game = domain.Game(player_a, player_b, TEST_SHIP_SUITE + TEST_SHIP_SUITE, salvo_mode=True)
+    game = domain.Game(
+        player_a, player_b, roster.get_roster("test") + roster.get_roster("test"), salvo_mode=True
+    )
     game.add_ship(player_a, position=["A2", "A3"], ship_type="ship")
     game.add_ship(player_a, position=["C4", "D4"], ship_type="ship")
     game.add_ship(player_b, position=["B2", "B3"], ship_type="ship")
@@ -387,7 +392,7 @@ def test_game_alternates_players_after_every_shot():
     random.seed(42)
     player_a = domain.Player(name="player_a")
     player_b = domain.Player(name="player_b")
-    game = domain.Game(player_a, player_b, TEST_SHIP_SUITE)
+    game = domain.Game(player_a, player_b, roster.get_roster("test"))
     game.add_ship(player_a, position=["A2", "A3"], ship_type="ship")
     game.add_ship(player_b, position=["B2", "B3"], ship_type="ship")
     game.start()
@@ -411,7 +416,7 @@ def test_game_alternates_players_after_first_miss():
     player_a = domain.Player(name="player_a")
     player_b = domain.Player(name="player_b")
     game = domain.Game(
-        player_a, player_b, TEST_SHIP_SUITE, firing_order=domain.FiringOrder.UNTIL_MISS
+        player_a, player_b, roster.get_roster("test"), firing_order=domain.FiringOrder.UNTIL_MISS
     )
     game.add_ship(player_a, position=["A2", "A3"], ship_type="ship")
     game.add_ship(player_b, position=["B2", "B3"], ship_type="ship")
@@ -438,7 +443,7 @@ def test_game_alternates_players_after_first_miss_salve_mode():
     game = domain.Game(
         player_a,
         player_b,
-        TEST_SHIP_SUITE + TEST_SHIP_SUITE,
+        roster.get_roster("test") + roster.get_roster("test"),
         firing_order=domain.FiringOrder.UNTIL_MISS,
         salvo_mode=True,
     )
@@ -466,7 +471,7 @@ def test_game_ends_if_player_has_no_more_ships():
     random.seed(42)
     player_a = domain.Player(name="player_a")
     player_b = domain.Player(name="player_b")
-    game = domain.Game(player_a, player_b, TEST_SHIP_SUITE + TEST_SHIP_SUITE)
+    game = domain.Game(player_a, player_b, roster.get_roster("test") + roster.get_roster("test"))
     game.add_ship(player_a, position=["A2", "A3"], ship_type="ship")
     game.add_ship(player_a, position=["C4", "D4"], ship_type="ship")
     game.add_ship(player_b, position=["B2", "B3"], ship_type="ship")
