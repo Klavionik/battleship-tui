@@ -18,7 +18,7 @@ class Direction(enum.StrEnum):
 
 
 class FiringOrder(enum.StrEnum):
-    ALTERNATE = "alternate"
+    ALTERNATELY = "alternately"
     UNTIL_MISS = "until_miss"
 
 
@@ -227,7 +227,7 @@ class Game:
         player_a: Player,
         player_b: Player,
         roster: roster.Roster,
-        firing_order: FiringOrder = FiringOrder.ALTERNATE,
+        firing_order: FiringOrder = FiringOrder.ALTERNATELY,
         salvo_mode: bool = False,
     ) -> None:
         self.players = {player_a, player_b}
@@ -332,7 +332,7 @@ class Game:
         missed = all(shot.miss for shot in shots)
 
         if (
-            self.firing_order == FiringOrder.ALTERNATE
+            self.firing_order == FiringOrder.ALTERNATELY
             or self.firing_order == FiringOrder.UNTIL_MISS
             and missed
         ):
