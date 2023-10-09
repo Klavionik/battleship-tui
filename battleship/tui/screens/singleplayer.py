@@ -7,25 +7,7 @@ from textual.screen import Screen
 from textual.widgets import Button, Checkbox, Footer, Markdown, RadioButton, RadioSet
 
 from battleship.engine import domain, roster
-from battleship.tui import screens
-
-SINGLEPLAYER_TEXT = """
-# Help
-In Singleplayer mode you play against the AI. You can configure options before the game starts.
-
-**Roster**
-Choose ship types that will be present on the battlefield.
-
-1. *Classic* - Carrier (5 HP), Battleship (4 HP), Cruiser (3 HP), Submarine (3 HP), Destroyer (2 HP)
-2. *Russian* - Battleship (4 HP), Cruiser (3 HP) x2, Destroyer (2 HP) x3, Frigate (1 HP) x4
-
-**Firing order**
-Choose, whether players make turns one at a time, or until the first miss.
-
-**Salvo mode**
-Toggles salvo mode. In salvo mode, players make as many shots during the turn as they have ships
-left.
-"""
+from battleship.tui import resources, screens
 
 
 class Singleplayer(Screen[None]):
@@ -37,10 +19,13 @@ class Singleplayer(Screen[None]):
         self.firing_order = domain.FiringOrder.ALTERNATELY
         self.salvo_mode = False
 
+        with resources.get_resource("singleplayer_help.md").open() as fh:
+            self.help = fh.read()
+
     def compose(self) -> ComposeResult:
         with Container(id="content"):
             with VerticalScroll():
-                yield Markdown(SINGLEPLAYER_TEXT, id="text")
+                yield Markdown(self.help, id="text")
 
             with Container(id="options"):
                 with RadioSet(id="roster") as rs:

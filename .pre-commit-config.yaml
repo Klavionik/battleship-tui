@@ -5,7 +5,7 @@ repos:
     rev: v3.2.0
     hooks:
       - id: trailing-whitespace
-        types: [text]
+        types: [python]
       - id: end-of-file-fixer
         types: [text]
 
