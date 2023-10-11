@@ -72,3 +72,11 @@ Singleplayer #options #firing_order {
 Singleplayer #options Button {
   margin-left: 1;
 }
+
+Game {
+  layout: horizontal;
+}
+
+Board {
+  width: 22;
+}

@@ -70,4 +70,4 @@ class Singleplayer(Screen[None]):
                 salvo_mode=self.salvo_mode,
             )
 
-        # TODO: Switch to game screen.
+        self.app.switch_screen(screens.Game(game_factory=game_factory))

@@ -99,7 +99,7 @@ def is_valid_position(coordinates: Iterable[str]) -> None:
 
 class Board:
     def __init__(self, size: int = 10) -> None:
-        self._size = size
+        self.size = size
         self._letters = string.ascii_uppercase[:size]
         self._numbers = tuple(range(1, size + 1))
         self.grid = [[Cell(col, row) for col in self._letters] for row in self._numbers]
