@@ -11,3 +11,7 @@ class BattleshipApp(App[None]):
 
     def on_mount(self) -> None:
         self.push_screen(screens.MainMenu())
+
+
+if __name__ == "__main__":
+    BattleshipApp().run()

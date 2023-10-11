@@ -9,6 +9,8 @@ from typing import Collection, Iterable
 
 from battleship.engine import errors, roster
 
+DEFAULT_BOARD_SIZE = 10
+
 
 class Direction(enum.StrEnum):
     UP = "up"
@@ -98,7 +100,7 @@ def is_valid_position(coordinates: Iterable[str]) -> None:
 
 
 class Board:
-    def __init__(self, size: int = 10) -> None:
+    def __init__(self, size: int = DEFAULT_BOARD_SIZE) -> None:
         self.size = size
         self._letters = string.ascii_uppercase[:size]
         self._numbers = tuple(range(1, size + 1))

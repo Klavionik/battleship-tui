@@ -12,7 +12,7 @@ from textual.message import Message
 from textual.widget import Widget
 from textual.widgets import DataTable, Static
 
-from battleship.engine import domain, roster
+from battleship.engine import domain
 from battleship.engine.domain import Direction
 
 SHIP = EMOJI["ship"]
@@ -23,6 +23,7 @@ CROSS = EMOJI["cross_mark"]
 
 @dataclass
 class ShipToPlace:
+    type: str
     length: int
     direction: str = ""
 
@@ -45,13 +46,16 @@ class Board(Widget):
     }
     """
 
-    def __init__(
-        self, *args: Any, player: str, size: int, roster: roster.Roster, **kwargs: Any
-    ) -> None:
+    class ShipPlaced(Message):
+        def __init__(self, ship: ShipToPlace, coordinates: list[Coordinate]):
+            super().__init__()
+            self.ship = ship
+            self.coordinates = coordinates
+
+    def __init__(self, *args: Any, player: str, size: int, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self.player = player
         self.board_size = size
-        self.ships_to_place = iter([item for item in roster])
         self._table: DataTable[Text] = DataTable(cell_padding=0)
         self._ship_to_place: ShipToPlace | None = None
         self._current_ship_coordinates: list[Coordinate] = []
@@ -65,8 +69,9 @@ class Board(Widget):
 
     def on_mount(self) -> None:
         self.initialize_grid()
-        roster_item = next(self.ships_to_place)
-        self._ship_to_place = ShipToPlace(length=roster_item.hp)
+
+    def ask_placement(self, ship: ShipToPlace) -> None:
+        self._ship_to_place = ship
 
     def initialize_grid(self) -> None:
         self._table.clear()
@@ -178,24 +183,13 @@ class Board(Widget):
             self._table.update_cell_at(coor, value=self._forbidden_cell)
 
     def action_place(self) -> None:
-        class ShipPlaced(Message):
-            def __init__(self, coordinates: list[Coordinate]):
-                super().__init__()
-                self.coordinates = coordinates
-
-        if self._place_forbidden:
+        if self._place_forbidden or not self._ship_to_place:
             return
 
         self.place_ship(self._current_ship_coordinates)
+        self.post_message(self.ShipPlaced(self._ship_to_place, self._current_ship_coordinates[:]))
         self._current_ship_coordinates.clear()
-
-        try:
-            roster_item = next(self.ships_to_place)
-            self._ship_to_place = ShipToPlace(length=roster_item.hp)
-        except StopIteration:
-            self._ship_to_place = None
-
-        self.post_message(ShipPlaced(self._current_ship_coordinates))
+        self._ship_to_place = None
 
     def update_grid(self, board: domain.Board) -> None:
         table = self.query_one(DataTable)

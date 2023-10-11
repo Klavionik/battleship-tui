@@ -73,10 +73,25 @@ Singleplayer #options Button {
   margin-left: 1;
 }
 
-Game {
-  layout: horizontal;
+Game #boards {
+  margin: 1 3 0 3;
 }
 
-Board {
+Game RichLog {
+  padding: 0 1;
+  height: 11;
+  margin: 1 1 0 1;
+  scrollbar-size-vertical: 1;
+}
+
+Game Board {
   width: 22;
+}
+
+Game Board.player {
+  dock: left;
+}
+
+Game Board.enemy {
+  dock: right;
 }

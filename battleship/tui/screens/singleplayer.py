@@ -6,7 +6,7 @@ from textual.containers import Container, VerticalScroll
 from textual.screen import Screen
 from textual.widgets import Button, Checkbox, Footer, Markdown, RadioButton, RadioSet
 
-from battleship.engine import domain, roster
+from battleship.engine import domain, roster, session
 from battleship.tui import resources, screens
 
 
@@ -61,13 +61,9 @@ class Singleplayer(Screen[None]):
 
     @on(Button.Pressed)
     def start_game(self) -> None:
-        def game_factory() -> domain.Game:
-            return domain.Game(
-                player_a=domain.Player("Player"),
-                player_b=domain.Player("Computer"),
-                roster=self.roster,
-                firing_order=self.firing_order,
-                salvo_mode=self.salvo_mode,
+        def session_factory() -> session.SingleplayerSession:
+            return session.SingleplayerSession(
+                "Player", self.roster, self.firing_order, self.salvo_mode
             )
 
-        self.app.switch_screen(screens.Game(game_factory=game_factory))
+        self.app.switch_screen(screens.Game(session_factory=session_factory))
