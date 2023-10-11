@@ -19,6 +19,7 @@ SHIP = EMOJI["ship"]
 WATER = EMOJI["water_wave"]
 FIRE = EMOJI["fire"]
 CROSS = EMOJI["cross_mark"]
+TARGET = EMOJI["dart"]
 
 
 @dataclass
@@ -52,13 +53,17 @@ class Board(Widget):
             self.ship = ship
             self.coordinates = coordinates
 
-    def __init__(self, *args: Any, player: str, size: int, **kwargs: Any) -> None:
+    def __init__(
+        self, *args: Any, player: str, size: int, targetable: bool = False, **kwargs: Any
+    ) -> None:
         super().__init__(*args, **kwargs)
         self.player = player
         self.board_size = size
+        self.targetable = targetable
         self._table: DataTable[Text] = DataTable(cell_padding=0)
         self._ship_to_place: ShipToPlace | None = None
         self._current_ship_coordinates: list[Coordinate] = []
+        self._current_target_coordinate: Coordinate | None = None
         self._place_forbidden = True
 
         self._cell = " " * 2
@@ -104,7 +109,7 @@ class Board(Widget):
         yield Static(self.player)
         yield self._table
 
-    def on_mouse_move(self, event: MouseMove) -> None:
+    def show_preview(self, event: MouseMove) -> None:
         self._place_forbidden = True
 
         try:
@@ -114,6 +119,51 @@ class Board(Widget):
             self.clear_current_preview()
         else:
             self.preview_ship(row, column)
+
+    def clear_current_target(self) -> None:
+        if self._current_target_coordinate:
+            self._table.update_cell_at(
+                self._current_target_coordinate,
+                value=self.get_bg_cell(*self._current_target_coordinate),
+            )
+
+    def target_cell(self, row: int, column: int) -> None:
+        if not self.targetable:
+            return
+
+        self.clear_current_target()
+
+        if row < 0 or column < 0:
+            # Cursor outside grid.
+            return
+
+        self._current_target_coordinate = Coordinate(row, column)
+
+        cell = self.get_bg_cell(row, column)
+        self._table.update_cell_at(
+            self._current_target_coordinate, value=Text(TARGET, style=cell.style)
+        )
+
+    def show_target(self, event: MouseMove) -> None:
+        if self._current_target_coordinate:
+            self._table.update_cell_at(
+                self._current_target_coordinate,
+                value=self.get_bg_cell(*self._current_target_coordinate),
+            )
+
+        try:
+            row, column = event.style.meta["row"], event.style.meta["column"]
+        except KeyError:
+            # Cursor outside grid, clear preview.
+            self.clear_current_preview()
+        else:
+            self.target_cell(row, column)
+
+    def on_mouse_move(self, event: MouseMove) -> None:
+        if self.targetable:
+            self.show_target(event)
+        else:
+            self.show_preview(event)
 
     def action_rotate(self) -> None:
         if not self._ship_to_place:

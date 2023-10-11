@@ -24,7 +24,10 @@ class Game(Screen[None]):
             player=self._session.player_name, size=domain.DEFAULT_BOARD_SIZE, classes="player"
         )
         self.enemy_board = Board(
-            player=self._session.bot_name, size=domain.DEFAULT_BOARD_SIZE, classes="enemy"
+            player=self._session.bot_name,
+            size=domain.DEFAULT_BOARD_SIZE,
+            targetable=True,
+            classes="enemy",
         )
         self.chat = RichLog(wrap=True, markup=True)
         self.ships_to_place: Iterator[roster.RosterItem] = iter(
