@@ -29,6 +29,10 @@ class Game(Screen[None]):
             targetable=True,
             classes="enemy",
         )
+
+        if self._session.salvo_mode:
+            self.enemy_board.min_targets = len(self._session.roster.items)
+
         self.chat = RichLog(wrap=True, markup=True)
         self.ships_to_place: Iterator[roster.RosterItem] = iter(
             [item for item in self._session.roster]
@@ -72,3 +76,9 @@ class Game(Screen[None]):
         self._session.spawn_ship(position, event.ship.type)
 
         self.try_ship_placement()
+
+    @on(Board.CellShot)
+    def fire(self, event: Board.CellShot) -> None:
+        position = [chr(c.column + 1 + 64) + str(c.row + 1) for c in event.coordinates]
+        position_str = ", ".join(position) if len(position) > 1 else position[0]
+        self.write_as_game(f"Player {self._session.player_name} attacks {position_str}")

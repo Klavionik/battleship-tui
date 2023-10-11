@@ -45,3 +45,6 @@ class SingleplayerSession:
         for ship_type, _ in self.roster:
             position = self.autoplacer.place(ship_type)
             self._game.add_ship(self.bot, position, ship_type)
+
+    def fire(self, coordinates: Collection[str]) -> list[domain.Shot]:
+        return self._game.fire(coordinates)

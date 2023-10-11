@@ -5,10 +5,12 @@ from typing import Any, Iterable
 
 from rich.emoji import EMOJI  # type: ignore[attr-defined]
 from rich.text import Text
+from textual import on
 from textual.app import ComposeResult
 from textual.coordinate import Coordinate
 from textual.events import MouseMove
 from textual.message import Message
+from textual.reactive import var
 from textual.widget import Widget
 from textual.widgets import DataTable, Static
 
@@ -46,11 +48,17 @@ class Board(Widget):
       width: 1fr;
     }
     """
+    min_targets: var[int] = var(1)
 
     class ShipPlaced(Message):
         def __init__(self, ship: ShipToPlace, coordinates: list[Coordinate]):
             super().__init__()
             self.ship = ship
+            self.coordinates = coordinates
+
+    class CellShot(Message):
+        def __init__(self, coordinates: list[Coordinate]):
+            super().__init__()
             self.coordinates = coordinates
 
     def __init__(
@@ -63,7 +71,8 @@ class Board(Widget):
         self._table: DataTable[Text] = DataTable(cell_padding=0)
         self._ship_to_place: ShipToPlace | None = None
         self._current_ship_coordinates: list[Coordinate] = []
-        self._current_target_coordinate: Coordinate | None = None
+        self._current_target_coordinates: list[Coordinate] = []
+        self._last_target_coordinate: Coordinate | None = None
         self._place_forbidden = True
 
         self._cell = " " * 2
@@ -121,41 +130,61 @@ class Board(Widget):
             self.preview_ship(row, column)
 
     def clear_current_target(self) -> None:
-        if self._current_target_coordinate:
+        while self._current_target_coordinates:
+            coor = self._current_target_coordinates.pop()
             self._table.update_cell_at(
-                self._current_target_coordinate,
-                value=self.get_bg_cell(*self._current_target_coordinate),
+                coor,
+                value=self.get_bg_cell(*coor),
             )
+
+    def clear_last_target(self) -> None:
+        if (
+            self._last_target_coordinate
+            and self._last_target_coordinate not in self._current_target_coordinates
+        ):
+            self._table.update_cell_at(
+                self._last_target_coordinate, value=self.get_bg_cell(*self._last_target_coordinate)
+            )
+
+    @on(DataTable.CellSelected)
+    def select_target(self, event: DataTable.CellSelected) -> None:
+        event.stop()
+
+        if not self.targetable:
+            return
+
+        self._current_target_coordinates.append(event.coordinate)
+
+        if len(self._current_target_coordinates) == self.min_targets:
+            self.emit_cell_shot()
+            self.clear_current_target()
 
     def target_cell(self, row: int, column: int) -> None:
         if not self.targetable:
             return
 
-        self.clear_current_target()
-
         if row < 0 or column < 0:
-            # Cursor outside grid.
+            # Cursor inside table, but outside cells.
             return
 
-        self._current_target_coordinate = Coordinate(row, column)
+        coordinate = Coordinate(row, column)
+
+        if coordinate in self._current_target_coordinates:
+            return
 
         cell = self.get_bg_cell(row, column)
-        self._table.update_cell_at(
-            self._current_target_coordinate, value=Text(TARGET, style=cell.style)
-        )
+        # Paint target symbol preserving cell's background color.
+        self._table.update_cell_at(coordinate, value=Text(TARGET, style=cell.style))
+        self._last_target_coordinate = coordinate
 
     def show_target(self, event: MouseMove) -> None:
-        if self._current_target_coordinate:
-            self._table.update_cell_at(
-                self._current_target_coordinate,
-                value=self.get_bg_cell(*self._current_target_coordinate),
-            )
+        self.clear_last_target()
 
         try:
             row, column = event.style.meta["row"], event.style.meta["column"]
         except KeyError:
-            # Cursor outside grid, clear preview.
-            self.clear_current_preview()
+            # Cursor outside grid.
+            self.clear_last_target()
         else:
             self.target_cell(row, column)
 
@@ -185,6 +214,9 @@ class Board(Widget):
         return (coordinate.column >= self.board_size or coordinate.column < 0) or (
             coordinate.row > self.board_size - 1 or coordinate.row < 0
         )
+
+    def emit_cell_shot(self) -> None:
+        self.post_message(self.CellShot(self._current_target_coordinates[:]))
 
     def preview_ship(self, row: int, column: int) -> None:
         if self._ship_to_place is None:
