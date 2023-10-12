@@ -1,3 +1,4 @@
+import enum
 import string
 from dataclasses import dataclass
 from itertools import cycle
@@ -39,16 +40,18 @@ class ShipToPlace:
 
 
 class Board(Widget):
-    BINDINGS = [
-        ("r", "rotate", "Rotate ship"),
-        ("space", "place", "Place ship"),
-    ]
+    class Mode(enum.StrEnum):
+        NONE = "none"
+        ARRANGE = "arrange"
+        TARGET = "target"
+
     DEFAULT_CSS = """
     Board {
       width: 1fr;
     }
     """
     min_targets: var[int] = var(1)
+    mode: var[Mode] = var(Mode.NONE, init=False)
 
     class ShipPlaced(Message):
         def __init__(self, ship: ShipToPlace, coordinates: list[Coordinate]):
@@ -61,13 +64,10 @@ class Board(Widget):
             super().__init__()
             self.coordinates = coordinates
 
-    def __init__(
-        self, *args: Any, player: str, size: int, targetable: bool = False, **kwargs: Any
-    ) -> None:
+    def __init__(self, *args: Any, player: str, size: int, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self.player = player
         self.board_size = size
-        self.targetable = targetable
         self._table: DataTable[Text] = DataTable(cell_padding=0)
         self._ship_to_place: ShipToPlace | None = None
         self._current_ship_coordinates: list[Coordinate] = []
@@ -80,6 +80,12 @@ class Board(Widget):
         self._ship_cell = Text(self._cell, style="on green")
         self._even_cell = Text(self._cell, style="on #2D2D2D")
         self._odd_cell = Text(self._cell, style="on #1E1E1E")
+
+    def key_r(self) -> None:
+        self.rotate_preview()
+
+    def key_space(self) -> None:
+        self.action_place()
 
     def on_mount(self) -> None:
         self.initialize_grid()
@@ -150,7 +156,7 @@ class Board(Widget):
     def select_target(self, event: DataTable.CellSelected) -> None:
         event.stop()
 
-        if not self.targetable:
+        if not self.mode == self.Mode.TARGET:
             return
 
         self._current_target_coordinates.append(event.coordinate)
@@ -160,7 +166,7 @@ class Board(Widget):
             self.clear_current_target()
 
     def target_cell(self, row: int, column: int) -> None:
-        if not self.targetable:
+        if not self.mode == self.Mode.TARGET:
             return
 
         if row < 0 or column < 0:
@@ -189,16 +195,16 @@ class Board(Widget):
             self.target_cell(row, column)
 
     def on_mouse_move(self, event: MouseMove) -> None:
-        if self.targetable:
+        if self.mode == self.Mode.TARGET:
             self.show_target(event)
         else:
             self.show_preview(event)
 
-    def action_rotate(self) -> None:
-        if not self._ship_to_place:
+    def rotate_preview(self) -> None:
+        if not self.mode == self.Mode.ARRANGE:
             return
 
-        self._ship_to_place.rotate()
+        self._ship_to_place.rotate()  # type: ignore[union-attr]
         self.preview_ship(*self._table.hover_coordinate)
 
     def clear_current_preview(self) -> None:
@@ -219,7 +225,7 @@ class Board(Widget):
         self.post_message(self.CellShot(self._current_target_coordinates[:]))
 
     def preview_ship(self, row: int, column: int) -> None:
-        if self._ship_to_place is None:
+        if self.mode != self.Mode.ARRANGE:
             return
 
         self.clear_current_preview()
@@ -235,8 +241,8 @@ class Board(Widget):
 
         self._current_ship_coordinates.append(start)
 
-        for _ in range(self._ship_to_place.length - 1):
-            match self._ship_to_place.direction:
+        for _ in range(self._ship_to_place.length - 1):  # type: ignore[union-attr]
+            match self._ship_to_place.direction:  # type: ignore[union-attr]
                 case domain.Direction.DOWN:
                     next_cell = start.down()
                 case domain.Direction.UP:
@@ -265,32 +271,16 @@ class Board(Widget):
             self._table.update_cell_at(coor, value=self._forbidden_cell)
 
     def action_place(self) -> None:
-        if self._place_forbidden or not self._ship_to_place:
+        # TODO: Do I really need the second condition?
+        if self._place_forbidden or self.mode != self.Mode.ARRANGE:
             return
 
         self.place_ship(self._current_ship_coordinates)
-        self.post_message(self.ShipPlaced(self._ship_to_place, self._current_ship_coordinates[:]))
+        self.post_message(
+            self.ShipPlaced(
+                self._ship_to_place,  # type: ignore[arg-type]
+                self._current_ship_coordinates[:],
+            )
+        )
         self._current_ship_coordinates.clear()
         self._ship_to_place = None
-
-    def update_grid(self, board: domain.Board) -> None:
-        table = self.query_one(DataTable)
-        table.clear()
-
-        for number, row in enumerate(board.grid, start=1):
-            label = Text(str(number), style="#B0FC38 italic")
-            cells = []
-
-            for cell in row:
-                if cell.ship is not None:
-                    if cell.is_shot:
-                        cells.append(FIRE)
-                    else:
-                        cells.append(SHIP)
-                else:
-                    if cell.is_shot:
-                        cells.append(WATER)
-                    else:
-                        cells.append("")
-
-            table.add_row(*cells, label=label)

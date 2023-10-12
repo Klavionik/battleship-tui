@@ -26,7 +26,6 @@ class Game(Screen[None]):
         self.enemy_board = Board(
             player=self._session.bot_name,
             size=domain.DEFAULT_BOARD_SIZE,
-            targetable=True,
             classes="enemy",
         )
 
@@ -66,11 +65,17 @@ class Game(Screen[None]):
         ship = self.get_next_ship_to_place()
 
         if ship:
+            self.player_board.mode = Board.Mode.ARRANGE
             self.write_as_game(f"Place your :ship: [b]{ship.type.title()}[/]")
             self.player_board.ask_placement(ShipToPlace(type=ship.type, length=ship.hp))
+        else:
+            self.write_as_game("Fleet is ready, admiral!")
+            self.player_board.mode = Board.Mode.NONE
+            self.enemy_board.mode = Board.Mode.TARGET
 
     @on(Board.ShipPlaced)
     def spawn_ship(self, event: Board.ShipPlaced) -> None:
+        self.player_board.mode = Board.Mode.NONE
         coordinates = event.coordinates
         position = [chr(c.column + 1 + 64) + str(c.row + 1) for c in coordinates]
         self._session.spawn_ship(position, event.ship.type)
@@ -79,6 +84,7 @@ class Game(Screen[None]):
 
     @on(Board.CellShot)
     def fire(self, event: Board.CellShot) -> None:
+        self.enemy_board.mode = Board.Mode.NONE
         position = [chr(c.column + 1 + 64) + str(c.row + 1) for c in event.coordinates]
         position_str = ", ".join(position) if len(position) > 1 else position[0]
         self.write_as_game(f"Player {self._session.player_name} attacks {position_str}")
