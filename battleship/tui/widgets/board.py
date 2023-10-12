@@ -32,7 +32,7 @@ class ShipToPlace:
     direction: str = ""
 
     def __post_init__(self) -> None:
-        self._directions = cycle((Direction.UP, Direction.RIGHT, Direction.DOWN, Direction.LEFT))
+        self._directions = cycle((Direction.RIGHT, Direction.DOWN))
         self.direction = next(self._directions)
 
     def rotate(self) -> None:
@@ -265,10 +265,6 @@ class Board(Widget):
             match self._ship_to_place.direction:  # type: ignore[union-attr]
                 case domain.Direction.DOWN:
                     next_cell = start.down()
-                case domain.Direction.UP:
-                    next_cell = start.up()
-                case domain.Direction.LEFT:
-                    next_cell = start.left()
                 case domain.Direction.RIGHT:
                     next_cell = start.right()
                 case _:
