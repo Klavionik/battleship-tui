@@ -9,7 +9,7 @@ from rich.text import Text
 from textual import on
 from textual.app import ComposeResult
 from textual.coordinate import Coordinate
-from textual.events import MouseMove
+from textual.events import Click, MouseMove
 from textual.message import Message
 from textual.reactive import var
 from textual.widget import Widget
@@ -68,9 +68,10 @@ class Board(Widget):
         super().__init__(*args, **kwargs)
         self.player = player
         self.board_size = size
-        self._table: DataTable[Text] = DataTable(cell_padding=0)
+        self._table: DataTable[Text] = DataTable(cell_padding=0, cursor_type="none")
         self._ship_to_place: ShipToPlace | None = None
         self._current_ship_coordinates: list[Coordinate] = []
+        self._cursor_coordinate: Coordinate = Coordinate(0, 0)
         self._current_target_coordinates: list[Coordinate] = []
         self._last_target_coordinate: Coordinate | None = None
         self._place_forbidden = True
@@ -81,11 +82,34 @@ class Board(Widget):
         self._even_cell = Text(self._cell, style="on #2D2D2D")
         self._odd_cell = Text(self._cell, style="on #1E1E1E")
 
-    def key_r(self) -> None:
-        self.rotate_preview()
+    def on_click(self, event: Click) -> None:
+        meta = event.style.meta
 
-    def key_space(self) -> None:
-        self.action_place()
+        if not meta:
+            # Click outside board.
+            return
+
+        row, column = meta["row"], meta["column"]
+
+        if row < 0 or column < 0:
+            # Click outside cells.
+            return
+
+        coordinate = Coordinate(row, column)
+
+        if self.mode == self.Mode.TARGET:
+            self._current_target_coordinates.append(coordinate)
+
+            if len(self._current_target_coordinates) == self.min_targets:
+                self.emit_cell_shot()
+                self.clear_current_target()
+
+        if self.mode == self.Mode.ARRANGE:
+            match event.button:
+                case 1:
+                    self.action_place()
+                case 3:
+                    self.rotate_preview()
 
     def on_mount(self) -> None:
         self.initialize_grid()
@@ -129,6 +153,7 @@ class Board(Widget):
 
         try:
             row, column = event.style.meta["row"], event.style.meta["column"]
+            self._cursor_coordinate = Coordinate(row, column)
         except KeyError:
             # Cursor outside grid, clear preview.
             self.clear_current_preview()
@@ -197,7 +222,8 @@ class Board(Widget):
     def on_mouse_move(self, event: MouseMove) -> None:
         if self.mode == self.Mode.TARGET:
             self.show_target(event)
-        else:
+
+        if self.mode == self.Mode.ARRANGE:
             self.show_preview(event)
 
     def rotate_preview(self) -> None:
@@ -205,7 +231,7 @@ class Board(Widget):
             return
 
         self._ship_to_place.rotate()  # type: ignore[union-attr]
-        self.preview_ship(*self._table.hover_coordinate)
+        self.preview_ship(*self._cursor_coordinate)
 
     def clear_current_preview(self) -> None:
         while self._current_ship_coordinates:
