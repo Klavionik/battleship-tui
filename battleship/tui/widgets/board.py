@@ -278,7 +278,6 @@ class Board(Widget):
             self._ship_coordinates.append(next_cell)
             start = next_cell
         else:
-            # TODO: Fails if clicks happen too fast.
             self._place_forbidden = False
             self.place_ship(self._ship_coordinates)
             return
@@ -287,8 +286,7 @@ class Board(Widget):
             self._table.update_cell_at(coor, value=self._forbidden_cell)
 
     def action_place(self) -> None:
-        # TODO: Do I really need the second condition?
-        if self._place_forbidden or self.mode != self.Mode.ARRANGE:
+        if self._place_forbidden:
             return
 
         self.place_ship(self._ship_coordinates)
@@ -300,3 +298,4 @@ class Board(Widget):
         )
         self._ship_coordinates.clear()
         self._ship_to_place = None
+        self._place_forbidden = True
