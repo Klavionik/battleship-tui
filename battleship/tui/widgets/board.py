@@ -77,7 +77,7 @@ class Board(Widget):
         self._cursor_coordinate: Coordinate | None = None
 
         self._ship_to_place: ShipToPlace | None = None
-        self._ship_coordinates: list[Coordinate] = []
+        self._preview_coordinates: list[Coordinate] = []
         self._place_forbidden = True
 
         self._target_coordinates: list[Coordinate] = []
@@ -116,7 +116,7 @@ class Board(Widget):
             self.move_crosshair(coordinate)
 
         if self.mode == self.Mode.ARRANGE:
-            self.show_preview(coordinate)
+            self.move_ship_preview(coordinate)
 
         self._cursor_coordinate = coordinate
 
@@ -132,12 +132,12 @@ class Board(Widget):
                 case MouseButton.LEFT:
                     self.select_target()
                 case MouseButton.RIGHT:
-                    self.clear_current_target()
+                    self.clean_targets()
 
         if self.mode == self.Mode.ARRANGE:
             match event.button:
                 case MouseButton.LEFT:
-                    self.action_place()
+                    self.place_ship()
                 case MouseButton.RIGHT:
                     self.rotate_preview()
 
@@ -202,14 +202,17 @@ class Board(Widget):
             value=self.get_bg_cell(*coordinate),
         )
 
-    def show_preview(self, coordinate: Coordinate | None) -> None:
+    def move_ship_preview(self, coordinate: Coordinate | None) -> None:
+        # We don't know if we could place the ship
+        # after the move, so we forbid it until we know
+        # there is enough place.
         self._place_forbidden = True
-        self.clear_current_preview()
+        self.clean_ship_preview()
 
         if coordinate:
             self.preview_ship(coordinate.row, coordinate.column)
 
-    def clear_current_target(self) -> None:
+    def clean_targets(self) -> None:
         while self._target_coordinates:
             coor = self._target_coordinates.pop()
             self.paint_background_cell(coor)
@@ -224,7 +227,7 @@ class Board(Widget):
 
         if len(self._target_coordinates) == self.min_targets:
             self.post_message(self.CellShot(self._target_coordinates[:]))
-            self.clear_current_target()
+            self.clean_targets()
 
     def rotate_preview(self) -> None:
         if not self.mode == self.Mode.ARRANGE:
@@ -233,14 +236,18 @@ class Board(Widget):
         self._ship_to_place.rotate()  # type: ignore[union-attr]
         self.preview_ship(*self._cursor_coordinate)  # type: ignore[misc]
 
-    def clear_current_preview(self) -> None:
-        while self._ship_coordinates:
-            coor = self._ship_coordinates.pop()
+    def clean_ship_preview(self) -> None:
+        while self._preview_coordinates:
+            coor = self._preview_coordinates.pop()
             self.paint_background_cell(coor)
 
-    def place_ship(self, coordinates: Iterable[Coordinate]) -> None:
+    def paint_ship(self, coordinates: Iterable[Coordinate]) -> None:
         for coor in coordinates:
             self._table.update_cell_at(coor, value=self._ship_cell)
+
+    def paint_forbidden(self, coordinates: Iterable[Coordinate]) -> None:
+        for coor in coordinates:
+            self._table.update_cell_at(coor, value=self._forbidden_cell)
 
     def is_coordinate_outside_board(self, coordinate: Coordinate) -> bool:
         return (coordinate.column >= self.board_size or coordinate.column < 0) or (
@@ -251,14 +258,14 @@ class Board(Widget):
         if self.mode != self.Mode.ARRANGE:
             return
 
-        self.clear_current_preview()
+        self.clean_ship_preview()
 
         start = Coordinate(row, column)
 
         if self._table.get_cell_at(start) is self._ship_cell:
             return
 
-        self._ship_coordinates.append(start)
+        self._preview_coordinates.append(start)
 
         for _ in range(self._ship_to_place.length - 1):  # type: ignore[union-attr]
             match self._ship_to_place.direction:  # type: ignore[union-attr]
@@ -275,27 +282,25 @@ class Board(Widget):
             if self._table.get_cell_at(next_cell) is self._ship_cell:
                 break
 
-            self._ship_coordinates.append(next_cell)
+            self._preview_coordinates.append(next_cell)
             start = next_cell
         else:
             self._place_forbidden = False
-            self.place_ship(self._ship_coordinates)
+            self.paint_ship(self._preview_coordinates)
             return
 
-        for coor in self._ship_coordinates:
-            self._table.update_cell_at(coor, value=self._forbidden_cell)
+        self.paint_forbidden(self._preview_coordinates)
 
-    def action_place(self) -> None:
+    def place_ship(self) -> None:
         if self._place_forbidden:
             return
 
-        self.place_ship(self._ship_coordinates)
         self.post_message(
             self.ShipPlaced(
                 self._ship_to_place,  # type: ignore[arg-type]
-                self._ship_coordinates[:],
+                self._preview_coordinates[:],
             )
         )
-        self._ship_coordinates.clear()
+        self._preview_coordinates.clear()
         self._ship_to_place = None
         self._place_forbidden = True
