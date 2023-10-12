@@ -46,7 +46,7 @@ class MouseButton(enum.IntEnum):
 
 class Board(Widget):
     class Mode(enum.StrEnum):
-        NONE = "none"
+        DISPLAY = "display"
         ARRANGE = "arrange"
         TARGET = "target"
 
@@ -56,7 +56,7 @@ class Board(Widget):
     }
     """
     min_targets: var[int] = var(1)
-    mode: var[Mode] = var(Mode.NONE, init=False)
+    mode: var[Mode] = var(Mode.DISPLAY, init=False)
 
     class ShipPlaced(Message):
         def __init__(self, ship: ShipToPlace, coordinates: list[Coordinate]):
