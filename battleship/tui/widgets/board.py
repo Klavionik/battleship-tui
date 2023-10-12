@@ -6,7 +6,6 @@ from typing import Any, Iterable
 
 from rich.emoji import EMOJI  # type: ignore[attr-defined]
 from rich.text import Text
-from textual import on
 from textual.app import ComposeResult
 from textual.coordinate import Coordinate
 from textual.events import Click, MouseMove
@@ -37,6 +36,11 @@ class ShipToPlace:
 
     def rotate(self) -> None:
         self.direction = next(self._directions)
+
+
+class MouseButton(enum.IntEnum):
+    LEFT = 1
+    RIGHT = 3
 
 
 class Board(Widget):
@@ -82,33 +86,38 @@ class Board(Widget):
         self._even_cell = Text(self._cell, style="on #2D2D2D")
         self._odd_cell = Text(self._cell, style="on #1E1E1E")
 
-    def on_click(self, event: Click) -> None:
+    @staticmethod
+    def detect_cell_coordinate(event: Click | MouseMove) -> Coordinate | None:
         meta = event.style.meta
 
         if not meta:
-            # Click outside board.
-            return
+            # Event outside board.
+            return None
 
         row, column = meta["row"], meta["column"]
 
         if row < 0 or column < 0:
-            # Click outside cells.
+            # Event outside cells.
+            return None
+
+        return Coordinate(row, column)
+
+    def on_click(self, event: Click) -> None:
+        if not (coordinate := self.detect_cell_coordinate(event)):
             return
 
-        coordinate = Coordinate(row, column)
-
         if self.mode == self.Mode.TARGET:
-            self._current_target_coordinates.append(coordinate)
-
-            if len(self._current_target_coordinates) == self.min_targets:
-                self.emit_cell_shot()
-                self.clear_current_target()
+            match event.button:
+                case MouseButton.LEFT:
+                    self.select_target(coordinate)
+                case MouseButton.RIGHT:
+                    self.clear_current_target()
 
         if self.mode == self.Mode.ARRANGE:
             match event.button:
-                case 1:
+                case MouseButton.LEFT:
                     self.action_place()
-                case 3:
+                case MouseButton.RIGHT:
                     self.rotate_preview()
 
     def on_mount(self) -> None:
@@ -148,17 +157,14 @@ class Board(Widget):
         yield Static(self.player)
         yield self._table
 
-    def show_preview(self, event: MouseMove) -> None:
+    def show_preview(self, coordinate: Coordinate | None) -> None:
         self._place_forbidden = True
 
-        try:
-            row, column = event.style.meta["row"], event.style.meta["column"]
-            self._cursor_coordinate = Coordinate(row, column)
-        except KeyError:
-            # Cursor outside grid, clear preview.
+        if coordinate is None:
             self.clear_current_preview()
         else:
-            self.preview_ship(row, column)
+            self.preview_ship(coordinate.row, coordinate.column)
+            self._cursor_coordinate = coordinate
 
     def clear_current_target(self) -> None:
         while self._current_target_coordinates:
@@ -177,54 +183,42 @@ class Board(Widget):
                 self._last_target_coordinate, value=self.get_bg_cell(*self._last_target_coordinate)
             )
 
-    @on(DataTable.CellSelected)
-    def select_target(self, event: DataTable.CellSelected) -> None:
-        event.stop()
-
+    def select_target(self, coordinate: Coordinate) -> None:
         if not self.mode == self.Mode.TARGET:
             return
 
-        self._current_target_coordinates.append(event.coordinate)
+        self._current_target_coordinates.append(coordinate)
 
         if len(self._current_target_coordinates) == self.min_targets:
             self.emit_cell_shot()
             self.clear_current_target()
 
-    def target_cell(self, row: int, column: int) -> None:
+    def target_cell(self, coordinate: Coordinate) -> None:
         if not self.mode == self.Mode.TARGET:
             return
-
-        if row < 0 or column < 0:
-            # Cursor inside table, but outside cells.
-            return
-
-        coordinate = Coordinate(row, column)
 
         if coordinate in self._current_target_coordinates:
             return
 
-        cell = self.get_bg_cell(row, column)
+        cell = self.get_bg_cell(*coordinate)
         # Paint target symbol preserving cell's background color.
         self._table.update_cell_at(coordinate, value=Text(TARGET, style=cell.style))
         self._last_target_coordinate = coordinate
 
-    def show_target(self, event: MouseMove) -> None:
+    def show_target(self, coordinate: Coordinate | None) -> None:
         self.clear_last_target()
 
-        try:
-            row, column = event.style.meta["row"], event.style.meta["column"]
-        except KeyError:
-            # Cursor outside grid.
-            self.clear_last_target()
-        else:
-            self.target_cell(row, column)
+        if coordinate:
+            self.target_cell(coordinate)
 
     def on_mouse_move(self, event: MouseMove) -> None:
+        coordinate = self.detect_cell_coordinate(event)
+
         if self.mode == self.Mode.TARGET:
-            self.show_target(event)
+            self.show_target(coordinate)
 
         if self.mode == self.Mode.ARRANGE:
-            self.show_preview(event)
+            self.show_preview(coordinate)
 
     def rotate_preview(self) -> None:
         if not self.mode == self.Mode.ARRANGE:
@@ -255,10 +249,6 @@ class Board(Widget):
             return
 
         self.clear_current_preview()
-
-        if row < 0 or column < 0:
-            # Cursor outside grid.
-            return
 
         start = Coordinate(row, column)
 
