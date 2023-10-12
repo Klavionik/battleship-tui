@@ -280,6 +280,7 @@ class Board(Widget):
             self._current_ship_coordinates.append(next_cell)
             start = next_cell
         else:
+            # TODO: Fails if clicks happen too fast.
             self._place_forbidden = False
             self.place_ship(self._current_ship_coordinates)
             return
