@@ -123,7 +123,7 @@ class Board(Widget):
     def on_mount(self) -> None:
         self.initialize_grid()
 
-    def ask_placement(self, ship: ShipToPlace) -> None:
+    def set_ship_to_place(self, ship: ShipToPlace) -> None:
         self._ship_to_place = ship
 
     def initialize_grid(self) -> None:

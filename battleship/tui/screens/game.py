@@ -67,7 +67,7 @@ class Game(Screen[None]):
         if ship:
             self.player_board.mode = Board.Mode.ARRANGE
             self.write_as_game(f"Place your :ship: [b]{ship.type.title()}[/]")
-            self.player_board.ask_placement(ShipToPlace(type=ship.type, length=ship.hp))
+            self.player_board.set_ship_to_place(ShipToPlace(type=ship.type, length=ship.hp))
         else:
             self.write_as_game("Fleet is ready, admiral!")
             self.player_board.mode = Board.Mode.NONE
