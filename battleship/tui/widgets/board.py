@@ -78,7 +78,7 @@ class Board(Widget):
         self._current_ship_coordinates: list[Coordinate] = []
         self._cursor_coordinate: Coordinate = Coordinate(0, 0)
         self._current_target_coordinates: list[Coordinate] = []
-        self._last_target_coordinate: Coordinate | None = None
+        self._last_crosshair_coordinate: Coordinate | None = None
         self._place_forbidden = True
 
         self._cell = " " * 2
@@ -112,7 +112,7 @@ class Board(Widget):
         coordinate = self.detect_cell_coordinate(event)
 
         if self.mode == self.Mode.TARGET:
-            self.show_target(coordinate)
+            self.move_crosshair(coordinate)
 
         if self.mode == self.Mode.ARRANGE:
             self.show_preview(coordinate)
@@ -170,6 +170,34 @@ class Board(Widget):
         yield Static(self.player)
         yield self._table
 
+    def move_crosshair(self, coordinate: Coordinate | None) -> None:
+        self.clear_last_crosshair()
+
+        if coordinate:
+            self.paint_crosshair(coordinate)
+
+    def paint_crosshair(self, coordinate: Coordinate) -> None:
+        if not self.mode == self.Mode.TARGET:
+            return
+
+        if coordinate in self._current_target_coordinates:
+            return
+
+        cell = self.get_bg_cell(*coordinate)
+        # Paint crosshair preserving cell's background color.
+        self._table.update_cell_at(coordinate, value=Text(TARGET, style=cell.style))
+        self._last_crosshair_coordinate = coordinate
+
+    def clear_last_crosshair(self) -> None:
+        if (
+            self._last_crosshair_coordinate
+            and self._last_crosshair_coordinate not in self._current_target_coordinates
+        ):
+            self._table.update_cell_at(
+                self._last_crosshair_coordinate,
+                value=self.get_bg_cell(*self._last_crosshair_coordinate),
+            )
+
     def show_preview(self, coordinate: Coordinate | None) -> None:
         self._place_forbidden = True
 
@@ -187,15 +215,6 @@ class Board(Widget):
                 value=self.get_bg_cell(*coor),
             )
 
-    def clear_last_target(self) -> None:
-        if (
-            self._last_target_coordinate
-            and self._last_target_coordinate not in self._current_target_coordinates
-        ):
-            self._table.update_cell_at(
-                self._last_target_coordinate, value=self.get_bg_cell(*self._last_target_coordinate)
-            )
-
     def select_target(self, coordinate: Coordinate) -> None:
         if not self.mode == self.Mode.TARGET:
             return
@@ -205,24 +224,6 @@ class Board(Widget):
         if len(self._current_target_coordinates) == self.min_targets:
             self.emit_cell_shot()
             self.clear_current_target()
-
-    def target_cell(self, coordinate: Coordinate) -> None:
-        if not self.mode == self.Mode.TARGET:
-            return
-
-        if coordinate in self._current_target_coordinates:
-            return
-
-        cell = self.get_bg_cell(*coordinate)
-        # Paint target symbol preserving cell's background color.
-        self._table.update_cell_at(coordinate, value=Text(TARGET, style=cell.style))
-        self._last_target_coordinate = coordinate
-
-    def show_target(self, coordinate: Coordinate | None) -> None:
-        self.clear_last_target()
-
-        if coordinate:
-            self.target_cell(coordinate)
 
     def rotate_preview(self) -> None:
         if not self.mode == self.Mode.ARRANGE:
