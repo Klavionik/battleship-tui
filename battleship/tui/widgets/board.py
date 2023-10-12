@@ -194,6 +194,7 @@ class Board(Widget):
                 self._crosshair_coordinate,
                 value=self.get_bg_cell(*self._crosshair_coordinate),
             )
+            self._crosshair_coordinate = None
 
     def show_preview(self, coordinate: Coordinate | None) -> None:
         self._place_forbidden = True
