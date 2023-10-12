@@ -78,7 +78,7 @@ class Board(Widget):
         self._current_ship_coordinates: list[Coordinate] = []
         self._cursor_coordinate: Coordinate = Coordinate(0, 0)
         self._current_target_coordinates: list[Coordinate] = []
-        self._last_crosshair_coordinate: Coordinate | None = None
+        self._crosshair_coordinate: Coordinate | None = None
         self._place_forbidden = True
 
         self._cell = " " * 2
@@ -119,13 +119,10 @@ class Board(Widget):
 
     @on(Click)
     def handle_click(self, event: Click) -> None:
-        if not (coordinate := self.detect_cell_coordinate(event)):
-            return
-
         if self.mode == self.Mode.TARGET:
             match event.button:
                 case MouseButton.LEFT:
-                    self.select_target(coordinate)
+                    self.select_target()
                 case MouseButton.RIGHT:
                     self.clear_current_target()
 
@@ -171,7 +168,7 @@ class Board(Widget):
         yield self._table
 
     def move_crosshair(self, coordinate: Coordinate | None) -> None:
-        self.clear_last_crosshair()
+        self.clean_crosshair()
 
         if coordinate:
             self.paint_crosshair(coordinate)
@@ -186,16 +183,16 @@ class Board(Widget):
         cell = self.get_bg_cell(*coordinate)
         # Paint crosshair preserving cell's background color.
         self._table.update_cell_at(coordinate, value=Text(TARGET, style=cell.style))
-        self._last_crosshair_coordinate = coordinate
+        self._crosshair_coordinate = coordinate
 
-    def clear_last_crosshair(self) -> None:
+    def clean_crosshair(self) -> None:
         if (
-            self._last_crosshair_coordinate
-            and self._last_crosshair_coordinate not in self._current_target_coordinates
+            self._crosshair_coordinate
+            and self._crosshair_coordinate not in self._current_target_coordinates
         ):
             self._table.update_cell_at(
-                self._last_crosshair_coordinate,
-                value=self.get_bg_cell(*self._last_crosshair_coordinate),
+                self._crosshair_coordinate,
+                value=self.get_bg_cell(*self._crosshair_coordinate),
             )
 
     def show_preview(self, coordinate: Coordinate | None) -> None:
@@ -215,11 +212,13 @@ class Board(Widget):
                 value=self.get_bg_cell(*coor),
             )
 
-    def select_target(self, coordinate: Coordinate) -> None:
+    def select_target(self) -> None:
         if not self.mode == self.Mode.TARGET:
             return
 
-        self._current_target_coordinates.append(coordinate)
+        self._current_target_coordinates.append(
+            self._crosshair_coordinate,  # type: ignore[arg-type]
+        )
 
         if len(self._current_target_coordinates) == self.min_targets:
             self.emit_cell_shot()
