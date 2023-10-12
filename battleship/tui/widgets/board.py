@@ -190,11 +190,14 @@ class Board(Widget):
             self._crosshair_coordinate
             and self._crosshair_coordinate not in self._current_target_coordinates
         ):
-            self._table.update_cell_at(
-                self._crosshair_coordinate,
-                value=self.get_bg_cell(*self._crosshair_coordinate),
-            )
+            self.paint_background_cell(self._crosshair_coordinate)
             self._crosshair_coordinate = None
+
+    def paint_background_cell(self, coordinate: Coordinate) -> None:
+        self._table.update_cell_at(
+            coordinate,
+            value=self.get_bg_cell(*coordinate),
+        )
 
     def show_preview(self, coordinate: Coordinate | None) -> None:
         self._place_forbidden = True
@@ -208,10 +211,7 @@ class Board(Widget):
     def clear_current_target(self) -> None:
         while self._current_target_coordinates:
             coor = self._current_target_coordinates.pop()
-            self._table.update_cell_at(
-                coor,
-                value=self.get_bg_cell(*coor),
-            )
+            self.paint_background_cell(coor)
 
     def select_target(self) -> None:
         if not self.mode == self.Mode.TARGET:
@@ -235,7 +235,7 @@ class Board(Widget):
     def clear_current_preview(self) -> None:
         while self._current_ship_coordinates:
             coor = self._current_ship_coordinates.pop()
-            self._table.update_cell_at(coor, value=self.get_bg_cell(coor.row, coor.column))
+            self.paint_background_cell(coor)
 
     def place_ship(self, coordinates: Iterable[Coordinate]) -> None:
         for coor in coordinates:
