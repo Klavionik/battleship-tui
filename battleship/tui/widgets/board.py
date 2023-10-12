@@ -74,14 +74,13 @@ class Board(Widget):
         self.player = player
         self.board_size = size
         self._table: DataTable[Text] = DataTable(cell_padding=0, cursor_type="none")
+        self._cursor_coordinate: Coordinate | None = None
 
         self._ship_to_place: ShipToPlace | None = None
         self._ship_coordinates: list[Coordinate] = []
-        self._cursor_coordinate: Coordinate = Coordinate(0, 0)
         self._place_forbidden = True
 
         self._target_coordinates: list[Coordinate] = []
-        self._crosshair_coordinate: Coordinate | None = None
 
         self._cell = " " * 2
         self._forbidden_cell = Text(self._cell, style="on red")
@@ -119,8 +118,15 @@ class Board(Widget):
         if self.mode == self.Mode.ARRANGE:
             self.show_preview(coordinate)
 
+        self._cursor_coordinate = coordinate
+
     @on(Click)
     def handle_click(self, event: Click) -> None:
+        coordinate = self.detect_cell_coordinate(event)
+
+        if not coordinate:
+            return
+
         if self.mode == self.Mode.TARGET:
             match event.button:
                 case MouseButton.LEFT:
@@ -185,15 +191,10 @@ class Board(Widget):
         cell = self.get_bg_cell(*coordinate)
         # Paint crosshair preserving cell's background color.
         self._table.update_cell_at(coordinate, value=Text(TARGET, style=cell.style))
-        self._crosshair_coordinate = coordinate
 
     def clean_crosshair(self) -> None:
-        if (
-            self._crosshair_coordinate
-            and self._crosshair_coordinate not in self._target_coordinates
-        ):
-            self.paint_background_cell(self._crosshair_coordinate)
-            self._crosshair_coordinate = None
+        if self._cursor_coordinate and self._cursor_coordinate not in self._target_coordinates:
+            self.paint_background_cell(self._cursor_coordinate)
 
     def paint_background_cell(self, coordinate: Coordinate) -> None:
         self._table.update_cell_at(
@@ -203,12 +204,10 @@ class Board(Widget):
 
     def show_preview(self, coordinate: Coordinate | None) -> None:
         self._place_forbidden = True
+        self.clear_current_preview()
 
-        if coordinate is None:
-            self.clear_current_preview()
-        else:
+        if coordinate:
             self.preview_ship(coordinate.row, coordinate.column)
-            self._cursor_coordinate = coordinate
 
     def clear_current_target(self) -> None:
         while self._target_coordinates:
@@ -220,7 +219,7 @@ class Board(Widget):
             return
 
         self._target_coordinates.append(
-            self._crosshair_coordinate,  # type: ignore[arg-type]
+            self._cursor_coordinate,  # type: ignore[arg-type]
         )
 
         if len(self._target_coordinates) == self.min_targets:
@@ -232,7 +231,7 @@ class Board(Widget):
             return
 
         self._ship_to_place.rotate()  # type: ignore[union-attr]
-        self.preview_ship(*self._cursor_coordinate)
+        self.preview_ship(*self._cursor_coordinate)  # type: ignore[misc]
 
     def clear_current_preview(self) -> None:
         while self._ship_coordinates:
