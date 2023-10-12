@@ -87,4 +87,4 @@ class Game(Screen[None]):
         self.enemy_board.mode = Board.Mode.DISPLAY
         position = [chr(c.column + 1 + 64) + str(c.row + 1) for c in event.coordinates]
         position_str = ", ".join(position) if len(position) > 1 else position[0]
-        self.write_as_game(f"Player {self._session.player_name} attacks {position_str}")
+        self.write_as_game(f"{self._session.player_name} attacks {position_str}")
