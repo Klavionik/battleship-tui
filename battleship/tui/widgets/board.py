@@ -6,9 +6,10 @@ from typing import Any, Iterable
 
 from rich.emoji import EMOJI  # type: ignore[attr-defined]
 from rich.text import Text
+from textual import on
 from textual.app import ComposeResult
 from textual.coordinate import Coordinate
-from textual.events import Click, MouseMove
+from textual.events import Click, Mount, MouseMove
 from textual.message import Message
 from textual.reactive import var
 from textual.widget import Widget
@@ -102,7 +103,22 @@ class Board(Widget):
 
         return Coordinate(row, column)
 
-    def on_click(self, event: Click) -> None:
+    @on(Mount)
+    def handle_mount(self) -> None:
+        self.initialize_grid()
+
+    @on(MouseMove)
+    def handle_mouse_move(self, event: MouseMove) -> None:
+        coordinate = self.detect_cell_coordinate(event)
+
+        if self.mode == self.Mode.TARGET:
+            self.show_target(coordinate)
+
+        if self.mode == self.Mode.ARRANGE:
+            self.show_preview(coordinate)
+
+    @on(Click)
+    def handle_click(self, event: Click) -> None:
         if not (coordinate := self.detect_cell_coordinate(event)):
             return
 
@@ -119,9 +135,6 @@ class Board(Widget):
                     self.action_place()
                 case MouseButton.RIGHT:
                     self.rotate_preview()
-
-    def on_mount(self) -> None:
-        self.initialize_grid()
 
     def set_ship_to_place(self, ship: ShipToPlace) -> None:
         self._ship_to_place = ship
@@ -210,15 +223,6 @@ class Board(Widget):
 
         if coordinate:
             self.target_cell(coordinate)
-
-    def on_mouse_move(self, event: MouseMove) -> None:
-        coordinate = self.detect_cell_coordinate(event)
-
-        if self.mode == self.Mode.TARGET:
-            self.show_target(coordinate)
-
-        if self.mode == self.Mode.ARRANGE:
-            self.show_preview(coordinate)
 
     def rotate_preview(self) -> None:
         if not self.mode == self.Mode.ARRANGE:
