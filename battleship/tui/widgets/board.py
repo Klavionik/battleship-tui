@@ -4,7 +4,10 @@ from dataclasses import dataclass
 from itertools import cycle
 from typing import Any, Iterable
 
+from rich.console import Console, ConsoleOptions
 from rich.emoji import EMOJI  # type: ignore[attr-defined]
+from rich.measure import Measurement
+from rich.segment import Segment
 from rich.text import Text
 from textual import on
 from textual.app import ComposeResult
@@ -15,7 +18,6 @@ from textual.reactive import var
 from textual.widget import Widget
 from textual.widgets import DataTable, Static
 
-from battleship.engine import domain
 from battleship.engine.domain import Direction
 
 SHIP = EMOJI["ship"]
@@ -29,11 +31,10 @@ TARGET = EMOJI["dart"]
 class ShipToPlace:
     type: str
     length: int
-    direction: str = ""
+    direction: Direction = Direction.RIGHT
 
     def __post_init__(self) -> None:
-        self._directions = cycle((Direction.RIGHT, Direction.DOWN))
-        self.direction = next(self._directions)
+        self._directions = cycle((Direction.DOWN, Direction.RIGHT))
 
     def rotate(self) -> None:
         self.direction = next(self._directions)
@@ -42,6 +43,79 @@ class ShipToPlace:
 class MouseButton(enum.IntEnum):
     LEFT = 1
     RIGHT = 3
+
+
+_cell = " " * 2
+_forbidden_cell = Text(_cell, style="on red")
+_ship_cell = Text(_cell, style="on green")
+_even_cell = Text(_cell, style="on #2D2D2D")
+_odd_cell = Text(_cell, style="on #1E1E1E")
+
+
+@dataclass
+class Cell:
+    class State(enum.StrEnum):
+        EMPTY = "empty"
+        FORBIDDEN = "forbidden"
+        SHIP = "ship"
+        CROSSHAIR = "crosshair"
+        MISS = "miss"
+        SHIP_DAMAGED = "ship_damaged"
+        SHIP_DESTROYED = "ship_destroyed"
+
+    dark: bool = False
+    state: State = State.EMPTY
+
+    @classmethod
+    def miss(cls, dark: bool = False) -> "Cell":
+        return cls(dark, Cell.State.MISS)
+
+    @classmethod
+    def damaged(cls, dark: bool = False) -> "Cell":
+        return cls(dark, Cell.State.SHIP_DAMAGED)
+
+    @classmethod
+    def empty(cls, dark: bool = False) -> "Cell":
+        return cls(dark, Cell.State.EMPTY)
+
+    @classmethod
+    def ship(cls) -> "Cell":
+        return cls(state=Cell.State.SHIP)
+
+    @classmethod
+    def forbidden(cls) -> "Cell":
+        return cls(state=Cell.State.FORBIDDEN)
+
+    @classmethod
+    def crosshair(cls, dark: bool = False) -> "Cell":
+        return cls(dark, Cell.State.CROSSHAIR)
+
+    def render(self) -> Text:
+        base = _even_cell if self.dark else _odd_cell
+
+        match self.state:
+            case Cell.State.EMPTY:
+                return base
+            case Cell.State.FORBIDDEN:
+                return _forbidden_cell
+            case Cell.State.SHIP:
+                return _ship_cell
+            case Cell.State.CROSSHAIR:
+                return Text(TARGET, style=base.style)
+            case Cell.State.MISS:
+                return Text(WATER, style=base.style)
+            case Cell.State.SHIP_DAMAGED:
+                return Text(FIRE, style=base.style)
+            case Cell.State.SHIP_DESTROYED:
+                return Text(FIRE, style=base.style)
+
+        return base
+
+    def __rich_console__(self, console: Console, options: ConsoleOptions) -> Iterable[Segment]:
+        return self.render().__rich_console__(console, options)
+
+    def __rich_measure__(self, console: Console, options: ConsoleOptions) -> Measurement:
+        return self.render().__rich_measure__(console, options)
 
 
 class Board(Widget):
@@ -73,7 +147,7 @@ class Board(Widget):
         super().__init__(*args, **kwargs)
         self.player = player
         self.board_size = size
-        self._table: DataTable[Text] = DataTable(cell_padding=0, cursor_type="none")
+        self._table: DataTable[Cell] = DataTable(cell_padding=0, cursor_type="none")
         self._cursor_coordinate: Coordinate | None = None
 
         self._ship_to_place: ShipToPlace | None = None
@@ -81,12 +155,6 @@ class Board(Widget):
         self._place_forbidden = True
 
         self._target_coordinates: list[Coordinate] = []
-
-        self._cell = " " * 2
-        self._forbidden_cell = Text(self._cell, style="on red")
-        self._ship_cell = Text(self._cell, style="on green")
-        self._even_cell = Text(self._cell, style="on #2D2D2D")
-        self._odd_cell = Text(self._cell, style="on #1E1E1E")
 
     @staticmethod
     def detect_cell_coordinate(event: Click | MouseMove) -> Coordinate | None:
@@ -151,25 +219,24 @@ class Board(Widget):
         for i, row in enumerate(range(self.board_size), start=1):
             cells = []
             for column in range(self.board_size):
-                cells.append(self.get_bg_cell(row, column))
+                cells.append(Cell(self.is_dark_cell((row, column))))
 
             self._table.add_row(*cells, label=Text(str(i), style="#B0FC38 italic"))
 
-    def get_bg_cell(self, row: int, column: int) -> Text:
+    @staticmethod
+    def is_dark_cell(coordinate: tuple[int, int]) -> bool:
         """
-        Decide what cell should be at this position.
+        Decide what cell should be at this position. Cell considered
+        dark if the sum of its row and column indices is even.
 
         Args:
-            row: 0-based row index.
-            column: 0-based column index.
-
-        Returns: Even cell or odd cell.
-
+            coordinate: A tuple-like object containing a 0-based row index
+            and a 0-based column index.
         """
-        row, column = row + 1, column + 1
-        # Cell considered even if the sum of its row and column indices is even.
-        is_cell_even = (row + column) % 2 == 0
-        return self._even_cell if is_cell_even else self._odd_cell
+        row, column = coordinate
+        row = row + 1
+        column = column + 1
+        return (row + column) % 2 == 0
 
     def compose(self) -> ComposeResult:
         yield Static(self.player)
@@ -183,8 +250,11 @@ class Board(Widget):
 
     def is_cell_hit(self, coordinate: Coordinate) -> bool:
         cell = self._table.get_cell_at(coordinate)
+        return cell.state in (Cell.State.MISS, Cell.State.SHIP_DAMAGED, Cell.State.SHIP_DESTROYED)
 
-        return str(cell) == WATER or str(cell) == FIRE
+    def is_cell_ship(self, coordinate: Coordinate) -> bool:
+        cell = self._table.get_cell_at(coordinate)
+        return cell.state == Cell.State.SHIP
 
     def paint_crosshair(self, coordinate: Coordinate) -> None:
         if not self.mode == self.Mode.TARGET:
@@ -193,9 +263,8 @@ class Board(Widget):
         if coordinate in self._target_coordinates or self.is_cell_hit(coordinate):
             return
 
-        cell = self.get_bg_cell(*coordinate)
         # Paint crosshair preserving cell's background color.
-        self._table.update_cell_at(coordinate, value=Text(TARGET, style=cell.style))
+        self._table.update_cell_at(coordinate, Cell.crosshair(self.is_dark_cell(coordinate)))
 
     def clean_crosshair(self) -> None:
         if (
@@ -203,12 +272,12 @@ class Board(Widget):
             and self._cursor_coordinate not in self._target_coordinates
             and not self.is_cell_hit(self._cursor_coordinate)
         ):
-            self.paint_background_cell(self._cursor_coordinate)
+            self.paint_empty_cell(self._cursor_coordinate)
 
-    def paint_background_cell(self, coordinate: Coordinate) -> None:
+    def paint_empty_cell(self, coordinate: Coordinate) -> None:
         self._table.update_cell_at(
             coordinate,
-            value=self.get_bg_cell(*coordinate),
+            Cell(self.is_dark_cell(coordinate)),
         )
 
     def move_ship_preview(self, coordinate: Coordinate | None) -> None:
@@ -224,7 +293,7 @@ class Board(Widget):
     def clean_targets(self) -> None:
         while self._target_coordinates:
             coor = self._target_coordinates.pop()
-            self.paint_background_cell(coor)
+            self.paint_empty_cell(coor)
 
     def select_target(self) -> None:
         if not self.mode == self.Mode.TARGET:
@@ -251,19 +320,20 @@ class Board(Widget):
     def clean_ship_preview(self) -> None:
         while self._preview_coordinates:
             coor = self._preview_coordinates.pop()
-            self.paint_background_cell(coor)
+            self.paint_empty_cell(coor)
 
     def paint_ship(self, coordinates: Iterable[Coordinate]) -> None:
         for coor in coordinates:
-            self._table.update_cell_at(coor, value=self._ship_cell)
+            self._table.update_cell_at(coor, Cell.ship())
 
     def paint_forbidden(self, coordinates: Iterable[Coordinate]) -> None:
         for coor in coordinates:
-            self._table.update_cell_at(coor, value=self._forbidden_cell)
+            self._table.update_cell_at(coor, Cell.forbidden())
 
-    def is_coordinate_outside_board(self, coordinate: Coordinate) -> bool:
-        return (coordinate.column >= self.board_size or coordinate.column < 0) or (
-            coordinate.row > self.board_size - 1 or coordinate.row < 0
+    def is_cell_exist(self, coordinate: Coordinate) -> bool:
+        return not (
+            (coordinate.column >= self.board_size or coordinate.column < 0)
+            or (coordinate.row > self.board_size - 1 or coordinate.row < 0)
         )
 
     def preview_ship(self, row: int, column: int) -> None:
@@ -274,24 +344,21 @@ class Board(Widget):
 
         start = Coordinate(row, column)
 
-        if self._table.get_cell_at(start) is self._ship_cell:
+        if self.is_cell_ship(start):
             return
 
         self._preview_coordinates.append(start)
 
         for _ in range(self._ship_to_place.length - 1):  # type: ignore[union-attr]
             match self._ship_to_place.direction:  # type: ignore[union-attr]
-                case domain.Direction.DOWN:
+                case Direction.DOWN:
                     next_cell = start.down()
-                case domain.Direction.RIGHT:
+                case Direction.RIGHT:
                     next_cell = start.right()
                 case _:
                     return
 
-            if self.is_coordinate_outside_board(next_cell):
-                break
-
-            if self._table.get_cell_at(next_cell) is self._ship_cell:
+            if not self.is_cell_exist(next_cell) or self.is_cell_ship(next_cell):
                 break
 
             self._preview_coordinates.append(next_cell)
@@ -318,9 +385,7 @@ class Board(Widget):
         self._place_forbidden = True
 
     def paint_damage(self, coordinate: Coordinate) -> None:
-        cell = self.get_bg_cell(*coordinate)
-        self._table.update_cell_at(coordinate, value=Text(FIRE, style=cell.style))
+        self._table.update_cell_at(coordinate, Cell.damaged(self.is_dark_cell(coordinate)))
 
     def paint_miss(self, coordinate: Coordinate) -> None:
-        cell = self.get_bg_cell(*coordinate)
-        self._table.update_cell_at(coordinate, value=Text(WATER, style=cell.style))
+        self._table.update_cell_at(coordinate, Cell.miss(self.is_dark_cell(coordinate)))
