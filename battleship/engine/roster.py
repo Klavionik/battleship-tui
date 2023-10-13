@@ -30,6 +30,9 @@ class Roster:
     def __iter__(self) -> Iterator[RosterItem]:
         return iter(self.items)
 
+    def __reversed__(self) -> Iterator[RosterItem]:
+        return reversed(self.items)
+
 
 _rosters: RosterRegistry = {}
 

@@ -181,11 +181,16 @@ class Board(Widget):
         if coordinate:
             self.paint_crosshair(coordinate)
 
+    def is_cell_hit(self, coordinate: Coordinate) -> bool:
+        cell = self._table.get_cell_at(coordinate)
+
+        return str(cell) == WATER or str(cell) == FIRE
+
     def paint_crosshair(self, coordinate: Coordinate) -> None:
         if not self.mode == self.Mode.TARGET:
             return
 
-        if coordinate in self._target_coordinates:
+        if coordinate in self._target_coordinates or self.is_cell_hit(coordinate):
             return
 
         cell = self.get_bg_cell(*coordinate)
@@ -193,7 +198,11 @@ class Board(Widget):
         self._table.update_cell_at(coordinate, value=Text(TARGET, style=cell.style))
 
     def clean_crosshair(self) -> None:
-        if self._cursor_coordinate and self._cursor_coordinate not in self._target_coordinates:
+        if (
+            self._cursor_coordinate
+            and self._cursor_coordinate not in self._target_coordinates
+            and not self.is_cell_hit(self._cursor_coordinate)
+        ):
             self.paint_background_cell(self._cursor_coordinate)
 
     def paint_background_cell(self, coordinate: Coordinate) -> None:
@@ -301,6 +310,14 @@ class Board(Widget):
                 self._preview_coordinates[:],
             )
         )
-        self._preview_coordinates.clear()
+        self.clean_ship_preview()
         self._ship_to_place = None
         self._place_forbidden = True
+
+    def paint_damage(self, coordinate: Coordinate) -> None:
+        cell = self.get_bg_cell(*coordinate)
+        self._table.update_cell_at(coordinate, value=Text(FIRE, style=cell.style))
+
+    def paint_miss(self, coordinate: Coordinate) -> None:
+        cell = self.get_bg_cell(*coordinate)
+        self._table.update_cell_at(coordinate, value=Text(WATER, style=cell.style))
