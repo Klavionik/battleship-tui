@@ -230,6 +230,9 @@ class Board(Widget):
         if not self.mode == self.Mode.TARGET:
             return
 
+        if self.is_cell_hit(self._cursor_coordinate):  # type: ignore[arg-type]
+            return
+
         self._target_coordinates.append(
             self._cursor_coordinate,  # type: ignore[arg-type]
         )
