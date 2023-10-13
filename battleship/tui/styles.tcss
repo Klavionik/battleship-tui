@@ -83,15 +83,3 @@ Game RichLog {
   margin: 1 1 0 1;
   scrollbar-size-vertical: 1;
 }
-
-Game Board {
-  width: 22;
-}
-
-Game Board.player {
-  dock: left;
-}
-
-Game Board.enemy {
-  dock: right;
-}

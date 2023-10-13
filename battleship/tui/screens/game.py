@@ -32,14 +32,8 @@ class Game(Screen[None]):
         super().__init__(*args, **kwargs)
         self._session_factory = session_factory
         self._session = session_factory()
-        self.player_board = Board(
-            player=self._session.player_name, size=domain.DEFAULT_BOARD_SIZE, classes="player"
-        )
-        self.enemy_board = Board(
-            player=self._session.bot_name,
-            size=domain.DEFAULT_BOARD_SIZE,
-            classes="enemy",
-        )
+        self.player_board = Board(size=domain.DEFAULT_BOARD_SIZE, classes="player")
+        self.enemy_board = Board(size=domain.DEFAULT_BOARD_SIZE, classes="enemy")
         self.board_map = {
             self._session.player: self.player_board,
             self._session.bot: self.enemy_board,

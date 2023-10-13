@@ -16,7 +16,7 @@ from textual.events import Click, Mount, MouseMove
 from textual.message import Message
 from textual.reactive import var
 from textual.widget import Widget
-from textual.widgets import DataTable, Static
+from textual.widgets import DataTable
 
 from battleship.engine.domain import Direction
 
@@ -124,11 +124,6 @@ class Board(Widget):
         ARRANGE = "arrange"
         TARGET = "target"
 
-    DEFAULT_CSS = """
-    Board {
-      width: 1fr;
-    }
-    """
     min_targets: var[int] = var(1)
     mode: var[Mode] = var(Mode.DISPLAY, init=False)
 
@@ -143,11 +138,10 @@ class Board(Widget):
             super().__init__()
             self.coordinates = coordinates
 
-    def __init__(self, *args: Any, player: str, size: int, **kwargs: Any) -> None:
+    def __init__(self, *args: Any, size: int, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
-        self.player = player
         self.board_size = size
-        self._table: DataTable[Cell] = DataTable(cell_padding=0, cursor_type="none")
+        self._table = self._create_table(size)
         self._cursor_coordinate: Coordinate | None = None
 
         self._ship_to_place: ShipToPlace | None = None
@@ -239,7 +233,6 @@ class Board(Widget):
         return (row + column) % 2 == 0
 
     def compose(self) -> ComposeResult:
-        yield Static(self.player)
         yield self._table
 
     def move_crosshair(self, coordinate: Coordinate | None) -> None:
@@ -389,3 +382,16 @@ class Board(Widget):
 
     def paint_miss(self, coordinate: Coordinate) -> None:
         self._table.update_cell_at(coordinate, Cell.miss(self.is_dark_cell(coordinate)))
+
+    def _create_table(self, size: int) -> DataTable[Cell]:
+        # 1. Disable cursor to make Click events bubble up.
+        # 2. Disable cell padding to make cells square.
+        table: DataTable[Cell] = DataTable(cell_padding=0, cursor_type="none")
+
+        # Size * cell width + row labels width.
+        self.styles.width = size * 2 + 2
+
+        # Size + header height.
+        self.styles.height = size + 1
+
+        return table
