@@ -38,15 +38,12 @@ class Ship:
             self.hp -= 1
 
 
+@dataclasses.dataclass
 class Cell:
-    def __init__(self, col: str, row: int):
-        self.col = col
-        self.row = row
-        self.ship: Ship | None = None
-        self.is_shot = False
-
-    def __repr__(self) -> str:
-        return f"Cell <{self.coordinate}>"
+    col: str
+    row: int
+    ship: Ship | None = None
+    is_shot: bool = False
 
     def hit(self) -> None:
         if self.is_shot:
@@ -107,8 +104,8 @@ class Board:
         self.grid = [[Cell(col, row) for col in self._letters] for row in self._numbers]
         self.ships: list[Ship] = []
 
-    def __str__(self) -> str:
-        return f"Board, {len(self.ships)} ships left"
+    def __repr__(self) -> str:
+        return f"<Board {self.size}x{self.size}, {len(self.ships)} ships>"
 
     def __getitem__(self, coordinate: str) -> Cell:
         return self.get_cell(coordinate)
@@ -181,13 +178,10 @@ class Board:
         return cell.ship
 
 
+@dataclasses.dataclass(unsafe_hash=True)
 class Player:
-    def __init__(self, name: str, board: Board | None = None) -> None:
-        self.name = name
-        self.board = board or Board()
-
-    def __str__(self) -> str:
-        return self.name
+    name: str
+    board: Board = dataclasses.field(default_factory=Board, hash=False)
 
     def add_ship(self, position: Collection[str], ship: Ship) -> None:
         self.board.place_ship(position, ship)
