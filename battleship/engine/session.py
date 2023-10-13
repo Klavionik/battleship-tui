@@ -87,6 +87,10 @@ class SingleplayerSession:
         shots = self._game.fire(position)
         ee.emit("shots", actor=actor, subject=subject, shots=shots)
 
+        if self._game.ended:
+            ee.emit("game_ended", winner=self._game.winner)
+            return
+
         if actor is self.bot:
             self.target_caller.provide_feedback(shots)
 

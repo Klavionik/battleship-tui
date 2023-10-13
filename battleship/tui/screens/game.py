@@ -10,6 +10,7 @@ from textual.widgets import Footer, RichLog
 
 from battleship.engine import domain, session
 from battleship.engine.session import ee as broker
+from battleship.tui import screens
 from battleship.tui.widgets.board import Board, ShipToPlace
 
 
@@ -54,6 +55,7 @@ class Game(Screen[None]):
         broker.add_listener("request_ship_position", self.on_request_ship_position)
         broker.add_listener("awaiting_move", self.on_awaiting_move)
         broker.add_listener("shots", self.on_shots)
+        broker.add_listener("game_ended", self.on_game_ended)
 
     def compose(self) -> ComposeResult:
         with Horizontal(id="boards"):
@@ -115,8 +117,17 @@ class Game(Screen[None]):
         if self._session.salvo_mode:
             board.min_targets = subject.ships_alive
 
+    def on_game_ended(self, winner: domain.Player) -> None:
+        for board in self.board_map.values():
+            board.mode = Board.Mode.DISPLAY
+
+        self.write_as_game(f"{winner.name} has won!")
+
     @on(Board.CellShot)
     def fire(self, event: Board.CellShot) -> None:
         self.enemy_board.mode = Board.Mode.DISPLAY
         position = [convert_to_coordinate(c) for c in event.coordinates]
         broker.emit("fire", position=position)
+
+    def action_back(self) -> None:
+        self.app.switch_screen(screens.MainMenu())
