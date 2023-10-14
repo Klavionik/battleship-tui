@@ -204,15 +204,12 @@ class Player:
 @dataclasses.dataclass
 class Shot:
     coordinate: str
+    hit: bool
     ship: Ship | None
 
     @property
-    def hit(self) -> bool:
-        return not self.miss
-
-    @property
     def miss(self) -> bool:
-        return self.ship is None
+        return not self.hit
 
 
 @dataclasses.dataclass
@@ -340,6 +337,7 @@ class Game:
             maybe_ship = self.player_under_attack.attack(coordinate)
             shot = Shot(
                 coordinate=coordinate,
+                hit=maybe_ship is not None,
                 ship=maybe_ship,
             )
             salvo.add_shot(shot)

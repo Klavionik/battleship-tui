@@ -33,7 +33,7 @@ def test_target_caller_targets_adjacent_cells_after_hit_until_all_tried():
     ship = domain.Ship("ship", 4)
     board.place_ship(["B2", "B3", "B4", "B5"], ship)
     board.hit_cell("B3")
-    shot = domain.Shot("B3", ship)
+    shot = domain.Shot("B3", hit=True, ship=ship)
     caller = ai.TargetCaller(board)
 
     caller.provide_feedback([shot])  # Adds 4 adjacent cells to next targets.
