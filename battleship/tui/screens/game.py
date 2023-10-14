@@ -101,7 +101,7 @@ class Game(Screen[None]):
                 result = "Miss"
             else:
                 board.paint_damage(coor)
-                hit_or_destroyed = "destoyed" if shot.ship.destroyed else "hit"  # type: ignore
+                hit_or_destroyed = "sunk" if shot.ship.destroyed else "hit"  # type: ignore
                 result = f"{shot.ship.type.title()} {hit_or_destroyed}"  # type: ignore
 
             self.write_as_game(f"{salvo.actor.name} attacks {shot.coordinate}. {result}")
