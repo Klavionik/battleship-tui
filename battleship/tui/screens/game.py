@@ -9,7 +9,6 @@ from textual.screen import Screen
 from textual.widgets import Footer, RichLog
 
 from battleship.engine import domain, session
-from battleship.engine.session import ee as broker
 from battleship.tui import screens
 from battleship.tui.widgets.board import Board, ShipToPlace
 
@@ -35,21 +34,21 @@ class Game(Screen[None]):
         self.player_board = Board(size=domain.DEFAULT_BOARD_SIZE, classes="player")
         self.enemy_board = Board(size=domain.DEFAULT_BOARD_SIZE, classes="enemy")
         self.board_map = {
-            self._session.player: self.player_board,
-            self._session.bot: self.enemy_board,
+            self._session.player.name: self.player_board,
+            self._session.bot.name: self.enemy_board,
         }
 
         if self._session.salvo_mode:
-            self.enemy_board.min_targets = len(self._session.roster.items)
+            self.enemy_board.min_targets = len(self._session.roster)
 
         self.chat = RichLog(wrap=True, markup=True)
 
-        broker.add_listener("fleet_ready", self.on_fleet_ready)
-        broker.add_listener("ship_spawned", self.on_ship_spawned)
-        broker.add_listener("request_ship_position", self.on_request_ship_position)
-        broker.add_listener("awaiting_move", self.on_awaiting_move)
-        broker.add_listener("salvo", self.on_salvo)
-        broker.add_listener("game_ended", self.on_game_ended)
+        self._session.subscribe("fleet_ready", self.on_fleet_ready)
+        self._session.subscribe("ship_spawned", self.on_ship_spawned)
+        self._session.subscribe("request_ship_position", self.on_request_ship_position)
+        self._session.subscribe("awaiting_move", self.on_awaiting_move)
+        self._session.subscribe("salvo", self.on_salvo)
+        self._session.subscribe("game_ended", self.on_game_ended)
 
     def compose(self) -> ComposeResult:
         with Horizontal(id="boards"):
@@ -77,21 +76,21 @@ class Game(Screen[None]):
     def spawn_ship(self, event: Board.ShipPlaced) -> None:
         self.player_board.mode = Board.Mode.DISPLAY
         position = [convert_to_coordinate(c) for c in event.coordinates]
-        broker.emit("spawn_ship", position=position, ship_type=event.ship.type)
+        self._session.notify("spawn_ship", position=position, ship_type=event.ship.type)
 
     def on_fleet_ready(self, player: domain.Player) -> None:
         self.write_as_game(f"{player.name}'s fleet is ready")
 
     def on_awaiting_move(self, actor: domain.Player, subject: domain.Player) -> None:
-        self.board_map[actor].mode = Board.Mode.DISPLAY
-        self.board_map[subject].mode = Board.Mode.TARGET
+        self.board_map[actor.name].mode = Board.Mode.DISPLAY
+        self.board_map[subject.name].mode = Board.Mode.TARGET
         self.write_as_game(f"{actor.name}'s turn. Fire at will!")
 
     def on_ship_spawned(self, position: Iterable[str]) -> None:
         self.player_board.paint_ship([convert_from_coordinate(p) for p in position])
 
     def on_salvo(self, salvo: domain.Salvo) -> None:
-        board = self.board_map[salvo.subject]
+        board = self.board_map[salvo.subject.name]
 
         for shot in salvo:
             coor = convert_from_coordinate(shot.coordinate)
@@ -107,7 +106,7 @@ class Game(Screen[None]):
             self.write_as_game(f"{salvo.actor.name} attacks {shot.coordinate}. {result}")
 
         if self._session.salvo_mode:
-            self.board_map[salvo.actor].min_targets = salvo.ships_left
+            self.board_map[salvo.actor.name].min_targets = salvo.ships_left
 
     def on_game_ended(self, winner: domain.Player) -> None:
         for board in self.board_map.values():
@@ -119,7 +118,7 @@ class Game(Screen[None]):
     def fire(self, event: Board.CellShot) -> None:
         self.enemy_board.mode = Board.Mode.DISPLAY
         position = [convert_to_coordinate(c) for c in event.coordinates]
-        broker.emit("fire", position=position)
+        self._session.notify("fire", position=position)
 
     def action_back(self) -> None:
         self.app.switch_screen(screens.MainMenu())
