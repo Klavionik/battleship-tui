@@ -5,7 +5,7 @@ import random
 import string
 from functools import cached_property
 from itertools import cycle
-from typing import Collection, Iterable
+from typing import Collection, Iterable, Iterator
 
 from battleship.engine import errors, roster
 
@@ -203,9 +203,7 @@ class Player:
 
 @dataclasses.dataclass
 class Shot:
-    actor: Player
     coordinate: str
-    subject: Player
     ship: Ship | None
 
     @property
@@ -215,6 +213,30 @@ class Shot:
     @property
     def miss(self) -> bool:
         return self.ship is None
+
+
+@dataclasses.dataclass
+class Salvo:
+    actor: Player
+    subject: Player
+    shots: list[Shot] = dataclasses.field(default_factory=list)
+
+    @property
+    def miss(self) -> bool:
+        return all(shot.miss for shot in self)
+
+    @property
+    def ships_left(self) -> int:
+        return self.subject.ships_alive
+
+    def add_shot(self, shot: Shot) -> None:
+        self.shots.append(shot)
+
+    def __len__(self) -> int:
+        return len(self.shots)
+
+    def __iter__(self) -> Iterator[Shot]:
+        return iter(self.shots)
 
 
 class Game:
@@ -293,7 +315,7 @@ class Game:
 
         self._started = True
 
-    def fire(self, coordinates: Collection[str]) -> list[Shot]:
+    def fire(self, coordinates: Collection[str]) -> Salvo:
         if not self._started:
             raise errors.GameNotStarted("Place ships and call `start()` before firing.")
 
@@ -309,29 +331,28 @@ class Game:
                 f"to the number of alive ships {self.current_player.ships_alive}."
             )
 
-        shots: list[Shot] = []
+        salvo = Salvo(
+            actor=self.current_player,
+            subject=self.player_under_attack,
+        )
 
         for coordinate in coordinates:
             maybe_ship = self.player_under_attack.attack(coordinate)
             shot = Shot(
-                actor=self.current_player,
                 coordinate=coordinate,
-                subject=self.player_under_attack,
                 ship=maybe_ship,
             )
-            shots.append(shot)
+            salvo.add_shot(shot)
 
         if self.player_under_attack.ships_alive == 0:
             self._winner = self.current_player
-            return shots
-
-        missed = all(shot.miss for shot in shots)
+            return salvo
 
         if (
             self.firing_order == FiringOrder.ALTERNATELY
             or self.firing_order == FiringOrder.UNTIL_MISS
-            and missed
+            and salvo.miss
         ):
             self._current_player = next(self._player_cycle)
 
-        return shots
+        return salvo

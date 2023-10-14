@@ -319,7 +319,7 @@ def test_game_shots_count_must_match_ships_count():
         game.fire(["A1", "A2"])
 
 
-def test_game_fire_returns_correct_fire_attempt_if_miss():
+def test_game_fire_returns_correct_salvo_if_miss():
     random.seed(42)
     player_a = domain.Player(name="player_a")
     player_b = domain.Player(name="player_b")
@@ -327,20 +327,19 @@ def test_game_fire_returns_correct_fire_attempt_if_miss():
     game.add_ship(player_a, position=["A2", "A3"], ship_type="ship")
     game.add_ship(player_b, position=["B2", "B3"], ship_type="ship")
     game.start()
-    attempt: domain.Result  # type: ignore
 
-    fire_attempts = game.fire(["B4"])
+    salvo = game.fire(["B4"])
 
-    assert len(fire_attempts) == 1
+    assert len(salvo) == 1
 
-    [attempt] = fire_attempts
+    [shot] = salvo
 
-    assert attempt.actor is player_a
-    assert attempt.subject is player_b
-    assert attempt.miss
+    assert salvo.actor is player_a
+    assert salvo.subject is player_b
+    assert shot.miss
 
 
-def test_game_fire_returns_correct_fire_attempt_if_hit():
+def test_game_fire_returns_correct_salvo_if_hit():
     random.seed(42)
     player_a = domain.Player(name="player_a")
     player_b = domain.Player(name="player_b")
@@ -348,20 +347,19 @@ def test_game_fire_returns_correct_fire_attempt_if_hit():
     game.add_ship(player_a, position=["A2", "A3"], ship_type="ship")
     game.add_ship(player_b, position=["B2", "B3"], ship_type="ship")
     game.start()
-    attempt: domain.Result  # type: ignore
 
-    fire_attempts = game.fire(["B2"])
+    salvo = game.fire(["B2"])
 
-    assert len(fire_attempts) == 1
+    assert len(salvo) == 1
 
-    [attempt] = fire_attempts
+    [shot] = salvo
 
-    assert attempt.actor is player_a
-    assert attempt.subject is player_b
-    assert attempt.hit
+    assert salvo.actor is player_a
+    assert salvo.subject is player_b
+    assert shot.hit
 
 
-def test_game_fire_returns_correct_fire_attempts_salvo_mode():
+def test_game_fire_returns_correct_salvo_in_salvo_mode():
     random.seed(42)
     player_a = domain.Player(name="player_a")
     player_b = domain.Player(name="player_b")
@@ -376,14 +374,14 @@ def test_game_fire_returns_correct_fire_attempts_salvo_mode():
     attempt_hit: domain.Result  # type: ignore
     attempt_miss: domain.Result  # type: ignore
 
-    fire_attempts = game.fire(["B2", "G5"])
+    salvo = game.fire(["B2", "G5"])
 
-    assert len(fire_attempts) == 2
+    assert len(salvo) == 2
 
-    attempt_hit, attempt_miss = fire_attempts
+    attempt_hit, attempt_miss = salvo
 
-    assert attempt_miss.actor is attempt_hit.actor is player_a
-    assert attempt_miss.subject is attempt_hit.subject is player_b
+    assert salvo.actor is player_a
+    assert salvo.subject is player_b
     assert attempt_hit.hit
     assert attempt_miss.miss
 

@@ -83,16 +83,15 @@ class SingleplayerSession:
 
     def fire(self, position: Collection[str]) -> None:
         actor = self._game.current_player
-        subject = self._game.player_under_attack
-        shots = self._game.fire(position)
-        ee.emit("shots", actor=actor, subject=subject, shots=shots)
+        salvo = self._game.fire(position)
+        ee.emit("salvo", salvo=salvo)
 
         if self._game.ended:
             ee.emit("game_ended", winner=self._game.winner)
             return
 
         if actor is self.bot:
-            self.target_caller.provide_feedback(shots)
+            self.target_caller.provide_feedback(salvo)
 
         if self._game.current_player is self.bot:
             self.make_bot_move()

@@ -48,7 +48,7 @@ class Game(Screen[None]):
         broker.add_listener("ship_spawned", self.on_ship_spawned)
         broker.add_listener("request_ship_position", self.on_request_ship_position)
         broker.add_listener("awaiting_move", self.on_awaiting_move)
-        broker.add_listener("shots", self.on_shots)
+        broker.add_listener("salvo", self.on_salvo)
         broker.add_listener("game_ended", self.on_game_ended)
 
     def compose(self) -> ComposeResult:
@@ -90,12 +90,10 @@ class Game(Screen[None]):
     def on_ship_spawned(self, position: Iterable[str]) -> None:
         self.player_board.paint_ship([convert_from_coordinate(p) for p in position])
 
-    def on_shots(
-        self, actor: domain.Player, subject: domain.Player, shots: Iterable[domain.Shot]
-    ) -> None:
-        board = self.board_map[subject]
+    def on_salvo(self, salvo: domain.Salvo) -> None:
+        board = self.board_map[salvo.subject]
 
-        for shot in shots:
+        for shot in salvo:
             coor = convert_from_coordinate(shot.coordinate)
 
             if shot.miss:
@@ -106,10 +104,10 @@ class Game(Screen[None]):
                 hit_or_destroyed = "destoyed" if shot.ship.destroyed else "hit"  # type: ignore
                 result = f"{shot.ship.type.title()} {hit_or_destroyed}"  # type: ignore
 
-            self.write_as_game(f"{actor.name} attacks {shot.coordinate}. {result}")
+            self.write_as_game(f"{salvo.actor.name} attacks {shot.coordinate}. {result}")
 
         if self._session.salvo_mode:
-            board.min_targets = subject.ships_alive
+            self.board_map[salvo.actor].min_targets = salvo.ships_left
 
     def on_game_ended(self, winner: domain.Player) -> None:
         for board in self.board_map.values():
