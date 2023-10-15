@@ -154,11 +154,11 @@ class Board(Widget):
     def detect_cell_coordinate(event: Click | MouseMove) -> Coordinate | None:
         meta = event.style.meta
 
-        if not meta:
-            # Event outside board.
+        try:
+            row, column = meta["row"], meta["column"]
+        except KeyError:
+            # Event outside table.
             return None
-
-        row, column = meta["row"], meta["column"]
 
         if row < 0 or column < 0:
             # Event outside cells.
