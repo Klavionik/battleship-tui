@@ -22,7 +22,7 @@ class MainMenu(Screen[None]):
         with Container(classes="main"):
             yield Markdown(WELCOME_TEXT, classes="screen-help")
 
-            with ListView(id="menu"):
+            with ListView(classes="screen-content"):
                 yield ListItem(Label(":robot: Singleplayer"), id="singleplayer")
                 yield ListItem(Label(":man: Multiplayer"), id="multiplayer")
                 yield ListItem(Label(":wrench: Settings"), id="settings")

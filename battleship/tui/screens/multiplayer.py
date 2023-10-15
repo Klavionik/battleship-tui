@@ -21,7 +21,7 @@ class Multiplayer(Screen[None]):
         with Container(classes="main"):
             yield Markdown(self.help, classes="screen-help")
 
-            with Container(id="menu"):
+            with Container(classes="screen-content"):
                 yield Input(placeholder="Nickname")
 
                 with ListView():

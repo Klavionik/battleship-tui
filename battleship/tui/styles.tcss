@@ -1,27 +1,13 @@
-MainMenu #menu {
-  width: 1fr;
-  height: auto;
-  margin-top: 1;
-  margin-left: 4;
-}
-
 MainMenu ListItem {
   align-horizontal: center;
   padding: 1;
 }
 
-Singleplayer #options {
-  width: 1fr;
-  height: auto;
-  margin-top: 1;
-  margin-left: 4;
-}
-
-Singleplayer #options > * {
+Singleplayer .screen-content > * {
   margin-bottom: 1;
 }
 
-Singleplayer #options #roster {
+Singleplayer #roster {
   padding: 1;
   width: 100%;
   border: tall $secondary;
@@ -35,17 +21,17 @@ Singleplayer #options #roster {
   border: tall transparent;
 }
 
-Singleplayer #options #salvo_mode {
+Singleplayer #salvo_mode {
   width: 100%;
 }
 
-Singleplayer #options #firing_order {
+Singleplayer #firing_order {
   padding: 1;
   width: 100%;
   border: tall $secondary;
 }
 
-Singleplayer #options Button {
+Singleplayer Button {
   margin-left: 1;
 }
 
@@ -60,17 +46,11 @@ Game RichLog {
   scrollbar-size-vertical: 1;
 }
 
-Multiplayer #menu {
-  height: auto;
-  margin-top: 1;
-  margin-left: 4;
-}
-
-Multiplayer #menu Input {
+Multiplayer Input {
   margin-bottom: 1;
 }
 
-Multiplayer #menu ListItem {
+Multiplayer ListItem {
   align-horizontal: center;
   padding: 1;
 }
@@ -85,4 +65,11 @@ Multiplayer #menu ListItem {
   width: 1fr;
   margin: 0;
   margin-right: 4;
+}
+
+.screen-content {
+  width: 1fr;
+  height: auto;
+  margin-top: 1;
+  margin-left: 4;
 }

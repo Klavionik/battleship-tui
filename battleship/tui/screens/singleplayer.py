@@ -27,7 +27,7 @@ class Singleplayer(Screen[None]):
             with VerticalScroll():
                 yield Markdown(self.help, classes="screen-help")
 
-            with Container(id="options"):
+            with Container(classes="screen-content"):
                 with RadioSet(id="roster") as rs:
                     rs.border_title = "Roster"
                     yield RadioButton("Classic", name="classic", value=True)
