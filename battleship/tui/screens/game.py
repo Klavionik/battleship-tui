@@ -35,7 +35,7 @@ class Game(Screen[None]):
         self.enemy_board = Board(size=domain.DEFAULT_BOARD_SIZE, classes="enemy")
         self.board_map = {
             self._session.player.name: self.player_board,
-            self._session.bot.name: self.enemy_board,
+            self._session.enemy.name: self.enemy_board,
         }
 
         if self._session.salvo_mode:
