@@ -20,7 +20,7 @@ via network.
 class MainMenu(Screen[None]):
     def compose(self) -> ComposeResult:
         with Container(classes="main"):
-            yield Markdown(WELCOME_TEXT, id="text")
+            yield Markdown(WELCOME_TEXT, classes="screen-help")
 
             with ListView(id="menu"):
                 yield ListItem(Label(":robot: Singleplayer"), id="singleplayer")

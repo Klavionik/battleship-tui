@@ -19,7 +19,7 @@ class Multiplayer(Screen[None]):
 
     def compose(self) -> ComposeResult:
         with Container(classes="main"):
-            yield Markdown(self.help, id="text")
+            yield Markdown(self.help, classes="screen-help")
 
             with Container(id="menu"):
                 yield Input(placeholder="Nickname")

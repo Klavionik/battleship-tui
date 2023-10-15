@@ -25,7 +25,7 @@ class Singleplayer(Screen[None]):
     def compose(self) -> ComposeResult:
         with Container(classes="main"):
             with VerticalScroll():
-                yield Markdown(self.help, id="text")
+                yield Markdown(self.help, classes="screen-help")
 
             with Container(id="options"):
                 with RadioSet(id="roster") as rs:
