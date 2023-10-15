@@ -28,12 +28,12 @@ class Singleplayer(Screen[None]):
                 yield Markdown(self.help, classes="screen-help")
 
             with Container(classes="screen-content"):
-                with RadioSet(id="roster") as rs:
+                with RadioSet(id="roster", classes="options-panel") as rs:
                     rs.border_title = "Roster"
                     yield RadioButton("Classic", name="classic", value=True)
                     yield RadioButton("Russian", name="russian")
 
-                with RadioSet(id="firing_order") as rs:
+                with RadioSet(id="firing_order", classes="options-panel") as rs:
                     rs.border_title = "Firing order"
                     yield RadioButton("Alternately", name="alternately", value=True)
                     yield RadioButton("Until miss", name="until_miss")
