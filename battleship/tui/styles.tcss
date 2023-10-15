@@ -1,47 +1,6 @@
-MainMenu ListItem {
-  align-horizontal: center;
-  padding: 1;
-}
+$option-border: tall $secondary;
 
-Singleplayer .screen-content > * {
-  margin-bottom: 1;
-}
-
-#roster:focus, #firing_order:focus {
-  border: none;
-}
-
-#salvo_mode:focus {
-  border: tall transparent;
-}
-
-Singleplayer #salvo_mode {
-  width: 100%;
-}
-
-Singleplayer Button {
-  margin-left: 1;
-}
-
-Game #boards {
-  margin: 1 3 0 3;
-}
-
-Game RichLog {
-  padding: 0 1;
-  height: 11;
-  margin: 1 1 0 1;
-  scrollbar-size-vertical: 1;
-}
-
-Multiplayer Input {
-  margin-bottom: 1;
-}
-
-Multiplayer ListItem {
-  align-horizontal: center;
-  padding: 1;
-}
+/* Reusable classes */
 
 .main {
   layout: horizontal;
@@ -65,5 +24,58 @@ Multiplayer ListItem {
 .options-panel {
   padding: 1;
   width: 100%;
-  border: tall $secondary;
+  border: $option-border;
+}
+
+
+/* Main menu screen */
+
+MainMenu ListItem {
+  align-horizontal: center;
+  padding: 1;
+}
+
+
+/* Singleplayer screen */
+
+Singleplayer .screen-content > * {
+  margin-bottom: 1;
+}
+
+#salvo_mode {
+  border: $option-border;
+}
+
+Singleplayer #salvo_mode {
+  width: 100%;
+}
+
+Singleplayer .screen-content Button {
+  margin-left: 1;
+}
+
+
+/* Game screen */
+
+Game #boards {
+  margin: 1 3 0 3;
+}
+
+Game RichLog {
+  padding: 0 1;
+  height: 11;
+  margin: 1 1 0 1;
+  scrollbar-size-vertical: 1;
+}
+
+
+/* Multiplayer screen */
+
+Multiplayer Input {
+  margin-bottom: 1;
+}
+
+Multiplayer ListItem {
+  align-horizontal: center;
+  padding: 1;
 }
