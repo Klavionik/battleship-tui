@@ -23,7 +23,7 @@ class Singleplayer(Screen[None]):
             self.help = fh.read()
 
     def compose(self) -> ComposeResult:
-        with Container(id="content"):
+        with Container(classes="main"):
             with VerticalScroll():
                 yield Markdown(self.help, id="text")
 

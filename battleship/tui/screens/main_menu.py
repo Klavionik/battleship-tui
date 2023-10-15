@@ -19,7 +19,7 @@ via network.
 
 class MainMenu(Screen[None]):
     def compose(self) -> ComposeResult:
-        with Container(id="content"):
+        with Container(classes="main"):
             yield Markdown(WELCOME_TEXT, id="text")
 
             with ListView(id="menu"):

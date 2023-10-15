@@ -1,9 +1,3 @@
-MainMenu #content {
-  layout: horizontal;
-  margin: 0 4;
-  align: center middle;
-}
-
 MainMenu #text {
   width: 1fr;
   margin: 0;
@@ -20,12 +14,6 @@ MainMenu #menu {
 MainMenu ListItem {
   align-horizontal: center;
   padding: 1;
-}
-
-Singleplayer #content {
-  layout: horizontal;
-  align-vertical: middle;
-  margin: 0 4;
 }
 
 Singleplayer #text {
@@ -84,12 +72,6 @@ Game RichLog {
   scrollbar-size-vertical: 1;
 }
 
-Multiplayer #content {
-  layout: horizontal;
-  margin: 0 4;
-  align: center middle;
-}
-
 Multiplayer #text {
   width: 1fr;
   margin: 0;
@@ -109,4 +91,10 @@ Multiplayer #menu Input {
 Multiplayer #menu ListItem {
   align-horizontal: center;
   padding: 1;
+}
+
+.main {
+  layout: horizontal;
+  margin: 0 4;
+  align: center middle;
 }

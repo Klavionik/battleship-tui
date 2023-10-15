@@ -18,7 +18,7 @@ class Multiplayer(Screen[None]):
             self.help = fh.read()
 
     def compose(self) -> ComposeResult:
-        with Container(id="content"):
+        with Container(classes="main"):
             yield Markdown(self.help, id="text")
 
             with Container(id="menu"):
