@@ -83,3 +83,30 @@ Game RichLog {
   margin: 1 1 0 1;
   scrollbar-size-vertical: 1;
 }
+
+Multiplayer #content {
+  layout: horizontal;
+  margin: 0 4;
+  align: center middle;
+}
+
+Multiplayer #text {
+  width: 1fr;
+  margin: 0;
+  margin-right: 4;
+}
+
+Multiplayer #menu {
+  height: auto;
+  margin-top: 1;
+  margin-left: 4;
+}
+
+Multiplayer #menu Input {
+  margin-bottom: 1;
+}
+
+Multiplayer #menu ListItem {
+  align-horizontal: center;
+  padding: 1;
+}

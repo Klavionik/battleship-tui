@@ -34,5 +34,5 @@ class MainMenu(Screen[None]):
         match event.item.id:
             case "singleplayer":
                 self.app.switch_screen(screens.Singleplayer())
-            case _:
-                ...
+            case "multiplayer":
+                self.app.switch_screen(screens.Multiplayer())
