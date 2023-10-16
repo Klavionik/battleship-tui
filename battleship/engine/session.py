@@ -27,6 +27,14 @@ class SingleplayerSession:
         self.ee.add_listener("spawn_ship", self.spawn_ship)
         self.ee.add_listener("fire", self.fire)
 
+    @property
+    def player_name(self) -> str:
+        return self.player.name
+
+    @property
+    def enemy_name(self) -> str:
+        return self.enemy.name
+
     def subscribe(self, event: str, handler: Callable[..., Any]) -> None:
         self.ee.add_listener(event, handler)
 
