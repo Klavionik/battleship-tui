@@ -177,6 +177,9 @@ class Board(Widget):
 
     @on(Grid.GridLeave)
     def clean_board(self) -> None:
+        if self.mode == self.Mode.DISPLAY:
+            return
+
         self.clean_crosshair()
         self.clean_ship_preview()
 
