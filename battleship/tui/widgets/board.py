@@ -29,8 +29,8 @@ TARGET = EMOJI["dart"]
 
 @dataclass
 class ShipToPlace:
-    type: str
-    length: int
+    id: str
+    hp: int
     direction: Direction = Direction.RIGHT
 
     def __post_init__(self) -> None:
@@ -220,8 +220,8 @@ class Board(Widget):
                 case MouseButton.RIGHT:
                     self.rotate_preview()
 
-    def set_ship_to_place(self, ship: ShipToPlace) -> None:
-        self._ship_to_place = ship
+    def show_ship_preview(self, ship_id: str, ship_hp: int) -> None:
+        self._ship_to_place = ShipToPlace(ship_id, ship_hp)
 
     def initialize_grid(self) -> None:
         self._grid.clear()
@@ -357,7 +357,7 @@ class Board(Widget):
 
         self._preview_coordinates.append(start)
 
-        for _ in range(self._ship_to_place.length - 1):  # type: ignore[union-attr]
+        for _ in range(self._ship_to_place.hp - 1):  # type: ignore[union-attr]
             match self._ship_to_place.direction:  # type: ignore[union-attr]
                 case Direction.DOWN:
                     next_cell = start.down()

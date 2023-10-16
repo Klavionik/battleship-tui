@@ -51,7 +51,6 @@ class SingleplayerSession:
 
     def start(self) -> None:
         self._spawn_enemy_fleet()
-        self._request_ship_position()
 
     def _create_game(self) -> domain.Game:
         game = domain.Game(
@@ -63,9 +62,10 @@ class SingleplayerSession:
         )
         return game
 
-    def _spawn_ship(self, position: Collection[str], ship_type: str) -> None:
-        self._game.add_ship(self._player, position, ship_type)
-        self._ee.emit("ship_spawned", position=position)
+    def _spawn_ship(self, ship_id: str, position: Collection[str]) -> None:
+        item = self.roster[ship_id]
+        self._game.add_ship(self._player, position, item.id)
+        self._ee.emit("ship_spawned", ship_id=ship_id, position=position)
 
         if self._game.is_fleet_ready(self._player):
             self._ee.emit("fleet_ready", player=self._player)
@@ -79,13 +79,11 @@ class SingleplayerSession:
                     actor=self._game.current_player,
                     subject=self._game.player_under_attack,
                 )
-        else:
-            self._request_ship_position()
 
     def _spawn_enemy_fleet(self) -> None:
-        for ship_type, _ in self._roster:
-            position = self._autoplacer.place(ship_type)
-            self._game.add_ship(self._enemy, position, ship_type)
+        for item in self._roster:
+            position = self._autoplacer.place(item.type)
+            self._game.add_ship(self._enemy, position, item.id)
 
         self._ee.emit("fleet_ready", player=self._enemy)
 
@@ -118,7 +116,3 @@ class SingleplayerSession:
                 actor=self._game.current_player,
                 subject=self._game.player_under_attack,
             )
-
-    def _request_ship_position(self) -> None:
-        ship = self._ships_to_place.pop()
-        self._ee.emit("request_ship_position", hp=ship.hp, ship_type=ship.type)

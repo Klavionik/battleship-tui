@@ -1,4 +1,4 @@
-from battleship.game import run_game
+from battleship.tui.app import BattleshipApp
 
-if __name__ == '__main__':
-    run_game()
+if __name__ == "__main__":
+    BattleshipApp().run()

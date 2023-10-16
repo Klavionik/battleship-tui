@@ -10,8 +10,8 @@ from textual.widgets import Footer, Placeholder, RichLog
 
 from battleship.engine import domain, session
 from battleship.tui import screens
-from battleship.tui.widgets.board import Board, ShipToPlace
-from battleship.tui.widgets.fleet import Fleet, PlaceShipLink
+from battleship.tui.widgets.board import Board
+from battleship.tui.widgets.fleet import Fleet, Ship
 
 
 def convert_to_coordinate(coordinate: Coordinate) -> str:
@@ -34,8 +34,8 @@ class Game(Screen[None]):
         self._session = session_factory()
         self.player_board = Board(size=domain.DEFAULT_BOARD_SIZE, classes="player")
         self.enemy_board = Board(size=domain.DEFAULT_BOARD_SIZE, classes="enemy")
-        self.player_fleet = Fleet(roster=self._session.roster, placeable=True, classes="player")
-        self.enemy_fleet = Fleet(roster=self._session.roster, classes="enemy")
+        self.player_fleet = Fleet(roster=self._session.roster, classes="player")
+        self.enemy_fleet = Fleet(roster=self._session.roster, is_player=False, classes="enemy")
         self.board_map = {
             self._session.player_name: self.player_board,
             self._session.enemy_name: self.enemy_board,
@@ -52,7 +52,6 @@ class Game(Screen[None]):
 
         self._session.subscribe("fleet_ready", self.on_fleet_ready)
         self._session.subscribe("ship_spawned", self.on_ship_spawned)
-        # self._session.subscribe("request_ship_position", self.on_request_ship_position)
         self._session.subscribe("awaiting_move", self.on_awaiting_move)
         self._session.subscribe("salvo", self.on_salvo)
         self._session.subscribe("game_ended", self.on_game_ended)
@@ -77,16 +76,11 @@ class Game(Screen[None]):
         prefix = "[yellow][Game][/]:"
         self.chat.write(f"{time} {prefix} {text}")
 
-    # def on_request_ship_position(self, hp: int, ship_type: str) -> None:
-    #     self.player_board.mode = Board.Mode.ARRANGE
-    #     self.write_as_game(f"Place your :ship: [b]{ship_type.title()}[/]")
-    #     self.player_board.set_ship_to_place(ShipToPlace(type=ship_type, length=hp))
-
     @on(Board.ShipPlaced)
     def spawn_ship(self, event: Board.ShipPlaced) -> None:
         self.player_board.mode = Board.Mode.DISPLAY
         position = [convert_to_coordinate(c) for c in event.coordinates]
-        self._session.notify("spawn_ship", position=position, ship_type=event.ship.type)
+        self._session.notify("spawn_ship", ship_id=event.ship.id, position=position)
 
     def on_fleet_ready(self, player: domain.Player) -> None:
         self.write_as_game(f"{player.name}'s fleet is ready")
@@ -96,8 +90,9 @@ class Game(Screen[None]):
         self.board_map[subject.name].mode = Board.Mode.TARGET
         self.write_as_game(f"{actor.name}'s turn. Fire at will!")
 
-    def on_ship_spawned(self, position: Iterable[str]) -> None:
+    def on_ship_spawned(self, ship_id: str, position: Iterable[str]) -> None:
         self.player_board.paint_ship([convert_from_coordinate(p) for p in position])
+        self.player_fleet.place(ship_id)
 
     def on_salvo(self, salvo: domain.Salvo) -> None:
         board = self.board_map[salvo.subject.name]
@@ -133,8 +128,8 @@ class Game(Screen[None]):
     def action_back(self) -> None:
         self.app.switch_screen(screens.MainMenu())
 
-    @on(PlaceShipLink.RequestShipPreview)
-    def request_ship_preview(self, event: PlaceShipLink.RequestShipPreview) -> None:
+    @on(Ship.ShowPreview)
+    def show_ship_preview(self, event: Ship.ShowPreview) -> None:
         self.player_board.mode = Board.Mode.ARRANGE
-        ship_type, hp = self._session.roster[event.ship_index]
-        self.player_board.set_ship_to_place(ShipToPlace(type=ship_type, length=hp))
+        roster_item = self._session.roster[event.ship_key]
+        self.player_board.show_ship_preview(ship_id=roster_item.id, ship_hp=roster_item.hp)

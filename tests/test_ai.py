@@ -30,7 +30,7 @@ def test_target_caller_doesnt_target_shot_cells():
 def test_target_caller_targets_adjacent_cells_after_hit_until_all_tried():
     random.seed(42)
     board = domain.Board()
-    ship = domain.Ship("ship", 4)
+    ship = domain.Ship("id", "ship", 4)
     board.place_ship(["B2", "B3", "B4", "B5"], ship)
     board.hit_cell("B3")
     shot = domain.Shot("B3", hit=True, ship=ship)
@@ -47,22 +47,20 @@ def test_target_caller_targets_adjacent_cells_after_hit_until_all_tried():
 
 @pytest.mark.parametrize("ship", [*roster.get_roster("classic")])
 def test_autoplacer_position_matches_ship_hp(ship):
-    type_, hp = ship
     board = domain.Board()
     autoplacer = ai.Autoplacer(board, roster.get_roster("classic"))
 
-    position = autoplacer.place(ship_type=type_)
+    position = autoplacer.place(ship_type=ship.type)
 
-    assert len(position) == hp
+    assert len(position) == ship.hp
 
 
 @pytest.mark.parametrize("ship", [*roster.get_roster("classic")])
 def test_autoplacer_position_is_valid(ship):
-    type_, hp = ship
     board = domain.Board()
     autoplacer = ai.Autoplacer(board, roster.get_roster("classic"))
 
-    position = autoplacer.place(ship_type=type_)
+    position = autoplacer.place(ship_type=ship.type)
 
     assert domain.is_valid_position(position) is None
 

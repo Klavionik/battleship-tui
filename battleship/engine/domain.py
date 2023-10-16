@@ -26,6 +26,7 @@ class FiringOrder(enum.StrEnum):
 
 @dataclasses.dataclass
 class Ship:
+    id: str
     type: str
     hp: int
 
@@ -192,6 +193,12 @@ class Player:
     def count_ships(self, ship_type: roster.ShipType) -> int:
         return len([ship for ship in self.board.ships if ship.type == ship_type])
 
+    def get_ship(self, ship_id: str) -> Ship | None:
+        try:
+            return next(ship for ship in self.ships if ship.id == ship_id)
+        except StopIteration:
+            return None
+
     @property
     def ships_alive(self) -> int:
         return len([ship for ship in self.board.ships if not ship.destroyed])
@@ -251,7 +258,6 @@ class Game:
         self.salvo_mode = salvo_mode
         self._player_a = player_a
         self._player_b = player_b
-        self._reference_fleet = [Ship(item.type, item.hp) for item in roster.items]
         self._player_cycle = cycle(random.sample([player_a, player_b], k=2))
         self._current_player = next(self._player_cycle)
         self._started = False
@@ -260,31 +266,24 @@ class Game:
     def __str__(self) -> str:
         return f"Game <{self._player_a} vs {self._player_b}> <Winner: {self._winner}>"
 
-    def add_ship(
-        self, player: Player, position: Collection[str], ship_type: roster.ShipType
-    ) -> None:
-        ship = self._spawn_ship(ship_type)
-        max_ships = self._max_ships_for_type(ship_type)
-
-        if player.count_ships(ship_type) >= max_ships:
+    def add_ship(self, player: Player, position: Collection[str], roster_id: roster.ShipId) -> None:
+        if player.get_ship(roster_id) is None:
+            ship = self._build_ship(roster_id)
+            player.add_ship(position, ship)
+        else:
             raise errors.ShipLimitExceeded(
-                f"You can put only {max_ships} ships of type {ship_type}."
+                f"Player {player.name} already has a ship with roster id {roster_id}."
             )
 
-        player.add_ship(position, ship)
-
     def is_fleet_ready(self, player: Player) -> bool:
-        return player.ships == self._reference_fleet
+        return {ship.id for ship in player.ships} == {item.id for item in self.roster}
 
-    def _spawn_ship(self, ship_type: roster.ShipType) -> Ship:
+    def _build_ship(self, ship_id: roster.ShipId) -> Ship:
         try:
-            roster_item = next(item for item in self.roster.items if item.type == ship_type)
-            return Ship(*roster_item)
-        except StopIteration:
-            raise errors.ShipNotFound(f"No ship of type {ship_type} in the roster.")
-
-    def _max_ships_for_type(self, ship_type: roster.ShipType) -> int:
-        return len([ship for ship in self._reference_fleet if ship.type == ship_type])
+            item = self.roster[ship_id]
+            return Ship(*item)
+        except KeyError:
+            raise errors.ShipNotFound(f"No ship with ID {ship_id} in the roster.")
 
     @property
     def current_player(self) -> Player:

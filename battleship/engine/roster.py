@@ -1,7 +1,11 @@
 import dataclasses
+from functools import cached_property
+from itertools import chain
 from typing import Callable, Iterable, Iterator, NamedTuple, TypeAlias
+from uuid import uuid4
 
 RosterName: TypeAlias = str
+ShipId: TypeAlias = str
 ShipType: TypeAlias = str
 ShipHitpoints: TypeAlias = int
 ShipConfig: TypeAlias = tuple[ShipType, ShipHitpoints]
@@ -10,11 +14,12 @@ RosterRegistry: TypeAlias = dict[RosterName, "Roster"]
 
 
 class RosterItem(NamedTuple):
+    id: ShipId
     type: ShipType
     hp: ShipHitpoints
 
 
-@dataclasses.dataclass(frozen=True, slots=True)
+@dataclasses.dataclass(frozen=True)
 class Roster:
     name: RosterName
     items: list[RosterItem]
@@ -24,7 +29,10 @@ class Roster:
             raise TypeError("Cannot add a Roster to non-Roster.")
 
         new_roster_name = f"{self.name}+{other.name}"
-        new_roster = Roster(name=new_roster_name, items=self.items.copy() + self.items.copy())
+        new_roster = Roster(
+            name=new_roster_name,
+            items=[RosterItem(make_item_id(), item.type, item.hp) for item in chain(self, other)],
+        )
         return new_roster
 
     def __iter__(self) -> Iterator[RosterItem]:
@@ -36,8 +44,12 @@ class Roster:
     def __len__(self) -> int:
         return len(self.items)
 
-    def __getitem__(self, item: int) -> RosterItem:
-        return self.items[item]
+    def __getitem__(self, key: str) -> RosterItem:
+        return self._items_by_id[key]
+
+    @cached_property
+    def _items_by_id(self) -> dict[ShipId, RosterItem]:
+        return {item.id: item for item in self.items}
 
 
 _rosters: RosterRegistry = {}
@@ -46,7 +58,7 @@ _rosters: RosterRegistry = {}
 def register(func: RosterDefinition) -> None:
     roster_name = func.__name__
     _rosters[roster_name] = Roster(
-        name=roster_name, items=[RosterItem(type_, hp) for type_, hp in func()]
+        name=roster_name, items=[RosterItem(make_item_id(), type_, hp) for type_, hp in func()]
     )
 
 
@@ -56,6 +68,10 @@ def get_rosters() -> RosterRegistry:
 
 def get_roster(name: RosterName) -> Roster:
     return _rosters[name]
+
+
+def make_item_id() -> str:
+    return uuid4().hex[:8]
 
 
 @register

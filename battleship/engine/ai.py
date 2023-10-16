@@ -54,7 +54,7 @@ class Autoplacer:
     def __init__(self, board: domain.Board, ship_suite: roster.Roster):
         self.board = board
         self.ship_hp_map: dict[roster.ShipType, roster.ShipHitpoints] = dict(
-            item for item in ship_suite
+            (item.type, item.hp) for item in ship_suite
         )
 
     def place(self, ship_type: roster.ShipType) -> list[str]:
