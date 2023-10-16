@@ -21,7 +21,7 @@ class SingleplayerSession:
         self._target_caller = ai.TargetCaller(self._player.board)
         self._autoplacer = ai.Autoplacer(self._enemy.board, self._roster)
         self._game = self._create_game()
-        self._ships_to_place = list(reversed(self._roster))
+        self._ships_to_place = list(self._roster)
         self._ee = AsyncIOEventEmitter()
 
         self._ee.add_listener("spawn_ship", self._spawn_ship)

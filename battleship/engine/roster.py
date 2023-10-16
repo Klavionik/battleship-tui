@@ -36,6 +36,9 @@ class Roster:
     def __len__(self) -> int:
         return len(self.items)
 
+    def __getitem__(self, item: int) -> RosterItem:
+        return self.items[item]
+
 
 _rosters: RosterRegistry = {}
 

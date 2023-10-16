@@ -57,14 +57,14 @@ Singleplayer .screen-content Button {
 
 /* Game screen */
 
-Game #boards {
-  margin: 1 3 0 3;
+Game #content {
+  margin: 1 3;
+  grid-size: 3;
+  grid-columns: 22 1fr 22;
+  grid-gutter: 1;
 }
 
 Game RichLog {
-  padding: 0 1;
-  height: 11;
-  margin: 1 1 0 1;
   scrollbar-size-vertical: 1;
 }
 
