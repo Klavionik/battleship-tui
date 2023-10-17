@@ -28,6 +28,13 @@ $option-border: tall $secondary;
 }
 
 
+/* Common */
+
+Tooltip {
+  padding: 0 1;
+}
+
+
 /* Main menu screen */
 
 MainMenu ListItem {

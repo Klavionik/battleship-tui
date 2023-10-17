@@ -50,6 +50,7 @@ class Ship(Static):
 
     def render_ship(self) -> None:
         self.update(self._factory(self._hp))
+        self.tooltip = self._ship_type.title()
 
     def render_place_link(self) -> None:
         self.update(f"[@click=preview('{self._key}')]Place {self._ship_type.title()}[/]\n")
