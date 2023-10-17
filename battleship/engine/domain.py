@@ -29,6 +29,7 @@ class Ship:
     id: str
     type: str
     hp: int
+    cells: list[str] = dataclasses.field(default_factory=list, compare=False)
 
     @property
     def destroyed(self) -> bool:
@@ -172,6 +173,7 @@ class Board:
             self.get_cell(coordinate).set_ship(ship)
 
         self.ships.append(ship)
+        ship.cells.extend(position)
 
     def hit_cell(self, coordinate: str) -> Ship | None:
         cell = self.get_cell(coordinate)

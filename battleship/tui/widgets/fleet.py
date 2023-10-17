@@ -24,16 +24,29 @@ class Ship(Static):
         key: str,
         ship_type: str,
         hp: int,
-        factory: Callable[[int], Text],
+        factory: Callable[[int, int, bool], Text],
         allow_placing: bool,
         **kwargs: Any,
     ) -> None:
         super().__init__(*args, **kwargs)
         self._ship_type = ship_type
         self._hp = hp
+        self._damage = 0
         self._key = key
         self._allow_placing = allow_placing
         self._factory = factory
+
+    @property
+    def type_display(self) -> str:
+        return self._ship_type.title()
+
+    @property
+    def destroyed(self) -> bool:
+        return self.hp == 0
+
+    @property
+    def hp(self) -> int:
+        return self._hp - self._damage
 
     @on(Mount)
     def on_mount(self) -> None:
@@ -44,13 +57,19 @@ class Ship(Static):
 
     def place(self) -> None:
         self.render_ship()
+        self.tooltip = self.type_display
+
+    def damage(self) -> None:
+        if self._damage + 1 <= self._hp:
+            self._damage += 1
+
+        self.render_ship()
 
     def render_ship(self) -> None:
-        self.update(self._factory(self._hp))
-        self.tooltip = self._ship_type.title()
+        self.update(self._factory(self.hp, self._damage, self.destroyed))
 
     def render_place_link(self) -> None:
-        self.update(f"[@click=preview('{self._key}')]Place {self._ship_type.title()}[/]\n")
+        self.update(f"[@click=preview()]Place {self.type_display}[/]\n")
 
     def action_preview(self) -> None:
         self.post_message(self.ShowPreview(self._key))
@@ -67,13 +86,19 @@ class Fleet(Widget):
     ) -> None:
         super().__init__(*args, **kwargs)
 
-        def ship_factory(hp: int) -> Text:
-            return Text.assemble(*[cell_factory.ship().render() for _ in range(hp)], "\n")
+        def ship_factory(hp: int, damage: int, destroyed: bool) -> Text:
+            if destroyed:
+                parts = [cell_factory.destroyed().render() for _ in range(damage)]
+                return Text.assemble(*parts, "\n")
+
+            hp_parts = [cell_factory.ship().render() for _ in range(hp)]
+            damage_parts = [cell_factory.damaged().render() for _ in range(damage)]
+            return Text.assemble(*(hp_parts + damage_parts), "\n")
 
         self.border_title = "Fleet status"
         self._roster = roster
         self._allow_placing = allow_placing
-        self._ships = {
+        self._ships: dict[str, Ship] = {
             ship.id: Ship(
                 key=ship.id,
                 ship_type=ship.type,
@@ -90,3 +115,7 @@ class Fleet(Widget):
     def place(self, ship_id: str) -> None:
         ship = self._ships[ship_id]
         ship.place()
+
+    def damage(self, ship_id: str) -> None:
+        ship = self._ships[ship_id]
+        ship.damage()

@@ -119,6 +119,7 @@ class Game(Screen[None]):
 
     def on_salvo(self, salvo: domain.Salvo) -> None:
         board = self.board_map[salvo.subject.name]
+        fleet = self.fleet_map[salvo.subject.name]
 
         for shot in salvo:
             coor = convert_from_coordinate(shot.coordinate)
@@ -127,9 +128,17 @@ class Game(Screen[None]):
                 board.paint_miss(coor)
                 result = "Miss"
             else:
-                board.paint_damage(coor)
-                hit_or_destroyed = "sunk" if shot.ship.destroyed else "hit"  # type: ignore
-                result = f"{shot.ship.type.title()} {hit_or_destroyed}"  # type: ignore
+                assert shot.ship, "Shot was a hit, but no ship"
+
+                if shot.ship.destroyed:
+                    status = "sunk"
+                    board.paint_destroyed(map(convert_from_coordinate, shot.ship.cells))
+                else:
+                    status = "hit"
+                    board.paint_damage(coor)
+
+                fleet.damage(shot.ship.id)
+                result = f"{shot.ship.type.title()} {status}"
 
             self.write_as_game(f"{salvo.actor.name} attacks {shot.coordinate}. {result}")
 

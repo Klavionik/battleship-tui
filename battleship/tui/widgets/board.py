@@ -24,6 +24,7 @@ from battleship.engine.domain import Direction
 WATER = EMOJI["water_wave"]
 FIRE = EMOJI["fire"]
 TARGET = EMOJI["dart"]
+CROSSMARK = EMOJI["cross_mark"]
 
 
 @dataclass
@@ -54,6 +55,7 @@ class CellFactory:
     miss_value: str = WATER
     crosshair_value: str = TARGET
     damaged_value: str = FIRE
+    destroyed_value: str = CROSSMARK
 
     @property
     def empty_value(self) -> str:
@@ -67,6 +69,9 @@ class CellFactory:
 
     def damaged(self) -> "Cell":
         return Cell(self.damaged_value, self.ship_bg, Cell.Type.SHIP_DAMAGED)
+
+    def destroyed(self) -> "Cell":
+        return Cell(self.destroyed_value, self.ship_bg, Cell.Type.SHIP_DESTROYED)
 
     def empty(self, dark: bool = False) -> "Cell":
         return Cell(self.empty_value, self.get_bg(dark), Cell.Type.EMPTY)
@@ -387,6 +392,11 @@ class Board(Widget):
     def paint_miss(self, coordinate: Coordinate) -> None:
         miss = self._cell_factory.miss(self.is_dark_cell(coordinate))
         self._grid.update_cell_at(coordinate, miss)
+
+    def paint_destroyed(self, coordinates: Iterable[Coordinate]) -> None:
+        for coor in coordinates:
+            destroyed = self._cell_factory.destroyed()
+            self._grid.update_cell_at(coor, destroyed)
 
     def _create_grid(self, size: int) -> Grid:
         # 1. Disable cursor to make Click events bubble up.
