@@ -5,7 +5,6 @@ from textual import on
 from textual.app import ComposeResult
 from textual.events import Mount
 from textual.message import Message
-from textual.reactive import var
 from textual.widget import Widget
 from textual.widgets import Static
 
@@ -14,8 +13,6 @@ from battleship.tui.widgets.board import CellFactory
 
 
 class Ship(Static):
-    SHIP_STYLE = {"player": "on green", "enemy": "on red"}
-
     class ShowPreview(Message):
         def __init__(self, ship_key: str) -> None:
             super().__init__()
@@ -60,8 +57,6 @@ class Ship(Static):
 
 
 class Fleet(Widget):
-    placed_ships: var[list[int]] = var(list)
-
     def __init__(
         self,
         *args: Any,
