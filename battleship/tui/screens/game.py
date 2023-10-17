@@ -10,7 +10,7 @@ from textual.widgets import Footer, Placeholder, RichLog
 
 from battleship.engine import domain, session
 from battleship.tui import screens
-from battleship.tui.widgets.board import Board
+from battleship.tui.widgets.board import Board, CellFactory
 from battleship.tui.widgets.fleet import Fleet, Ship
 
 
@@ -32,10 +32,27 @@ class Game(Screen[None]):
         super().__init__(*args, **kwargs)
         self._session_factory = session_factory
         self._session = session_factory()
-        self.player_board = Board(size=domain.DEFAULT_BOARD_SIZE, classes="player")
-        self.enemy_board = Board(size=domain.DEFAULT_BOARD_SIZE, classes="enemy")
-        self.player_fleet = Fleet(roster=self._session.roster, classes="player")
-        self.enemy_fleet = Fleet(roster=self._session.roster, is_player=False, classes="enemy")
+
+        player_cell_factory = CellFactory()
+        enemy_cell_factory = CellFactory(ship_bg="#690e0e")
+
+        self.player_board = Board(
+            size=domain.DEFAULT_BOARD_SIZE, cell_factory=player_cell_factory, classes="player"
+        )
+        self.enemy_board = Board(
+            size=domain.DEFAULT_BOARD_SIZE, cell_factory=enemy_cell_factory, classes="enemy"
+        )
+
+        self.player_fleet = Fleet(
+            roster=self._session.roster, cell_factory=player_cell_factory, classes="player"
+        )
+        self.enemy_fleet = Fleet(
+            roster=self._session.roster,
+            cell_factory=enemy_cell_factory,
+            allow_placing=False,
+            classes="enemy",
+        )
+
         self.board_map = {
             self._session.player_name: self.player_board,
             self._session.enemy_name: self.enemy_board,

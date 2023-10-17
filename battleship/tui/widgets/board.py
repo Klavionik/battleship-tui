@@ -8,6 +8,7 @@ from rich.console import Console, ConsoleOptions
 from rich.emoji import EMOJI  # type: ignore[attr-defined]
 from rich.measure import Measurement
 from rich.segment import Segment
+from rich.style import Style
 from rich.text import Text
 from textual import on
 from textual.app import ComposeResult
@@ -20,10 +21,8 @@ from textual.widgets import DataTable
 
 from battleship.engine.domain import Direction
 
-SHIP = EMOJI["ship"]
 WATER = EMOJI["water_wave"]
 FIRE = EMOJI["fire"]
-CROSS = EMOJI["cross_mark"]
 TARGET = EMOJI["dart"]
 
 
@@ -45,16 +44,46 @@ class MouseButton(enum.IntEnum):
     RIGHT = 3
 
 
-_cell = " " * 2
-_forbidden_cell = Text(_cell, style="on red")
-_ship_cell = Text(_cell, style="on green")
-_even_cell = Text(_cell, style="on #2D2D2D")
-_odd_cell = Text(_cell, style="on #1E1E1E")
+@dataclass
+class CellFactory:
+    cell_width: int = 2
+    light_bg: str = "#2D2D2D"
+    dark_bg: str = "#1E1E1E"
+    forbidden_bg: str = "yellow"
+    ship_bg: str = "green"
+    miss_value: str = WATER
+    crosshair_value: str = TARGET
+    damaged_value: str = FIRE
+
+    @property
+    def empty_value(self) -> str:
+        return " " * self.cell_width
+
+    def get_bg(self, dark: bool) -> str:
+        return self.dark_bg if dark else self.light_bg
+
+    def miss(self, dark: bool = False) -> "Cell":
+        return Cell(self.miss_value, self.get_bg(dark), Cell.Type.MISS)
+
+    def damaged(self) -> "Cell":
+        return Cell(self.damaged_value, self.ship_bg, Cell.Type.SHIP_DAMAGED)
+
+    def empty(self, dark: bool = False) -> "Cell":
+        return Cell(self.empty_value, self.get_bg(dark), Cell.Type.EMPTY)
+
+    def ship(self) -> "Cell":
+        return Cell(self.empty_value, self.ship_bg, Cell.Type.SHIP)
+
+    def forbidden(self) -> "Cell":
+        return Cell(self.empty_value, self.forbidden_bg, Cell.Type.FORBIDDEN)
+
+    def crosshair(self, dark: bool = False) -> "Cell":
+        return Cell(self.crosshair_value, self.get_bg(dark), Cell.Type.CROSSHAIR)
 
 
 @dataclass
 class Cell:
-    class State(enum.StrEnum):
+    class Type(enum.StrEnum):
         EMPTY = "empty"
         FORBIDDEN = "forbidden"
         SHIP = "ship"
@@ -63,53 +92,12 @@ class Cell:
         SHIP_DAMAGED = "ship_damaged"
         SHIP_DESTROYED = "ship_destroyed"
 
-    dark: bool = False
-    state: State = State.EMPTY
-
-    @classmethod
-    def miss(cls, dark: bool = False) -> "Cell":
-        return cls(dark, Cell.State.MISS)
-
-    @classmethod
-    def damaged(cls, dark: bool = False) -> "Cell":
-        return cls(dark, Cell.State.SHIP_DAMAGED)
-
-    @classmethod
-    def empty(cls, dark: bool = False) -> "Cell":
-        return cls(dark, Cell.State.EMPTY)
-
-    @classmethod
-    def ship(cls) -> "Cell":
-        return cls(state=Cell.State.SHIP)
-
-    @classmethod
-    def forbidden(cls) -> "Cell":
-        return cls(state=Cell.State.FORBIDDEN)
-
-    @classmethod
-    def crosshair(cls, dark: bool = False) -> "Cell":
-        return cls(dark, Cell.State.CROSSHAIR)
+    value: str
+    bg: str
+    type: Type
 
     def render(self) -> Text:
-        base = _even_cell if self.dark else _odd_cell
-
-        match self.state:
-            case Cell.State.EMPTY:
-                return base
-            case Cell.State.FORBIDDEN:
-                return _forbidden_cell
-            case Cell.State.SHIP:
-                return _ship_cell
-            case Cell.State.CROSSHAIR:
-                return Text(TARGET, style=base.style)
-            case Cell.State.MISS:
-                return Text(WATER, style=base.style)
-            case Cell.State.SHIP_DAMAGED:
-                return Text(FIRE, style=base.style)
-            case Cell.State.SHIP_DESTROYED:
-                return Text(FIRE, style=base.style)
-
-        return base
+        return Text(self.value, Style(bgcolor=self.bg))
 
     def __rich_console__(self, console: Console, options: ConsoleOptions) -> Iterable[Segment]:
         return self.render().__rich_console__(console, options)
@@ -147,9 +135,10 @@ class Board(Widget):
             super().__init__()
             self.coordinates = coordinates
 
-    def __init__(self, *args: Any, size: int, **kwargs: Any) -> None:
+    def __init__(self, *args: Any, size: int, cell_factory: CellFactory, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self.board_size = size
+        self._cell_factory = cell_factory
         self._grid = self._create_grid(size)
         self._cursor_coordinate: Coordinate | None = None
 
@@ -230,7 +219,8 @@ class Board(Widget):
         for i, row in enumerate(range(self.board_size), start=1):
             cells = []
             for column in range(self.board_size):
-                cells.append(Cell(self.is_dark_cell((row, column))))
+                dark = self.is_dark_cell((row, column))
+                cells.append(self._cell_factory.empty(dark))
 
             self._grid.add_row(*cells, label=Text(str(i), style="#B0FC38 italic"))
 
@@ -260,11 +250,11 @@ class Board(Widget):
 
     def is_cell_hit(self, coordinate: Coordinate) -> bool:
         cell = self._grid.get_cell_at(coordinate)
-        return cell.state in (Cell.State.MISS, Cell.State.SHIP_DAMAGED, Cell.State.SHIP_DESTROYED)
+        return cell.type in (Cell.Type.MISS, Cell.Type.SHIP_DAMAGED, Cell.Type.SHIP_DESTROYED)
 
     def is_cell_ship(self, coordinate: Coordinate) -> bool:
         cell = self._grid.get_cell_at(coordinate)
-        return cell.state == Cell.State.SHIP
+        return cell.type == Cell.Type.SHIP
 
     def paint_crosshair(self, coordinate: Coordinate) -> None:
         if not self.mode == self.Mode.TARGET:
@@ -274,7 +264,8 @@ class Board(Widget):
             return
 
         # Paint crosshair preserving cell's background color.
-        self._grid.update_cell_at(coordinate, Cell.crosshair(self.is_dark_cell(coordinate)))
+        crosshair = self._cell_factory.crosshair((self.is_dark_cell(coordinate)))
+        self._grid.update_cell_at(coordinate, crosshair)
 
     def clean_crosshair(self) -> None:
         if (
@@ -285,10 +276,8 @@ class Board(Widget):
             self.paint_empty_cell(self._cursor_coordinate)
 
     def paint_empty_cell(self, coordinate: Coordinate) -> None:
-        self._grid.update_cell_at(
-            coordinate,
-            Cell(self.is_dark_cell(coordinate)),
-        )
+        empty = self._cell_factory.empty(self.is_dark_cell(coordinate))
+        self._grid.update_cell_at(coordinate, empty)
 
     def move_ship_preview(self, coordinate: Coordinate | None) -> None:
         # We don't know if we could place the ship
@@ -334,11 +323,11 @@ class Board(Widget):
 
     def paint_ship(self, coordinates: Iterable[Coordinate]) -> None:
         for coor in coordinates:
-            self._grid.update_cell_at(coor, Cell.ship())
+            self._grid.update_cell_at(coor, self._cell_factory.ship())
 
     def paint_forbidden(self, coordinates: Iterable[Coordinate]) -> None:
         for coor in coordinates:
-            self._grid.update_cell_at(coor, Cell.forbidden())
+            self._grid.update_cell_at(coor, self._cell_factory.forbidden())
 
     def is_cell_exist(self, coordinate: Coordinate) -> bool:
         return not (
@@ -393,10 +382,11 @@ class Board(Widget):
         self._place_forbidden = True
 
     def paint_damage(self, coordinate: Coordinate) -> None:
-        self._grid.update_cell_at(coordinate, Cell.damaged(self.is_dark_cell(coordinate)))
+        self._grid.update_cell_at(coordinate, self._cell_factory.damaged())
 
     def paint_miss(self, coordinate: Coordinate) -> None:
-        self._grid.update_cell_at(coordinate, Cell.miss(self.is_dark_cell(coordinate)))
+        miss = self._cell_factory.miss(self.is_dark_cell(coordinate))
+        self._grid.update_cell_at(coordinate, miss)
 
     def _create_grid(self, size: int) -> Grid:
         # 1. Disable cursor to make Click events bubble up.
