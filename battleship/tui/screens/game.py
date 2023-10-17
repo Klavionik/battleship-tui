@@ -37,14 +37,20 @@ class Game(Screen[None]):
         enemy_cell_factory = CellFactory(ship_bg="#690e0e")
 
         self.player_board = Board(
-            size=domain.DEFAULT_BOARD_SIZE, cell_factory=player_cell_factory, classes="player"
+            size=domain.DEFAULT_BOARD_SIZE,
+            cell_factory=player_cell_factory,
+            classes="player",
         )
         self.enemy_board = Board(
-            size=domain.DEFAULT_BOARD_SIZE, cell_factory=enemy_cell_factory, classes="enemy"
+            size=domain.DEFAULT_BOARD_SIZE,
+            cell_factory=enemy_cell_factory,
+            classes="enemy",
         )
 
         self.player_fleet = Fleet(
-            roster=self._session.roster, cell_factory=player_cell_factory, classes="player"
+            roster=self._session.roster,
+            cell_factory=player_cell_factory,
+            classes="player",
         )
         self.enemy_fleet = Fleet(
             roster=self._session.roster,
