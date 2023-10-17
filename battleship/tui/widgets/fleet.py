@@ -7,7 +7,7 @@ from textual.events import Mount
 from textual.message import Message
 from textual.reactive import var
 from textual.widget import Widget
-from textual.widgets import Label, Static
+from textual.widgets import Static
 
 from battleship.engine.roster import Roster
 from battleship.tui.widgets.board import CellFactory
@@ -75,6 +75,7 @@ class Fleet(Widget):
         def ship_factory(hp: int) -> Text:
             return Text.assemble(*[cell_factory.ship().render() for _ in range(hp)], "\n")
 
+        self.border_title = "Fleet status"
         self._roster = roster
         self._allow_placing = allow_placing
         self._ships = {
@@ -89,7 +90,6 @@ class Fleet(Widget):
         }
 
     def compose(self) -> ComposeResult:
-        yield Label("[b]Fleet status[/]")
         yield from self._ships.values()
 
     def place(self, ship_id: str) -> None:

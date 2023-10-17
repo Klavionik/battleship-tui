@@ -76,6 +76,11 @@ Game RichLog {
   scrollbar-size-vertical: 1;
 }
 
+Fleet {
+  padding: 1 0;
+  border: wide $accent;
+}
+
 
 /* Multiplayer screen */
 
