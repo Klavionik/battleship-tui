@@ -303,12 +303,12 @@ class Board(Widget):
         if not self.mode == self.Mode.TARGET:
             return
 
-        if self.is_cell_hit(self._cursor_coordinate):  # type: ignore[arg-type]
+        assert self._cursor_coordinate, "Trying to select target w/o cursor"
+
+        if self.is_cell_hit(self._cursor_coordinate):
             return
 
-        self._target_coordinates.append(
-            self._cursor_coordinate,  # type: ignore[arg-type]
-        )
+        self._target_coordinates.append(self._cursor_coordinate)
 
         if len(self._target_coordinates) == self.min_targets:
             self.post_message(self.CellShot(self._target_coordinates[:]))
@@ -318,7 +318,9 @@ class Board(Widget):
         if not self.mode == self.Mode.ARRANGE:
             return
 
-        self._ship_to_place.rotate()  # type: ignore[union-attr]
+        assert self._ship_to_place, "No ship to rotate"
+
+        self._ship_to_place.rotate()
         self.move_ship_preview(self._cursor_coordinate)
 
     def clean_ship_preview(self) -> None:
@@ -351,8 +353,10 @@ class Board(Widget):
 
         self._preview_coordinates.append(start)
 
-        for _ in range(self._ship_to_place.hp - 1):  # type: ignore[union-attr]
-            match self._ship_to_place.direction:  # type: ignore[union-attr]
+        assert self._ship_to_place, "Trying to display ship preview w/o ship"
+
+        for _ in range(self._ship_to_place.hp - 1):
+            match self._ship_to_place.direction:
                 case Direction.DOWN:
                     next_cell = start.down()
                 case Direction.RIGHT:
@@ -376,9 +380,11 @@ class Board(Widget):
         if self._place_forbidden:
             return
 
+        assert self._ship_to_place, "Trying to place ship w/o ship set"
+
         self.post_message(
             self.ShipPlaced(
-                self._ship_to_place,  # type: ignore[arg-type]
+                self._ship_to_place,
                 self._preview_coordinates[:],
             )
         )
