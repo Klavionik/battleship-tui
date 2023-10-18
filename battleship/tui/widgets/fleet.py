@@ -5,6 +5,7 @@ from textual import on
 from textual.app import ComposeResult
 from textual.events import Mount
 from textual.message import Message
+from textual.reactive import var
 from textual.widget import Widget
 from textual.widgets import Static
 
@@ -13,6 +14,8 @@ from battleship.tui.widgets.board import CellFactory
 
 
 class Ship(Static):
+    previewing: var[bool] = var(False, init=False)
+
     class ShowPreview(Message):
         def __init__(self, ship_key: str) -> None:
             super().__init__()
@@ -34,6 +37,7 @@ class Ship(Static):
         self._damage = 0
         self._key = key
         self._allow_placing = allow_placing
+        self._placed = False
         self._factory = factory
 
     @property
@@ -58,6 +62,7 @@ class Ship(Static):
     def place(self) -> None:
         self.render_ship()
         self.tooltip = self.type_display
+        self._placed = True
 
     def damage(self) -> None:
         if self._damage + 1 <= self._hp:
@@ -68,11 +73,17 @@ class Ship(Static):
     def render_ship(self) -> None:
         self.update(self._factory(self.hp, self._damage, self.destroyed))
 
-    def render_place_link(self) -> None:
-        self.update(f"[@click=preview()]Place {self.type_display}[/]\n")
+    def render_place_link(self, previewing: bool = False) -> None:
+        end = " <-\n" if previewing else "\n"
+        self.update(f"[@click=preview()]Place {self.type_display}[/]{end}")
+
+    def watch_previewing(self, old: bool, new: bool) -> None:
+        if not self._placed:
+            self.render_place_link(previewing=new)
 
     def action_preview(self) -> None:
         self.post_message(self.ShowPreview(self._key))
+        self.previewing = True
 
 
 class Fleet(Widget):
@@ -98,6 +109,7 @@ class Fleet(Widget):
         self.border_title = "Fleet status"
         self._roster = roster
         self._allow_placing = allow_placing
+        self._previewing_id = ""
         self._ships: dict[str, Ship] = {
             ship.id: Ship(
                 key=ship.id,
@@ -111,6 +123,13 @@ class Fleet(Widget):
 
     def compose(self) -> ComposeResult:
         yield from self._ships.values()
+
+    @on(Ship.ShowPreview)
+    def handle_show_preview(self, event: Ship.ShowPreview) -> None:
+        if self._previewing_id:
+            self._ships[self._previewing_id].previewing = False
+
+        self._previewing_id = event.ship_key
 
     def place(self, ship_id: str) -> None:
         ship = self._ships[ship_id]
