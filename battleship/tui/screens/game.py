@@ -37,11 +37,13 @@ class Game(Screen[None]):
         enemy_cell_factory = CellFactory(ship_bg="#690e0e")
 
         self.player_board = Board(
+            player_name=self._session.player_name,
             size=domain.DEFAULT_BOARD_SIZE,
             cell_factory=player_cell_factory,
             classes="player",
         )
         self.enemy_board = Board(
+            player_name=self._session.enemy_name,
             size=domain.DEFAULT_BOARD_SIZE,
             cell_factory=enemy_cell_factory,
             classes="enemy",

@@ -17,7 +17,7 @@ from textual.events import Click, Mount, MouseMove
 from textual.message import Message
 from textual.reactive import var
 from textual.widget import Widget
-from textual.widgets import DataTable
+from textual.widgets import DataTable, Label
 
 from battleship.engine.domain import Direction
 
@@ -25,6 +25,7 @@ WATER = EMOJI["water_wave"]
 FIRE = EMOJI["fire"]
 TARGET = EMOJI["dart"]
 CROSSMARK = EMOJI["cross_mark"]
+ADMIRAL = EMOJI["man_pilot"]
 
 
 @dataclass
@@ -140,11 +141,16 @@ class Board(Widget):
             super().__init__()
             self.coordinates = coordinates
 
-    def __init__(self, *args: Any, size: int, cell_factory: CellFactory, **kwargs: Any) -> None:
+    def __init__(
+        self, *args: Any, player_name: str, size: int, cell_factory: CellFactory, **kwargs: Any
+    ) -> None:
         super().__init__(*args, **kwargs)
+        self.player_name = player_name
         self.board_size = size
         self._cell_factory = cell_factory
-        self._grid = self._create_grid(size)
+        # 1. Disable cursor to make Click events bubble up.
+        # 2. Disable cell padding to make cells square.
+        self._grid = Grid(cell_padding=0, cursor_type="none")
         self._cursor_coordinate: Coordinate | None = None
 
         self._ship_to_place: ShipToPlace | None = None
@@ -245,6 +251,7 @@ class Board(Widget):
         return (row + column) % 2 == 0
 
     def compose(self) -> ComposeResult:
+        yield Label(f"{ADMIRAL} {self.player_name}")
         yield self._grid
 
     def move_crosshair(self, coordinate: Coordinate | None) -> None:
@@ -403,16 +410,3 @@ class Board(Widget):
         for coor in coordinates:
             destroyed = self._cell_factory.destroyed()
             self._grid.update_cell_at(coor, destroyed)
-
-    def _create_grid(self, size: int) -> Grid:
-        # 1. Disable cursor to make Click events bubble up.
-        # 2. Disable cell padding to make cells square.
-        grid: Grid = Grid(cell_padding=0, cursor_type="none")
-
-        # Size * cell width + row labels width.
-        self.styles.width = size * 2 + 2
-
-        # Size + header height.
-        self.styles.height = size + 1
-
-        return grid
