@@ -59,12 +59,14 @@ class Game(Screen[None]):
             cell_factory=player_cell_factory,
             classes="player",
         )
+        self.player_fleet.border_title = "Your fleet"
         self.enemy_fleet = Fleet(
             roster=self._session.roster,
             cell_factory=enemy_cell_factory,
             allow_placing=False,
             classes="enemy",
         )
+        self.enemy_fleet.border_title = "Enemy fleet"
 
         self.board_map = {
             self._session.player_name: self.player_board,

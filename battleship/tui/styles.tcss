@@ -72,7 +72,7 @@ Game #content {
 }
 
 Game BattleLog {
-  border: wide $accent;
+  border: wide $secondary;
   padding: 1;
   scrollbar-size-vertical: 1;
 }
@@ -80,6 +80,10 @@ Game BattleLog {
 Fleet {
   padding: 1 0;
   border: wide $accent;
+}
+
+Fleet.player {
+  border: wide $success;
 }
 
 
