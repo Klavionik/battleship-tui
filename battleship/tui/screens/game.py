@@ -38,7 +38,7 @@ class Game(Screen[None]):
         assert dark_theme
         colors = dark_theme.generate()
 
-        player_cell_factory = CellFactory()
+        player_cell_factory = CellFactory(ship_bg=colors["success-darken-1"])
         enemy_cell_factory = CellFactory(ship_bg=colors["accent-darken-1"])
 
         self.player_board = Board(
