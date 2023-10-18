@@ -51,7 +51,7 @@ class CellFactory:
     cell_width: int = 2
     light_bg: str = "#2D2D2D"
     dark_bg: str = "#1E1E1E"
-    forbidden_bg: str = "yellow"
+    forbidden_bg: str = "#ba3c5b"
     ship_bg: str = "green"
     miss_value: str = WATER
     crosshair_value: str = TARGET
@@ -233,7 +233,7 @@ class Board(Widget):
                 dark = self.is_dark_cell((row, column))
                 cells.append(self._cell_factory.empty(dark))
 
-            self._grid.add_row(*cells, label=Text(str(i), style="#B0FC38 italic"))
+            self._grid.add_row(*cells, label=Text(str(i)))
 
     @staticmethod
     def is_dark_cell(coordinate: tuple[int, int]) -> bool:

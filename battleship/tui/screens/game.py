@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Any, Callable, Iterable
 
 from textual import on
-from textual.app import ComposeResult
+from textual.app import DEFAULT_COLORS, ComposeResult
 from textual.containers import Grid
 from textual.coordinate import Coordinate
 from textual.screen import Screen
@@ -33,8 +33,12 @@ class Game(Screen[None]):
         self._session_factory = session_factory
         self._session = session_factory()
 
+        dark_theme = DEFAULT_COLORS.get("dark")
+        assert dark_theme
+        colors = dark_theme.generate()
+
         player_cell_factory = CellFactory()
-        enemy_cell_factory = CellFactory(ship_bg="#690e0e")
+        enemy_cell_factory = CellFactory(ship_bg=colors["accent-darken-1"])
 
         self.player_board = Board(
             player_name=self._session.player_name,
