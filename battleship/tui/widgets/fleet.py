@@ -83,10 +83,11 @@ class Ship(Static):
 
     def action_preview(self) -> None:
         self.post_message(self.ShowPreview(self._key))
-        self.previewing = True  # noqa
 
 
 class Fleet(Widget):
+    previewing_id: var[str] = var("")
+
     def __init__(
         self,
         *args: Any,
@@ -120,19 +121,24 @@ class Fleet(Widget):
             for ship in roster
         }
 
+    def watch_previewing_id(self, old: str, new: str) -> None:
+        if old:
+            self._ships[old].previewing = False
+
+        if new:
+            self._ships[new].previewing = True
+
     def compose(self) -> ComposeResult:
         yield from self._ships.values()
 
     @on(Ship.ShowPreview)
     def handle_show_preview(self, event: Ship.ShowPreview) -> None:
-        if self._previewing_id:
-            self._ships[self._previewing_id].previewing = False
-
-        self._previewing_id = event.ship_key
+        self.previewing_id = event.ship_key  # noqa
 
     def place(self, ship_id: str) -> None:
         ship = self._ships[ship_id]
         ship.place()
+        self.previewing_id = ""  # noqa
 
     def damage(self, ship_id: str) -> None:
         ship = self._ships[ship_id]

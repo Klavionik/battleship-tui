@@ -1,4 +1,5 @@
 from datetime import datetime
+from string import Template
 from typing import Any, Callable, Iterable
 
 from textual import on
@@ -6,10 +7,18 @@ from textual.app import DEFAULT_COLORS, ComposeResult
 from textual.containers import Grid
 from textual.coordinate import Coordinate
 from textual.screen import Screen
-from textual.widgets import Footer, Placeholder
+from textual.widgets import Footer
 
 from battleship.engine import domain, session
 from battleship.tui import screens
+from battleship.tui.widgets.announcement import (
+    PHASE_BATTLE,
+    PHASE_BATTLE_SALVO,
+    PHASE_DEFEAT,
+    PHASE_VICTORY,
+    RULES_TEMPLATE,
+    Announcement,
+)
 from battleship.tui.widgets.battle_log import BattleLog
 from battleship.tui.widgets.board import Board, CellFactory
 from battleship.tui.widgets.fleet import Fleet, Ship
@@ -76,11 +85,14 @@ class Game(Screen[None]):
             self._session.player_name: self.player_fleet,
             self._session.enemy_name: self.enemy_fleet,
         }
+        self.players_ready = 0
 
         if self._session.salvo_mode:
             self.enemy_board.min_targets = len(self._session.roster)
 
         self.battle_log = BattleLog()
+
+        self.announcement = Announcement(rules=self._format_rules(RULES_TEMPLATE))
 
         self._session.subscribe("fleet_ready", self.on_fleet_ready)
         self._session.subscribe("ship_spawned", self.on_ship_spawned)
@@ -91,7 +103,7 @@ class Game(Screen[None]):
     def compose(self) -> ComposeResult:
         with Grid(id="content"):
             yield self.player_board
-            yield Placeholder()
+            yield self.announcement
             yield self.enemy_board
             yield self.player_fleet
             yield self.battle_log
@@ -116,6 +128,11 @@ class Game(Screen[None]):
 
     def on_fleet_ready(self, player: domain.Player) -> None:
         self.write_as_game(f"{player.name}'s fleet is ready")
+        self.players_ready += 1
+
+        if self.players_ready == 2:
+            text = PHASE_BATTLE_SALVO if self._session.salvo_mode else PHASE_BATTLE
+            self.query_one(Announcement).update_phase(text)
 
     def on_awaiting_move(self, actor: domain.Player, subject: domain.Player) -> None:
         self.board_map[actor.name].mode = Board.Mode.DISPLAY
@@ -160,6 +177,9 @@ class Game(Screen[None]):
 
         self.write_as_game(f"{winner.name} has won!")
 
+        text = PHASE_VICTORY if self._session.player_name == winner.name else PHASE_DEFEAT
+        self.query_one(Announcement).update_phase(text)
+
     @on(Board.CellShot)
     def fire(self, event: Board.CellShot) -> None:
         self.enemy_board.mode = Board.Mode.DISPLAY
@@ -174,3 +194,12 @@ class Game(Screen[None]):
         self.player_board.mode = Board.Mode.ARRANGE
         roster_item = self._session.roster[event.ship_key]
         self.player_board.show_ship_preview(ship_id=roster_item.id, ship_hp=roster_item.hp)
+
+    def _format_rules(self, template: str) -> str:
+        salvo_mode = "Yes" if self._session.salvo_mode else "No"
+        firing_order = self._session.firing_order.replace("_", " ").capitalize()
+        return Template(template).substitute(
+            salvo_mode=salvo_mode,
+            firing_order=firing_order,
+            roster=self._session.roster.name.capitalize(),
+        )

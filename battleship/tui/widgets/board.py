@@ -25,7 +25,7 @@ WATER = EMOJI["water_wave"]
 FIRE = EMOJI["fire"]
 TARGET = EMOJI["dart"]
 CROSSMARK = EMOJI["cross_mark"]
-ADMIRAL = EMOJI["man_pilot"]
+MAN = EMOJI["man"]
 
 
 @dataclass
@@ -251,7 +251,7 @@ class Board(Widget):
         return (row + column) % 2 == 0
 
     def compose(self) -> ComposeResult:
-        yield Label(f"{ADMIRAL} {self.player_name}")
+        yield Label(f"{MAN} {self.player_name}")
         yield self._grid
 
     def move_crosshair(self, coordinate: Coordinate | None) -> None:

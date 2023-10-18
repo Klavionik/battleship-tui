@@ -6,3 +6,6 @@ max_line_length = 100
 
 [*.yaml]
 indent_size = 2
+
+[*.tcss]
+indent_size = 2

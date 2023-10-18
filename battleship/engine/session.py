@@ -36,6 +36,10 @@ class SingleplayerSession:
         return self._enemy.name
 
     @property
+    def firing_order(self) -> str:
+        return self._firing_order
+
+    @property
     def salvo_mode(self) -> bool:
         return self._salvo_mode
 
