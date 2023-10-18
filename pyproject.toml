@@ -11,7 +11,7 @@ websockets = "^11.0.3"
 rich = "^13.5.2"
 loguru = "^0.7.0"
 pyee = "^11.0.0"
-textual = "^0.39.0"
+textual = "^0.40.0"
 
 [tool.poetry.scripts]
 battleship = "battleship.tui.app:run"
