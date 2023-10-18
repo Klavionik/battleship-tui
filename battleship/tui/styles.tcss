@@ -112,7 +112,12 @@ Multiplayer Input {
   margin-bottom: 1;
 }
 
-Multiplayer ListItem {
-  align-horizontal: center;
-  padding: 1;
+Multiplayer Button {
+  margin-left: 1;
+  margin-right: 1;
+  width: 100%;
+}
+
+Multiplayer Rule {
+  margin: 1;
 }

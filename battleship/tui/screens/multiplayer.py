@@ -3,7 +3,7 @@ from typing import Any
 from textual.app import ComposeResult
 from textual.containers import Container
 from textual.screen import Screen
-from textual.widgets import Footer, Input, Label, ListItem, ListView, Markdown
+from textual.widgets import Button, Footer, Input, Markdown, Rule
 
 from battleship.tui import resources, screens
 
@@ -23,10 +23,10 @@ class Multiplayer(Screen[None]):
 
             with Container(classes="screen-content"):
                 yield Input(placeholder="Nickname")
-
-                with ListView():
-                    yield ListItem(Label("New game"))
-                    yield ListItem(Label("Join game"))
+                yield Input(placeholder="Password")
+                yield Button("Connect", variant="primary")
+                yield Rule(line_style="heavy")
+                yield Button("Connect as guest")
 
         yield Footer()
 
