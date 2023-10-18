@@ -77,13 +77,13 @@ class Ship(Static):
         end = " <-\n" if previewing else "\n"
         self.update(f"[@click=preview()]Place {self.type_display}[/]{end}")
 
-    def watch_previewing(self, old: bool, new: bool) -> None:
+    def watch_previewing(self, _: bool, new: bool) -> None:
         if not self._placed:
             self.render_place_link(previewing=new)
 
     def action_preview(self) -> None:
         self.post_message(self.ShowPreview(self._key))
-        self.previewing = True
+        self.previewing = True  # noqa
 
 
 class Fleet(Widget):
@@ -106,7 +106,6 @@ class Fleet(Widget):
             damage_parts = [cell_factory.damaged().render() for _ in range(damage)]
             return Text.assemble(*(hp_parts + damage_parts), "\n")
 
-        self.border_title = "Fleet status"
         self._roster = roster
         self._allow_placing = allow_placing
         self._previewing_id = ""
