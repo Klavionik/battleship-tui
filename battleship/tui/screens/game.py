@@ -6,10 +6,11 @@ from textual.app import DEFAULT_COLORS, ComposeResult
 from textual.containers import Grid
 from textual.coordinate import Coordinate
 from textual.screen import Screen
-from textual.widgets import Footer, Placeholder, RichLog
+from textual.widgets import Footer, Placeholder
 
 from battleship.engine import domain, session
 from battleship.tui import screens
+from battleship.tui.widgets.battle_log import BattleLog
 from battleship.tui.widgets.board import Board, CellFactory
 from battleship.tui.widgets.fleet import Fleet, Ship
 
@@ -77,7 +78,7 @@ class Game(Screen[None]):
         if self._session.salvo_mode:
             self.enemy_board.min_targets = len(self._session.roster)
 
-        self.chat = RichLog(wrap=True, markup=True)
+        self.battle_log = BattleLog()
 
         self._session.subscribe("fleet_ready", self.on_fleet_ready)
         self._session.subscribe("ship_spawned", self.on_ship_spawned)
@@ -88,10 +89,10 @@ class Game(Screen[None]):
     def compose(self) -> ComposeResult:
         with Grid(id="content"):
             yield self.player_board
-            yield self.chat
+            yield Placeholder()
             yield self.enemy_board
             yield self.player_fleet
-            yield Placeholder()
+            yield self.battle_log
             yield self.enemy_fleet
 
         yield Footer()
@@ -103,7 +104,7 @@ class Game(Screen[None]):
         now = datetime.now().strftime("%H:%M")
         time = f"[cyan]{now}[/]"
         prefix = "[yellow][Game][/]:"
-        self.chat.write(f"{time} {prefix} {text}")
+        self.battle_log.write(f"{time} {prefix} {text}")
 
     @on(Board.ShipPlaced)
     def spawn_ship(self, event: Board.ShipPlaced) -> None:
