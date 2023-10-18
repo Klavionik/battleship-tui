@@ -1,14 +1,17 @@
 import json
 from collections.abc import AsyncGenerator
-from typing import Optional, ParamSpec, TypeVar
+from functools import cache
+from typing import Optional
 
 # noinspection PyProtectedMember
 from websockets.client import WebSocketClientProtocol, connect
 
-from battleship.shared.events import ClientEvent, EventMessage, EventMessageData
-
-P = ParamSpec("P")
-T = TypeVar("T")
+from battleship.shared.events import (
+    ClientEvent,
+    EventMessage,
+    EventMessageData,
+    ServerEvent,
+)
 
 
 class RealtimeClient:
@@ -23,6 +26,9 @@ class RealtimeClient:
         self._port = port
         self._ws: Optional[WebSocketClientProtocol] = None
 
+        self.logged_in = False
+        self.nickname = ""
+
     async def connect(self) -> None:
         self._ws = await connect(f"ws://{self._host}:{self._port}")
 
@@ -31,10 +37,22 @@ class RealtimeClient:
             await self._ws.close()
 
     async def logout(self) -> None:
-        await self._send(dict(kind=ClientEvent.LOGOUT))
+        if self.logged_in:
+            await self._send(dict(kind=ClientEvent.LOGOUT))
+            self.logged_in = False
+            self.nickname = ""
 
-    async def login(self, nickname: str) -> None:
+    async def login(self, nickname: str | None = None) -> str:
         await self._send(dict(kind=ClientEvent.LOGIN, payload={"nickname": nickname}))
+        await self._await_login_confirmed()
+        return self.nickname
+
+    async def _await_login_confirmed(self) -> None:
+        async for event in self:
+            if event.kind == ServerEvent.LOGIN:
+                self.logged_in = True
+                self.nickname = event.payload["nickname"]
+                break
 
     async def __aiter__(self) -> AsyncGenerator[EventMessage, None]:
         if self._ws is None:
@@ -48,3 +66,8 @@ class RealtimeClient:
             raise RuntimeError("Cannot send a message, no connection.")
 
         await self._ws.send(json.dumps(msg))
+
+
+@cache
+def get_client(host: str = "localhost", port: int = 8000) -> RealtimeClient:
+    return RealtimeClient(host, port)

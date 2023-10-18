@@ -1,5 +1,6 @@
 from textual.app import App
 
+from battleship.client.realtime import get_client
 from battleship.tui import screens
 
 
@@ -11,6 +12,11 @@ class BattleshipApp(App[None]):
 
     def on_mount(self) -> None:
         self.push_screen(screens.MainMenu())
+
+    async def on_unmount(self) -> None:
+        client = get_client()
+        await client.logout()
+        await client.disconnect()
 
 
 if __name__ == "__main__":

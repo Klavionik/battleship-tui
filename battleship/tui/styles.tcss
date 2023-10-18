@@ -121,3 +121,14 @@ Multiplayer Button {
 Multiplayer Rule {
   margin: 1;
 }
+
+/* Lobby screen */
+
+Lobby ListItem {
+  padding: 1;
+  align-horizontal: center;
+}
+
+Lobby #username {
+  margin-bottom: 1;
+}

@@ -4,6 +4,7 @@ from textual.containers import Container
 from textual.screen import Screen
 from textual.widgets import Footer, Label, ListItem, ListView, Markdown
 
+from battleship.client.realtime import get_client
 from battleship.tui import screens
 
 WELCOME_TEXT = """
@@ -35,4 +36,9 @@ class MainMenu(Screen[None]):
             case "singleplayer":
                 self.app.switch_screen(screens.Singleplayer())
             case "multiplayer":
-                self.app.switch_screen(screens.Multiplayer())
+                client = get_client()
+
+                if not client.logged_in:
+                    self.app.switch_screen(screens.Multiplayer())
+                else:
+                    self.app.switch_screen(screens.Lobby(nickname=client.nickname))

@@ -1,10 +1,13 @@
+import asyncio
 from typing import Any
 
+from textual import on
 from textual.app import ComposeResult
 from textual.containers import Container
 from textual.screen import Screen
 from textual.widgets import Button, Footer, Input, Markdown, Rule
 
+from battleship.client.realtime import get_client
 from battleship.tui import resources, screens
 
 
@@ -24,11 +27,23 @@ class Multiplayer(Screen[None]):
             with Container(classes="screen-content"):
                 yield Input(placeholder="Nickname")
                 yield Input(placeholder="Password")
-                yield Button("Connect", variant="primary")
+                yield Button("Connect", variant="primary", id="connect-user")
                 yield Rule(line_style="heavy")
-                yield Button("Connect as guest")
+                yield Button("Connect as guest", id="connect-guest")
 
         yield Footer()
 
     def action_back(self) -> None:
         self.app.switch_screen(screens.MainMenu())
+
+    @on(Button.Pressed, "#connect-guest")
+    async def connect_as_guest(self) -> None:
+        self.loading = True  # noqa
+        client = get_client()
+        await client.connect()
+
+        async def switch_to_lobby() -> None:
+            nickname = await client.login()
+            await self.app.switch_screen(screens.Lobby(nickname=nickname))
+
+        asyncio.create_task(switch_to_lobby())
