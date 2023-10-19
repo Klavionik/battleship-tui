@@ -1,6 +1,5 @@
-import asyncio
 import json
-from asyncio import Task
+from asyncio import Event, Future, Task, create_task, get_running_loop
 from functools import cache
 from typing import Any, Callable, Coroutine, Optional
 
@@ -50,7 +49,7 @@ class RealtimeClient:
 
     async def connect(self) -> None:
         self._ws = await connect(f"ws://{self._host}:{self._port}")
-        self._publish_task = asyncio.create_task(self._publish_events())
+        self._publish_task = create_task(self._publish_events())
 
     async def disconnect(self) -> None:
         if self._publish_task:
@@ -67,7 +66,7 @@ class RealtimeClient:
 
     async def login(self, nickname: str | None = None) -> str:
         await self._send(dict(kind=ClientEvent.LOGIN, payload={"nickname": nickname}))
-        signal = asyncio.Event()
+        signal = Event()
 
         async def _await_login_confirmed(payload: dict[str, str]) -> None:
             self.logged_in = True
@@ -84,9 +83,22 @@ class RealtimeClient:
         roster: str,
         firing_order: str,
         salvo_mode: bool,
-    ) -> None:
+    ) -> SessionId:
         payload = dict(name=name, roster=roster, firing_order=firing_order, salvo_mode=salvo_mode)
         await self._send(dict(kind=ClientEvent.NEW_GAME, payload=payload))
+        future: Future[str] = get_running_loop().create_future()
+
+        async def _await_session_created(payload_: dict[str, str]) -> None:
+            future.set_result(payload_["session_id"])
+
+        self._emitter.once(ServerEvent.NEW_GAME, _await_session_created)
+
+        await future
+        return future.result()
+
+    async def abort_game(self, session_id: SessionId) -> None:
+        payload = dict(session_id=session_id)
+        await self._send(dict(kind=ClientEvent.ABORT_GAME, payload=payload))
 
     async def sessions_subscribe(self) -> SessionSubscription:
         subscription = SessionSubscription()

@@ -71,10 +71,15 @@ class Connection:
                 case EventMessage(kind=ClientEvent.NEW_GAME):
                     session = Session(id=make_session_id(), **event.payload)
                     self._sessions.add(session)
+                    await self.send_event(
+                        EventMessage(kind=ServerEvent.NEW_GAME, payload={"session_id": session.id})
+                    )
                 case EventMessage(kind=ClientEvent.SESSIONS_SUBSCRIBE):
                     self._sessions.subscribe(self._session_observer)
                 case EventMessage(kind=ClientEvent.SESSIONS_UNSUBSCRIBE):
                     self._sessions.unsubscribe(self._session_observer)
+                case EventMessage(kind=ClientEvent.ABORT_GAME):
+                    self._sessions.remove(event.payload["session_id"])
 
 
 class ConnectionHandler:

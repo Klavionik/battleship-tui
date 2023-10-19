@@ -152,3 +152,39 @@ JoinGame ListItem {
   padding: 1;
   margin-bottom: 1;
 }
+
+
+/* WaitingModal screen */
+
+WaitingModal {
+  align: center middle;
+}
+
+WaitingModal #dialog LoadingIndicator {
+  width: 1fr;
+  column-span: 2;
+  height: auto;
+}
+
+WaitingModal #dialog {
+  layout: grid;
+  width: 60;
+  grid-size: 2 3;
+  grid-rows: 1fr;
+  grid-gutter: 1;
+  padding: 1 3;
+  background: $panel;
+  border: thick $primary 80%;
+  height: 13;
+}
+
+WaitingModal Label {
+  column-span: 2;
+  width: 1fr;
+  content-align: center middle;
+}
+
+WaitingModal Button {
+  column-span: 2;
+  width: 1fr;
+}

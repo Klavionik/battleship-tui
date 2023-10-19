@@ -10,6 +10,7 @@ class ClientEvent(StrEnum):
     NEW_GAME = "new_game"
     SESSIONS_SUBSCRIBE = "sessions_subscribe"
     SESSIONS_UNSUBSCRIBE = "sessions_unsubscribe"
+    ABORT_GAME = "abort_name"
 
 
 class ServerEvent(StrEnum):

@@ -3,12 +3,30 @@ from typing import Any
 from textual import on
 from textual.app import ComposeResult
 from textual.containers import Container
-from textual.screen import Screen
-from textual.widgets import Footer, Markdown
+from textual.screen import ModalScreen, Screen
+from textual.widgets import Button, Footer, Label, LoadingIndicator, Markdown
 
 from battleship.client.realtime import get_client
 from battleship.tui import resources
 from battleship.tui.widgets.new_game import NewGame
+
+
+class WaitingModal(ModalScreen[None]):
+    def __init__(self, *args: Any, session_id: str, **kwargs: Any):
+        super().__init__(*args, **kwargs)
+        self._session_id = session_id
+
+    def compose(self) -> ComposeResult:
+        with Container(id="dialog"):
+            yield Label("Waiting for the second player...")
+            yield LoadingIndicator()
+            yield Button("Abort", variant="error")
+
+    @on(Button.Pressed)
+    async def abort_waiting(self) -> None:
+        client = get_client()
+        await client.abort_game(self._session_id)
+        self.app.pop_screen()
 
 
 class CreateGame(Screen[None]):
@@ -36,6 +54,7 @@ class CreateGame(Screen[None]):
     @on(NewGame.PlayPressed)
     async def announce_game(self, event: NewGame.PlayPressed) -> None:
         client = get_client()
-        await client.announce_new_game(
+        session_id = await client.announce_new_game(
             event.name, event.roster.name, event.firing_order, event.salvo_mode
         )
+        await self.app.push_screen(WaitingModal(session_id=session_id))
