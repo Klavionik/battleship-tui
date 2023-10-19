@@ -12,22 +12,21 @@ from battleship.client.realtime import SessionSubscription, get_client
 from battleship.shared.sessions import Session, SessionId
 
 
-class SessionItem(Label):
+class SessionLabel(Label):
     TEMPLATE = "$name | Roster: $roster | Firing order: $firing_order | Salvo mode: $salvo_mode"
 
     def __init__(self, *args: Any, session: Session, **kwargs: Any):
         super().__init__(*args, **kwargs)
-        self._session = session
-        self.update(self.format_session())
+        self.update(self.format_session(session))
 
-    def format_session(self) -> str:
-        salvo_mode = "Yes" if self._session.salvo_mode else "No"
-        firing_order = self._session.firing_order.replace("_", " ").capitalize()
+    def format_session(self, session: Session) -> str:
+        salvo_mode = "Yes" if session.salvo_mode else "No"
+        firing_order = session.firing_order.replace("_", " ").capitalize()
         return Template(self.TEMPLATE).substitute(
-            name=self._session.name,
+            name=session.name,
             salvo_mode=salvo_mode,
             firing_order=firing_order,
-            roster=self._session.roster.capitalize(),
+            roster=session.roster.capitalize(),
         )
 
 
@@ -36,8 +35,8 @@ class JoinGame(Screen[None]):
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
-        self._subscription: SessionSubscription | None = None
         self._session_list = ListView()
+        self._subscription: SessionSubscription | None = None
 
     def compose(self) -> ComposeResult:
         with Container(classes="main"):
@@ -66,7 +65,7 @@ class JoinGame(Screen[None]):
     async def add_session(self, session: Session) -> None:
         await self._session_list.append(
             ListItem(
-                SessionItem(session=session),
+                SessionLabel(session=session),
                 id=session.id,
             )
         )
