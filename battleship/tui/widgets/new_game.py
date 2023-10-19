@@ -34,7 +34,7 @@ class NewGame(Widget):
 
     def compose(self) -> ComposeResult:
         if self._with_name:
-            yield Input(placeholder="Enter game name")
+            yield Input(placeholder="Game name")
 
         with RadioSet(id="roster", classes="options-panel") as rs:
             rs.border_title = "Roster"

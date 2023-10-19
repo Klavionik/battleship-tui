@@ -29,7 +29,7 @@ class Lobby(Screen[None]):
                 yield Static(f"👤{self._nickname}", id="username")
 
                 with ListView():
-                    yield ListItem(Label("🎯 New game"))
+                    yield ListItem(Label("🎯 Create game"), id="create_game")
                     yield ListItem(Label("🔍 Join game"))
                     yield ListItem(Label("📜 Statistics"))
                     yield ListItem(Label("👋 Logout"), id="logout")
@@ -44,3 +44,7 @@ class Lobby(Screen[None]):
         client = get_client()
         await client.logout()
         await self.app.switch_screen(screens.Multiplayer())
+
+    @on(ListView.Selected, item="#create_game")
+    async def create_game(self) -> None:
+        await self.app.push_screen(screens.CreateGame())
