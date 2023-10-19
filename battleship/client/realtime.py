@@ -14,7 +14,7 @@ from battleship.shared.events import (
     EventMessageData,
     ServerEvent,
 )
-from battleship.shared.sessions import Session, SessionId
+from battleship.shared.sessions import Action, Session, SessionId
 
 
 class SessionSubscription:
@@ -104,8 +104,16 @@ class RealtimeClient:
         subscription = SessionSubscription()
 
         async def publish_update(payload: dict) -> None:  # type: ignore[type-arg]
-            action = payload["action"]
-            subscription.emit(action.lower(), session=Session(**payload["session"]))
+            action = payload["action"].lower()
+            kwargs: dict[str, str | Session] = {}
+
+            if action == Action.ADD.lower():
+                kwargs.update(session=Session(**payload["session"]))
+
+            if action == Action.REMOVE.lower():
+                kwargs.update(session_id=payload["session_id"])
+
+            subscription.emit(action, **kwargs)
 
         self._emitter.add_listener(ServerEvent.SESSIONS_UPDATE, publish_update)
         await self._send(dict(kind=ClientEvent.SESSIONS_SUBSCRIBE))

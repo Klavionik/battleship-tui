@@ -41,6 +41,9 @@ class Connection:
         if action == Action.ADD:
             payload["session"] = asdict(self._sessions.get(session_id))
 
+        if action == Action.REMOVE:
+            payload["session_id"] = session_id
+
         await self.send_event(
             EventMessage(
                 kind=ServerEvent.SESSIONS_UPDATE,

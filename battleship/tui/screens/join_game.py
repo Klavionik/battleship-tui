@@ -71,4 +71,5 @@ class JoinGame(Screen[None]):
         )
 
     async def remove_session(self, session_id: SessionId) -> None:
-        await self._session_list.query_one(session_id, ListItem).remove()
+        self.log.debug(self.tree)
+        await self.query_one(f"#{session_id}", ListItem).remove()
