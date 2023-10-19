@@ -22,7 +22,8 @@ class Lobby(Screen[None]):
 
     def compose(self) -> ComposeResult:
         with Container(classes="main"):
-            yield Markdown(self.help, classes="screen-help")
+            with Container(classes="screen-help"):
+                yield Markdown(self.help)
 
             with Container(classes="screen-content"):
                 yield Static(f"👤{self._nickname}", id="username")
