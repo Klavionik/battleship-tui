@@ -133,3 +133,22 @@ NewGame #salvo_mode {
 NewGame Button {
   margin-left: 1;
 }
+
+/* JoinGame screen */
+
+JoinGame .main {
+  layout: vertical;
+}
+
+JoinGame #title {
+  text-style: bold;
+  margin: 1 0;
+  text-align: center;
+  background: $primary;
+}
+
+JoinGame ListItem {
+  align-horizontal: center;
+  padding: 1;
+  margin-bottom: 1;
+}

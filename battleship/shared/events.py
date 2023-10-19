@@ -8,11 +8,14 @@ class ClientEvent(StrEnum):
     LOGIN = "login"
     LOGOUT = "logout"
     NEW_GAME = "new_game"
+    SESSIONS_SUBSCRIBE = "sessions_subscribe"
+    SESSIONS_UNSUBSCRIBE = "sessions_unsubscribe"
 
 
 class ServerEvent(StrEnum):
     LOGIN = "login"
     NEW_GAME = "new_game"
+    SESSIONS_UPDATE = "sessions_update"
 
 
 Event: TypeAlias = ServerEvent | ClientEvent

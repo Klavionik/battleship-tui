@@ -30,7 +30,7 @@ class Lobby(Screen[None]):
 
                 with ListView():
                     yield ListItem(Label("🎯 Create game"), id="create_game")
-                    yield ListItem(Label("🔍 Join game"))
+                    yield ListItem(Label("🔍 Join game"), id="join_game")
                     yield ListItem(Label("📜 Statistics"))
                     yield ListItem(Label("👋 Logout"), id="logout")
 
@@ -46,5 +46,9 @@ class Lobby(Screen[None]):
         await self.app.switch_screen(screens.Multiplayer())
 
     @on(ListView.Selected, item="#create_game")
-    async def create_game(self) -> None:
-        await self.app.push_screen(screens.CreateGame())
+    def create_game(self) -> None:
+        self.app.push_screen(screens.CreateGame())
+
+    @on(ListView.Selected, item="#join_game")
+    async def join_game(self) -> None:
+        await self.app.push_screen(screens.JoinGame())

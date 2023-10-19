@@ -1,7 +1,10 @@
+import asyncio
 import json
-from collections.abc import AsyncGenerator
+from asyncio import Task
 from functools import cache
 from typing import Optional
+
+from pyee import AsyncIOEventEmitter
 
 # noinspection PyProtectedMember
 from websockets.client import WebSocketClientProtocol, connect
@@ -25,14 +28,19 @@ class RealtimeClient:
         self._host = host
         self._port = port
         self._ws: Optional[WebSocketClientProtocol] = None
-
+        self._emitter = AsyncIOEventEmitter()  # type: ignore[no-untyped-call]
+        self._publish_task: Task[None] | None = None
         self.logged_in = False
         self.nickname = ""
 
     async def connect(self) -> None:
         self._ws = await connect(f"ws://{self._host}:{self._port}")
+        self._publish_task = asyncio.create_task(self._publish_events())
 
     async def disconnect(self) -> None:
+        if self._publish_task:
+            self._publish_task.cancel()
+
         if self._ws:
             await self._ws.close()
 
@@ -44,22 +52,43 @@ class RealtimeClient:
 
     async def login(self, nickname: str | None = None) -> str:
         await self._send(dict(kind=ClientEvent.LOGIN, payload={"nickname": nickname}))
-        await self._await_login_confirmed()
+        signal = asyncio.Event()
+
+        async def _await_login_confirmed(payload: dict[str, str]) -> None:
+            self.logged_in = True
+            self.nickname = payload["nickname"]
+            signal.set()
+
+        self._emitter.once(ServerEvent.LOGIN, _await_login_confirmed)
+        await signal.wait()
         return self.nickname
 
-    async def _await_login_confirmed(self) -> None:
-        async for event in self:
-            if event.kind == ServerEvent.LOGIN:
-                self.logged_in = True
-                self.nickname = event.payload["nickname"]
-                break
+    async def announce_new_game(
+        self, name: str, roster: str, firing_order: str, salvo_mode: bool
+    ) -> None:
+        payload = dict(name=name, roster=roster, firing_order=firing_order, salvo_mode=salvo_mode)
+        await self._send(dict(kind=ClientEvent.NEW_GAME, payload=payload))
 
-    async def __aiter__(self) -> AsyncGenerator[EventMessage, None]:
+    async def sessions_subscribe(self) -> AsyncIOEventEmitter:
+        emitter = AsyncIOEventEmitter()  # type: ignore[no-untyped-call]
+
+        async def publish_update(payload: dict[str, tuple]) -> None:  # type: ignore[type-arg]
+            emitter.emit("update", update=payload)
+
+        self._emitter.add_listener(ServerEvent.SESSIONS_UPDATE, publish_update)
+        await self._send(dict(kind=ClientEvent.SESSIONS_SUBSCRIBE))
+        return emitter
+
+    async def sessions_unsubscribe(self) -> None:
+        await self._send(dict(kind=ClientEvent.SESSIONS_UNSUBSCRIBE))
+
+    async def _publish_events(self) -> None:
         if self._ws is None:
             raise RuntimeError("Cannot receive messages, no connection.")
 
         async for message in self._ws:
-            yield EventMessage.from_raw(message)
+            event = EventMessage.from_raw(message)
+            self._emitter.emit(event.kind, event.payload)
 
     async def _send(self, msg: EventMessageData) -> None:
         if self._ws is None:
