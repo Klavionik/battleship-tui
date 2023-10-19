@@ -2,7 +2,7 @@ from typing import Any
 
 from textual import on
 from textual.app import ComposeResult
-from textual.containers import Container
+from textual.containers import Container, VerticalScroll
 from textual.screen import Screen
 from textual.widgets import Footer, Label, ListItem, ListView, Markdown, Static
 
@@ -22,8 +22,8 @@ class Lobby(Screen[None]):
 
     def compose(self) -> ComposeResult:
         with Container(classes="main"):
-            with Container(classes="screen-help"):
-                yield Markdown(self.help)
+            with VerticalScroll():
+                yield Markdown(self.help, classes="screen-help")
 
             with Container(classes="screen-content"):
                 yield Static(f"👤{self._nickname}", id="username")

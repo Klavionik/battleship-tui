@@ -3,7 +3,7 @@ from typing import Any
 
 from textual import on
 from textual.app import ComposeResult
-from textual.containers import Container
+from textual.containers import Container, VerticalScroll
 from textual.screen import Screen
 from textual.widgets import Button, Footer, Input, Markdown, Rule
 
@@ -22,7 +22,8 @@ class Multiplayer(Screen[None]):
 
     def compose(self) -> ComposeResult:
         with Container(classes="main"):
-            yield Markdown(self.help, classes="screen-help")
+            with VerticalScroll():
+                yield Markdown(self.help, classes="screen-help")
 
             with Container(classes="screen-content"):
                 yield Input(placeholder="Nickname")
