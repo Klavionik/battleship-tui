@@ -1,8 +1,6 @@
-import dataclasses
 from string import Template
 from typing import Any
 
-import pyee
 from textual import on
 from textual.app import ComposeResult
 from textual.containers import Container
@@ -10,15 +8,8 @@ from textual.events import Mount, Unmount
 from textual.screen import Screen
 from textual.widgets import Footer, Label, ListItem, ListView, Static
 
-from battleship.client.realtime import get_client
-
-
-@dataclasses.dataclass
-class Session:
-    name: str
-    roster: str
-    firing_order: str
-    salvo_mode: bool
+from battleship.client.realtime import SessionSubscription, get_client
+from battleship.shared.sessions import Session, SessionId
 
 
 class SessionItem(Label):
@@ -45,7 +36,7 @@ class JoinGame(Screen[None]):
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
-        self._subscription: pyee.AsyncIOEventEmitter | None = None
+        self._subscription: SessionSubscription | None = None
         self._session_list = ListView()
 
     def compose(self) -> ComposeResult:
@@ -62,24 +53,23 @@ class JoinGame(Screen[None]):
     async def subscribe(self) -> None:
         client = get_client()
 
-        async def update_list(update: dict[str, tuple]) -> None:  # type: ignore[type-arg]
-            self.log.debug(f"Received update {update}")
-            updates = []
-
-            try:
-                for session_id, session in update["items"]:
-                    node_id = f"session_{session_id}"
-                    updates.append(ListItem(SessionItem(session=Session(**session)), id=node_id))
-
-                await self._session_list.clear()
-                await self._session_list.extend(updates)
-            except Exception as exc:
-                self.log.error(exc)
-
         self._subscription = await client.sessions_subscribe()
-        self._subscription.add_listener("update", update_list)
+        self._subscription.on_add(self.add_session)
+        self._subscription.on_remove(self.remove_session)
 
     @on(Unmount)
     async def unsubscribe(self) -> None:
         client = get_client()
         await client.sessions_unsubscribe()
+        self._subscription = None
+
+    async def add_session(self, session: Session) -> None:
+        await self._session_list.append(
+            ListItem(
+                SessionItem(session=session),
+                id=session.id,
+            )
+        )
+
+    async def remove_session(self, session_id: SessionId) -> None:
+        await self._session_list.query_one(session_id, ListItem).remove()

@@ -2,7 +2,7 @@ import asyncio
 import json
 from asyncio import Task
 from functools import cache
-from typing import Optional
+from typing import Any, Callable, Coroutine, Optional
 
 from pyee import AsyncIOEventEmitter
 
@@ -15,6 +15,21 @@ from battleship.shared.events import (
     EventMessageData,
     ServerEvent,
 )
+from battleship.shared.sessions import Session, SessionId
+
+
+class SessionSubscription:
+    def __init__(self) -> None:
+        self._ee = AsyncIOEventEmitter()  # type: ignore[no-untyped-call]
+
+    def on_add(self, callback: Callable[[Session], Coroutine[Any, Any, Any]]) -> None:
+        self._ee.add_listener("add", callback)
+
+    def on_remove(self, callback: Callable[[SessionId], Coroutine[Any, Any, Any]]) -> None:
+        self._ee.add_listener("remove", callback)
+
+    def emit(self, event: str, *args: Any, **kwargs: Any) -> None:
+        self._ee.emit(event, *args, **kwargs)
 
 
 class RealtimeClient:
@@ -64,20 +79,25 @@ class RealtimeClient:
         return self.nickname
 
     async def announce_new_game(
-        self, name: str, roster: str, firing_order: str, salvo_mode: bool
+        self,
+        name: str,
+        roster: str,
+        firing_order: str,
+        salvo_mode: bool,
     ) -> None:
         payload = dict(name=name, roster=roster, firing_order=firing_order, salvo_mode=salvo_mode)
         await self._send(dict(kind=ClientEvent.NEW_GAME, payload=payload))
 
-    async def sessions_subscribe(self) -> AsyncIOEventEmitter:
-        emitter = AsyncIOEventEmitter()  # type: ignore[no-untyped-call]
+    async def sessions_subscribe(self) -> SessionSubscription:
+        subscription = SessionSubscription()
 
-        async def publish_update(payload: dict[str, tuple]) -> None:  # type: ignore[type-arg]
-            emitter.emit("update", update=payload)
+        async def publish_update(payload: dict) -> None:  # type: ignore[type-arg]
+            action = payload["action"]
+            subscription.emit(action.lower(), session=Session(**payload["session"]))
 
         self._emitter.add_listener(ServerEvent.SESSIONS_UPDATE, publish_update)
         await self._send(dict(kind=ClientEvent.SESSIONS_SUBSCRIBE))
-        return emitter
+        return subscription
 
     async def sessions_unsubscribe(self) -> None:
         await self._send(dict(kind=ClientEvent.SESSIONS_UNSUBSCRIBE))
