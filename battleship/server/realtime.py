@@ -5,7 +5,7 @@ import signal
 from loguru import logger
 from websockets import serve  # type: ignore[attr-defined]
 
-from battleship.server.connections import ConnectionHandler
+from battleship.server.connections import ConnectionManager
 from battleship.server.players import Players
 from battleship.server.sessions import Sessions
 
@@ -21,7 +21,7 @@ async def run_server(host: str, port: int) -> None:
 
     sessions = Sessions()
     players = Players()
-    handler = ConnectionHandler(sessions, players)
+    handler = ConnectionManager(sessions, players)
 
     async with serve(handler, host=host, port=port):
         logger.info(f"Serving at {host}:{port}")

@@ -85,7 +85,7 @@ class Connection:
                     self._sessions.remove(event.payload["session_id"])
 
 
-class ConnectionHandler:
+class ConnectionManager:
     def __init__(self, sessions_repository: Sessions, players_repository: Players) -> None:
         self.connections: set[Connection] = set()
         self._sessions = sessions_repository
