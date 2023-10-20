@@ -48,7 +48,7 @@ class RealtimeClient:
         self.nickname = ""
 
     async def connect(self) -> None:
-        self._ws = await connect(f"ws://{self._host}:{self._port}")
+        self._ws = await connect(f"ws://{self._host}:{self._port}/ws")
         self._publish_task = create_task(self._publish_events())
 
     async def disconnect(self) -> None:

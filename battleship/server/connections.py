@@ -1,10 +1,10 @@
 import asyncio
 import json
 from dataclasses import asdict
-from typing import Any, AsyncGenerator, cast
+from typing import Any, AsyncGenerator
 
+from blacksheep import WebSocket, WebSocketDisconnectError
 from loguru import logger
-from websockets import WebSocketServerProtocol  # type: ignore[attr-defined]
 
 from battleship.server.players import Player, Players
 from battleship.server.sessions import Sessions
@@ -12,27 +12,39 @@ from battleship.shared.events import ClientEvent, EventMessage, ServerEvent
 from battleship.shared.sessions import Action, Session, make_session_id
 
 
-class Connection:
+class WebSocketWrapper:
+    def __init__(self, socket: WebSocket):
+        self.socket = socket
+
+    async def __aiter__(self) -> AsyncGenerator[str, None]:
+        while True:
+            try:
+                yield await self.socket.receive_text()
+            except WebSocketDisconnectError:
+                break
+
+
+class Client:
     def __init__(
         self,
-        connection: WebSocketServerProtocol,
+        connection: WebSocket,
         sessions_repository: Sessions,
         players_repository: Players,
     ) -> None:
-        self._connection = connection
+        self._connection = WebSocketWrapper(connection)
         self._sessions = sessions_repository
         self._players = players_repository
         self._player: Player | None = None
 
     @property
-    def local_address(self) -> tuple[str, int]:
-        return cast(tuple[str, int], self._connection.local_address)
+    def local_address(self) -> str:
+        return self._connection.socket.client_ip
 
     async def close(self) -> None:
-        await self._connection.close()
+        await self._connection.socket.close()
 
     async def send_event(self, event: EventMessage) -> None:
-        await self._connection.send(event.as_json())
+        await self._connection.socket.send_text(event.as_json())
 
     async def _session_observer(self, session_id: str, action: Action) -> None:
         logger.info(f"Send session update for {session_id=}, {action=}.")
@@ -87,16 +99,14 @@ class Connection:
 
 class ConnectionManager:
     def __init__(self, sessions_repository: Sessions, players_repository: Players) -> None:
-        self.connections: set[Connection] = set()
+        self.clients: set[Client] = set()
         self._sessions = sessions_repository
         self._players = players_repository
 
-    async def __call__(self, connection: WebSocketServerProtocol) -> None:
-        logger.info("New connection received")
-        connection = Connection(connection, self._sessions, self._players)
-        self.connections.add(connection)
+    async def __call__(self, socket: WebSocket) -> None:
+        client = Client(socket, self._sessions, self._players)
+        self.clients.add(client)
 
-        await connection()
+        await client()
 
-        self.connections.remove(connection)
-        logger.info("Connection closed")
+        self.clients.remove(client)
