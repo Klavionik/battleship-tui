@@ -2,7 +2,8 @@
 You can configure options before the game starts.
 
 **Game name**  
-A display name for your game session, it will be shown in the list of sessions.
+A display name for your game session, it will be shown in the list of sessions. Leave 
+it blank to use your nickname.
 
 **Roster**  
 Choose ship types that will be present on the battlefield.
