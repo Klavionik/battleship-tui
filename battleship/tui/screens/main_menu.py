@@ -4,7 +4,7 @@ from textual.containers import Container
 from textual.screen import Screen
 from textual.widgets import Footer, Label, ListItem, ListView, Markdown
 
-from battleship.client.realtime import get_client
+from battleship.client import get_client
 from battleship.tui import screens
 
 WELCOME_TEXT = """

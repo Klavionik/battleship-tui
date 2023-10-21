@@ -9,7 +9,7 @@ from textual.events import Mount, Unmount
 from textual.screen import Screen
 from textual.widgets import Footer, Label, ListItem, ListView, Static
 
-from battleship.client.realtime import SessionSubscription, get_client
+from battleship.client import SessionSubscription, get_client
 from battleship.shared.sessions import Session, SessionId
 
 

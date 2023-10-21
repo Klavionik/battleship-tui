@@ -6,7 +6,7 @@ from textual.containers import Container
 from textual.screen import ModalScreen, Screen
 from textual.widgets import Button, Footer, Label, LoadingIndicator, Markdown
 
-from battleship.client.realtime import get_client
+from battleship.client import get_client
 from battleship.tui import resources
 from battleship.tui.widgets.new_game import NewGame
 

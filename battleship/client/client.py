@@ -33,11 +33,11 @@ class SessionSubscription:
         self._ee.emit(event, *args, **kwargs)
 
 
-class RealtimeClient:
+class Client:
     """
-    Wraps WebSockets connection and provides a convenient interface
-    for sending client events to the realtime server and receiving
-    server events via `async for`.
+    Provides a convenient interface to the server API and realtime events.
+    Handles the HTTP session, as well as the WebSocket connection. Publishes
+    WebSocket messages as events via an async event emitter.
     """
 
     def __init__(self, host: str, port: int) -> None:
@@ -120,6 +120,9 @@ class RealtimeClient:
     async def sessions_unsubscribe(self) -> None:
         await self._send(dict(kind=ClientEvent.SESSIONS_UNSUBSCRIBE))
 
+    def add_listener(self, event: str, handler: Callable[..., Any]) -> None:
+        self._emitter.add_listener(event, handler)
+
     async def _publish_events(self) -> None:
         if self._ws is None:
             raise RuntimeError("Cannot receive messages, no connection.")
@@ -140,5 +143,5 @@ class RealtimeClient:
 
 
 @cache
-def get_client(host: str = "localhost", port: int = 8000) -> RealtimeClient:
-    return RealtimeClient(host, port)
+def get_client(host: str = "localhost", port: int = 8000) -> Client:
+    return Client(host, port)

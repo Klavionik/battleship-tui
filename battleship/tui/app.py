@@ -1,6 +1,6 @@
 from textual.app import App
 
-from battleship.client.realtime import get_client
+from battleship.client import get_client
 from battleship.tui import screens
 
 

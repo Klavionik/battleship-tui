@@ -7,7 +7,7 @@ from textual.containers import Container, VerticalScroll
 from textual.screen import Screen
 from textual.widgets import Button, Footer, Input, Markdown, Rule
 
-from battleship.client.realtime import get_client
+from battleship.client import get_client
 from battleship.tui import resources, screens
 
 
