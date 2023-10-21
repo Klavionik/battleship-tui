@@ -3,6 +3,8 @@ from asyncio import Event, Future, Task, create_task, get_running_loop
 from functools import cache
 from typing import Any, Callable, Coroutine, Optional
 
+from httpx import AsyncClient
+from loguru import logger
 from pyee import AsyncIOEventEmitter
 
 # noinspection PyProtectedMember
@@ -42,6 +44,7 @@ class RealtimeClient:
         self._host = host
         self._port = port
         self._ws: Optional[WebSocketClientProtocol] = None
+        self._session = AsyncClient(base_url=f"http://{host}:{port}")
         self._emitter = AsyncIOEventEmitter()  # type: ignore[no-untyped-call]
         self._publish_task: Task[None] | None = None
         self.logged_in = False
@@ -100,6 +103,10 @@ class RealtimeClient:
         payload = dict(session_id=session_id)
         await self._send(dict(kind=ClientEvent.ABORT_GAME, payload=payload))
 
+    async def fetch_sessions(self) -> list[Session]:
+        response = await self._session.get("/sessions")
+        return [Session(**data) for data in response.json()]
+
     async def sessions_subscribe(self) -> SessionSubscription:
         subscription = SessionSubscription()
 
@@ -133,6 +140,10 @@ class RealtimeClient:
     async def _send(self, msg: EventMessageData) -> None:
         if self._ws is None:
             raise RuntimeError("Cannot send a message, no connection.")
+
+        if self._ws.closed:
+            logger.warning("Trying to send a message, but connection is closed.")
+            return
 
         await self._ws.send(json.dumps(msg))
 

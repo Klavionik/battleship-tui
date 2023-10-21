@@ -13,18 +13,15 @@ class Sessions:
         self._listeners: set[Listener] = set()
         self._notify_task: Task[None] | None = None
 
-    def __iter__(self) -> list[Session]:
-        return list(self._sessions.values())
-
-    def __len__(self) -> int:
-        return len(self)
-
     def add(self, session: Session) -> None:
         self._sessions[session.id] = session
         self._notify_listeners(session.id, Action.ADD)
 
     def get(self, session_id: str) -> Session:
         return self._sessions[session_id]
+
+    def list(self) -> list[Session]:
+        return list(self._sessions.values())
 
     def remove(self, session_id: str) -> None:
         self._sessions.pop(session_id, None)

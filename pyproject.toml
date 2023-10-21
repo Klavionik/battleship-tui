@@ -14,6 +14,7 @@ pyee = "^11.0.0"
 textual = "^0.40.0"
 blacksheep = "^1.2.18"
 uvicorn = "^0.23.2"
+httpx = "^0.25.0"
 
 [tool.poetry.scripts]
 battleship = "battleship.tui.app:run"

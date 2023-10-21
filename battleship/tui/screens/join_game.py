@@ -4,6 +4,7 @@ from typing import Any
 from textual import on
 from textual.app import ComposeResult
 from textual.containers import Container
+from textual.css.query import NoMatches
 from textual.events import Mount, Unmount
 from textual.screen import Screen
 from textual.widgets import Footer, Label, ListItem, ListView, Static
@@ -56,6 +57,11 @@ class JoinGame(Screen[None]):
         self._subscription.on_add(self.add_session)
         self._subscription.on_remove(self.remove_session)
 
+        sessions = await client.fetch_sessions()
+
+        for session in sessions:
+            await self.add_session(session)
+
     @on(Unmount)
     async def unsubscribe(self) -> None:
         client = get_client()
@@ -63,6 +69,13 @@ class JoinGame(Screen[None]):
         self._subscription = None
 
     async def add_session(self, session: Session) -> None:
+        try:
+            # Remove possible duplicate.
+            item = self._session_list.query_one(f"#{session.id}")
+            await item.remove()
+        except NoMatches:
+            pass
+
         await self._session_list.append(
             ListItem(
                 SessionLabel(session=session),
@@ -71,5 +84,8 @@ class JoinGame(Screen[None]):
         )
 
     async def remove_session(self, session_id: SessionId) -> None:
-        self.log.debug(self.tree)
-        await self.query_one(f"#{session_id}", ListItem).remove()
+        try:
+            item = self._session_list.query_one(f"#{session_id}", ListItem)
+            await item.remove()
+        except NoMatches:
+            pass
