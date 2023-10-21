@@ -55,7 +55,10 @@ class CreateGame(Screen[None]):
     async def announce_game(self, event: NewGame.PlayPressed) -> None:
         client = get_client()
         name = event.name or f"{client.nickname}'s game"
-        session_id = await client.announce_new_game(
-            name, event.roster.name, event.firing_order, event.salvo_mode
+        session = await client.create_session(
+            name,
+            event.roster.name,
+            event.firing_order,
+            event.salvo_mode,
         )
-        await self.app.push_screen(WaitingModal(session_id=session_id))
+        await self.app.push_screen(WaitingModal(session_id=session.id))

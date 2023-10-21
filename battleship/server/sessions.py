@@ -2,7 +2,8 @@ import asyncio
 from asyncio import Task
 from typing import Callable, Coroutine, TypeAlias
 
-from battleship.shared.sessions import Action, Session, SessionId
+from battleship.server.schemas import SessionCreate
+from battleship.shared.sessions import Action, Session, SessionId, make_session_id
 
 Listener: TypeAlias = Callable[[SessionId, Action], Coroutine]
 
@@ -13,9 +14,11 @@ class Sessions:
         self._listeners: set[Listener] = set()
         self._notify_task: Task[None] | None = None
 
-    def add(self, session: Session) -> None:
+    def add(self, data: SessionCreate) -> Session:
+        session = Session(id=make_session_id(), **data.as_dict())  # type: ignore[arg-type]
         self._sessions[session.id] = session
         self._notify_listeners(session.id, Action.ADD)
+        return session
 
     def get(self, session_id: str) -> Session:
         return self._sessions[session_id]

@@ -1,5 +1,5 @@
 import json
-from asyncio import Event, Future, Task, create_task, get_running_loop
+from asyncio import Event, Task, create_task
 from functools import cache
 from typing import Any, Callable, Coroutine, Optional
 
@@ -80,24 +80,16 @@ class RealtimeClient:
         await signal.wait()
         return self.nickname
 
-    async def announce_new_game(
+    async def create_session(
         self,
         name: str,
         roster: str,
         firing_order: str,
         salvo_mode: bool,
-    ) -> SessionId:
+    ) -> Session:
         payload = dict(name=name, roster=roster, firing_order=firing_order, salvo_mode=salvo_mode)
-        await self._send(dict(kind=ClientEvent.NEW_GAME, payload=payload))
-        future: Future[str] = get_running_loop().create_future()
-
-        async def _await_session_created(payload_: dict[str, str]) -> None:
-            future.set_result(payload_["session_id"])
-
-        self._emitter.once(ServerEvent.NEW_GAME, _await_session_created)
-
-        await future
-        return future.result()
+        response = await self._session.post("/sessions", json=payload)
+        return Session(**response.json())
 
     async def abort_game(self, session_id: SessionId) -> None:
         payload = dict(session_id=session_id)

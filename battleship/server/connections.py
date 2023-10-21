@@ -9,7 +9,7 @@ from loguru import logger
 from battleship.server.players import Player, Players
 from battleship.server.sessions import Sessions
 from battleship.shared.events import ClientEvent, EventMessage, ServerEvent
-from battleship.shared.sessions import Action, Session, make_session_id
+from battleship.shared.sessions import Action
 
 
 class WebSocketWrapper:
@@ -83,12 +83,6 @@ class Client:
                     if self._player:
                         self._players.remove_player(self._player.nickname)
                         self._player = None
-                case EventMessage(kind=ClientEvent.NEW_GAME):
-                    session = Session(id=make_session_id(), **event.payload)
-                    self._sessions.add(session)
-                    await self.send_event(
-                        EventMessage(kind=ServerEvent.NEW_GAME, payload={"session_id": session.id})
-                    )
                 case EventMessage(kind=ClientEvent.SESSIONS_SUBSCRIBE):
                     self._sessions.subscribe(self._session_observer)
                 case EventMessage(kind=ClientEvent.SESSIONS_UNSUBSCRIBE):

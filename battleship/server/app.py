@@ -1,7 +1,8 @@
-from blacksheep import Application, WebSocket
+from blacksheep import Application, FromJSON, WebSocket
 
 from battleship.server.connections import ConnectionManager
 from battleship.server.players import Players
+from battleship.server.schemas import SessionCreate
 from battleship.server.sessions import Sessions
 from battleship.shared.sessions import Session
 
@@ -21,3 +22,11 @@ async def ws(websocket: WebSocket, connection_handler: ConnectionManager) -> Non
 @app.router.get("/sessions")
 async def list_sessions(session_repository: Sessions) -> list[Session]:
     return session_repository.list()
+
+
+@app.router.post("/sessions")
+async def create_session(
+    session: FromJSON[SessionCreate],
+    session_repository: Sessions,
+) -> Session:
+    return session_repository.add(session.value)
