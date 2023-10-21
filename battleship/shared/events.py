@@ -7,15 +7,12 @@ from typing import Any, NotRequired, Self, TypeAlias, TypedDict
 class ClientEvent(StrEnum):
     LOGIN = "login"
     LOGOUT = "logout"
-    NEW_GAME = "new_game"
     SESSIONS_SUBSCRIBE = "sessions_subscribe"
     SESSIONS_UNSUBSCRIBE = "sessions_unsubscribe"
-    ABORT_GAME = "abort_name"
 
 
 class ServerEvent(StrEnum):
     LOGIN = "login"
-    NEW_GAME = "new_game"
     SESSIONS_UPDATE = "sessions_update"
 
 

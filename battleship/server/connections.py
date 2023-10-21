@@ -87,8 +87,6 @@ class Client:
                     self._sessions.subscribe(self._session_observer)
                 case EventMessage(kind=ClientEvent.SESSIONS_UNSUBSCRIBE):
                     self._sessions.unsubscribe(self._session_observer)
-                case EventMessage(kind=ClientEvent.ABORT_GAME):
-                    self._sessions.remove(event.payload["session_id"])
 
 
 class ConnectionManager:

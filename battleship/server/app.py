@@ -1,4 +1,4 @@
-from blacksheep import Application, FromJSON, WebSocket
+from blacksheep import Application, FromJSON, Response, WebSocket
 
 from battleship.server.connections import ConnectionManager
 from battleship.server.players import Players
@@ -30,3 +30,12 @@ async def create_session(
     session_repository: Sessions,
 ) -> Session:
     return session_repository.add(session.value)
+
+
+@app.router.delete("/sessions/{session_id}")
+async def remove_session(
+    session_id: str,
+    session_repository: Sessions,
+) -> Response:
+    session_repository.remove(session_id)
+    return Response(status=204)

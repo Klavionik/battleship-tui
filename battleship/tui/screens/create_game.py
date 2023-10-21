@@ -25,7 +25,7 @@ class WaitingModal(ModalScreen[None]):
     @on(Button.Pressed)
     async def abort_waiting(self) -> None:
         client = get_client()
-        await client.abort_game(self._session_id)
+        await client.delete_session(self._session_id)
         self.app.pop_screen()
 
 

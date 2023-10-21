@@ -91,9 +91,8 @@ class RealtimeClient:
         response = await self._session.post("/sessions", json=payload)
         return Session(**response.json())
 
-    async def abort_game(self, session_id: SessionId) -> None:
-        payload = dict(session_id=session_id)
-        await self._send(dict(kind=ClientEvent.ABORT_GAME, payload=payload))
+    async def delete_session(self, session_id: SessionId) -> None:
+        await self._session.delete(f"/sessions/{session_id}")
 
     async def fetch_sessions(self) -> list[Session]:
         response = await self._session.get("/sessions")
