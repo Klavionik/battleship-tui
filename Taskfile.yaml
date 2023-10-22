@@ -12,4 +12,4 @@ tasks:
       - coverage html
       - python -m webbrowser -t htmlcov/index.html
   app:dev: poetry run textual run --dev battleship.tui.app:BattleshipApp
-  server:dev: uvicorn --reload battleship.server.app:app
+  server:dev: poetry run uvicorn --reload battleship.server.app:app
