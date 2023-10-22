@@ -1,13 +1,17 @@
 from blacksheep import Application, FromJSON, Response, WebSocket
 
+from battleship.server.auth import AuthManager, FirebaseAuthManager
+from battleship.server.config import Config, get_config
 from battleship.server.connections import ConnectionManager
 from battleship.server.players import Players
-from battleship.server.schemas import SessionCreate
+from battleship.server.schemas import GuestUser, SessionCreate
 from battleship.server.sessions import Sessions
 from battleship.shared.sessions import Session
 
 app = Application()
 
+app.services.add_singleton_by_factory(get_config, Config)
+app.services.add_singleton(AuthManager, FirebaseAuthManager)
 app.services.add_singleton(Sessions)
 app.services.add_singleton(Players)
 app.services.add_singleton(ConnectionManager)
@@ -39,3 +43,8 @@ async def remove_session(
 ) -> Response:
     session_repository.remove(session_id)
     return Response(status=204)
+
+
+@app.router.post("/login/guest")
+async def login_guest_user(auth_manager: AuthManager) -> GuestUser:
+    return await auth_manager.login_guest()

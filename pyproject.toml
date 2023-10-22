@@ -15,6 +15,9 @@ textual = "^0.40.0"
 blacksheep = "^1.2.18"
 uvicorn = "^0.23.2"
 httpx = "^0.25.0"
+pydantic = "^2.4.2"
+pydantic-settings = "^2.0.3"
+pyjwt = {extras = ["crypto"], version = "^2.8.0"}
 
 [tool.poetry.scripts]
 battleship = "battleship.tui.app:run"
@@ -24,6 +27,10 @@ line-length = 100
 
 [tool.isort]
 profile = "black"
+
+[[tool.mypy.overrides]]
+module = "firebase_admin"
+ignore_missing_imports = true
 
 [tool.poetry.group.dev.dependencies]
 mypy = "^1.5.0"
