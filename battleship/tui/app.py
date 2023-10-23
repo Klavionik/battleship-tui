@@ -15,7 +15,6 @@ class BattleshipApp(App[None]):
 
     async def on_unmount(self) -> None:
         client = get_client()
-        await client.logout()
         await client.disconnect()
 
 

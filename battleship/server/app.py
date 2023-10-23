@@ -1,6 +1,18 @@
-from blacksheep import Application, FromJSON, Response, WebSocket
+from blacksheep import (
+    Application,
+    FromJSON,
+    Response,
+    WebSocket,
+    no_content,
+    unauthorized,
+)
 
-from battleship.server.auth import AuthManager, FirebaseAuthManager
+from battleship.server.auth import (
+    AuthManager,
+    FirebaseAuthManager,
+    TokenHeader,
+    UserVerificationFailed,
+)
 from battleship.server.config import Config, get_config
 from battleship.server.connections import ConnectionManager
 from battleship.server.sessions import Sessions
@@ -15,9 +27,19 @@ app.services.add_singleton(ConnectionManager)
 
 
 @app.router.ws("/ws")
-async def ws(websocket: WebSocket, connection_handler: ConnectionManager) -> None:
+async def ws(
+    websocket: WebSocket,
+    id_token: TokenHeader,
+    connection_handler: ConnectionManager,
+    auth_manager: AuthManager,
+) -> Response | None:
+    try:
+        user = await auth_manager.verify_user(id_token.value)
+    except UserVerificationFailed:
+        return unauthorized()
+
     await websocket.accept()
-    await connection_handler(websocket)
+    await connection_handler(websocket, user)
 
 
 @app.router.get("/sessions")
@@ -39,7 +61,7 @@ async def remove_session(
     session_repository: Sessions,
 ) -> Response:
     session_repository.remove(session_id)
-    return Response(status=204)
+    return no_content()
 
 
 @app.router.post("/login/guest")

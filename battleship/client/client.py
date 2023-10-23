@@ -48,10 +48,15 @@ class Client:
         self._emitter = AsyncIOEventEmitter()  # type: ignore[no-untyped-call]
         self._publish_task: Task[None] | None = None
         self.logged_in = False
-        self.user: Any = None
+        self.user: User | None = None
 
     async def connect(self) -> None:
-        self._ws = await connect(f"ws://{self._host}:{self._port}/ws")
+        if self.user is None:
+            raise RuntimeError("Must log in before trying to establish a WS connection.")
+
+        self._ws = await connect(
+            f"ws://{self._host}:{self._port}/ws", extra_headers={"id_token": self.user.id_token}
+        )
         self._publish_task = create_task(self._publish_events())
 
     async def disconnect(self) -> None:
@@ -62,10 +67,8 @@ class Client:
             await self._ws.close()
 
     async def logout(self) -> None:
-        if self.logged_in:
-            await self._send(dict(kind=ClientEvent.LOGOUT))
-            self.logged_in = False
-            self.user = None
+        self.logged_in = False
+        self.user = None
 
     async def login_as_guest(self) -> str:
         response = await self._session.post("/login/guest")

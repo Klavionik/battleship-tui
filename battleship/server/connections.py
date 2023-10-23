@@ -5,7 +5,7 @@ from loguru import logger
 
 from battleship.server.sessions import Sessions
 from battleship.shared.events import ClientEvent, EventMessage, ServerEvent
-from battleship.shared.models import Action
+from battleship.shared.models import Action, User
 
 
 class WebSocketWrapper:
@@ -25,9 +25,11 @@ class Client:
         self,
         connection: WebSocket,
         sessions_repository: Sessions,
+        user: User,
     ) -> None:
         self._connection = WebSocketWrapper(connection)
         self._sessions = sessions_repository
+        self._user = user
 
     @property
     def local_address(self) -> str:
@@ -75,8 +77,8 @@ class ConnectionManager:
         self.clients: set[Client] = set()
         self._sessions = sessions_repository
 
-    async def __call__(self, socket: WebSocket) -> None:
-        client = Client(socket, self._sessions)
+    async def __call__(self, socket: WebSocket, user: User) -> None:
+        client = Client(socket, self._sessions, user)
         self.clients.add(client)
 
         await client()

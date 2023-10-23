@@ -39,6 +39,7 @@ class Session(SessionCreate):
 class User(BaseModel):
     display_name: str
     id_token: str
+    guest: bool
 
 
 def make_session_id() -> SessionID:

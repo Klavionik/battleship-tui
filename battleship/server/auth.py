@@ -1,14 +1,27 @@
 import asyncio
 from abc import ABC, abstractmethod
 from secrets import token_urlsafe
-from typing import Any, cast
+from typing import cast
 
 import jwt
+from blacksheep import FromHeader
 from httpx import AsyncClient
 from jwt import PyJWKClient
 
 from battleship.server.config import Config
 from battleship.shared.models import User
+
+
+class AuthError(Exception):
+    pass
+
+
+class UserVerificationFailed(AuthError):
+    pass
+
+
+class TokenHeader(FromHeader[str]):
+    name = "id_token"
 
 
 class AuthManager(ABC):
@@ -17,7 +30,7 @@ class AuthManager(ABC):
         pass
 
     @abstractmethod
-    async def verify_user(self, token: str) -> None:
+    async def verify_user(self, token: str) -> User:
         pass
 
 
@@ -36,8 +49,8 @@ class FirebaseAuthManager(AuthManager):
     async def login_guest(self) -> User:
         return await self.sign_in_anonymously()
 
-    async def verify_user(self, token: str) -> None:
-        await self.verify_id_token(token)
+    async def verify_user(self, token: str) -> User:
+        return await self.verify_id_token(token)
 
     async def sign_in_anonymously(self) -> User:
         async with self.client(base_url=self.identity_url) as client:
@@ -59,7 +72,7 @@ class FirebaseAuthManager(AuthManager):
 
             id_token = await self.refresh_id_token(refresh_token)
 
-        return User(display_name=display_name, id_token=id_token)
+        return User(display_name=display_name, id_token=id_token, guest=True)
 
     async def refresh_id_token(self, refresh_token: str) -> str:
         async with self.client(base_url=self.token_url) as client:
@@ -72,14 +85,20 @@ class FirebaseAuthManager(AuthManager):
             new_id_token = data["id_token"]
             return cast(str, new_id_token)
 
-    async def verify_id_token(self, id_token: str) -> dict[str, Any]:
+    async def verify_id_token(self, id_token: str) -> User:
         signing_key = await asyncio.to_thread(
             self.jwk_client.get_signing_key_from_jwt, token=id_token
         )
-        payload = jwt.decode(
-            id_token, signing_key.key, algorithms=["RS256"], audience=self.project_id
-        )
-        return cast(dict[str, Any], payload)
+        try:
+            payload = jwt.decode(
+                id_token, signing_key.key, algorithms=["RS256"], audience=self.project_id
+            )
+        except jwt.InvalidTokenError as exc:
+            raise UserVerificationFailed from exc
+
+        is_guest = payload["provider_id"] == "anonymous"
+        name = payload["name"]
+        return User(display_name=name, id_token=id_token, guest=is_guest)
 
 
 def _make_random_handle() -> str:

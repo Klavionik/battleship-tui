@@ -41,10 +41,10 @@ class Multiplayer(Screen[None]):
     async def connect_as_guest(self) -> None:
         self.loading = True  # noqa
         client = get_client()
-        await client.connect()
 
         async def switch_to_lobby() -> None:
             nickname = await client.login_as_guest()
+            await client.connect()
             await self.app.switch_screen(screens.Lobby(nickname=nickname))
 
         asyncio.create_task(switch_to_lobby())

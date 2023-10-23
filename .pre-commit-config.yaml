@@ -59,6 +59,7 @@ repos:
         entry: mypy
         args:
           - --strict
+          - --no-warn-no-return
         exclude: "^tests/"
         language: system
         types: [python]
