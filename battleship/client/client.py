@@ -1,5 +1,5 @@
 import json
-from asyncio import Event, Task, create_task
+from asyncio import Task, create_task
 from functools import cache
 from typing import Any, Callable, Coroutine, Optional
 
@@ -10,6 +10,7 @@ from pyee import AsyncIOEventEmitter
 # noinspection PyProtectedMember
 from websockets.client import WebSocketClientProtocol, connect
 
+from battleship.server.schemas import GuestUser
 from battleship.shared.events import (
     ClientEvent,
     EventMessage,
@@ -48,7 +49,7 @@ class Client:
         self._emitter = AsyncIOEventEmitter()  # type: ignore[no-untyped-call]
         self._publish_task: Task[None] | None = None
         self.logged_in = False
-        self.nickname = ""
+        self.user: Any = None
 
     async def connect(self) -> None:
         self._ws = await connect(f"ws://{self._host}:{self._port}/ws")
@@ -65,20 +66,13 @@ class Client:
         if self.logged_in:
             await self._send(dict(kind=ClientEvent.LOGOUT))
             self.logged_in = False
-            self.nickname = ""
+            self.user = None
 
-    async def login(self, nickname: str | None = None) -> str:
-        await self._send(dict(kind=ClientEvent.LOGIN, payload={"nickname": nickname}))
-        signal = Event()
-
-        async def _await_login_confirmed(payload: dict[str, str]) -> None:
-            self.logged_in = True
-            self.nickname = payload["nickname"]
-            signal.set()
-
-        self._emitter.once(ServerEvent.LOGIN, _await_login_confirmed)
-        await signal.wait()
-        return self.nickname
+    async def login_as_guest(self) -> str:
+        response = await self._session.post("/login/guest")
+        data = response.json()
+        self.user = GuestUser(**data)
+        return self.user.display_name
 
     async def create_session(
         self,

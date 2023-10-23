@@ -1,4 +1,3 @@
-import asyncio
 import json
 from dataclasses import asdict
 from typing import Any, AsyncGenerator
@@ -6,7 +5,6 @@ from typing import Any, AsyncGenerator
 from blacksheep import WebSocket, WebSocketDisconnectError
 from loguru import logger
 
-from battleship.server.players import Player, Players
 from battleship.server.sessions import Sessions
 from battleship.shared.events import ClientEvent, EventMessage, ServerEvent
 from battleship.shared.sessions import Action
@@ -29,12 +27,9 @@ class Client:
         self,
         connection: WebSocket,
         sessions_repository: Sessions,
-        players_repository: Players,
     ) -> None:
         self._connection = WebSocketWrapper(connection)
         self._sessions = sessions_repository
-        self._players = players_repository
-        self._player: Player | None = None
 
     @property
     def local_address(self) -> str:
@@ -71,18 +66,6 @@ class Client:
         async for event in self:
             logger.info(event)
             match event:
-                case EventMessage(kind=ClientEvent.LOGIN):
-                    await asyncio.sleep(0.5)  # Artificial latency.
-                    self._player = self._players.add_player(nickname=event.payload["nickname"])
-                    await self.send_event(
-                        EventMessage(
-                            kind=ServerEvent.LOGIN, payload={"nickname": self._player.nickname}
-                        )
-                    )
-                case EventMessage(kind=ClientEvent.LOGOUT):
-                    if self._player:
-                        self._players.remove_player(self._player.nickname)
-                        self._player = None
                 case EventMessage(kind=ClientEvent.SESSIONS_SUBSCRIBE):
                     self._sessions.subscribe(self._session_observer)
                 case EventMessage(kind=ClientEvent.SESSIONS_UNSUBSCRIBE):
@@ -90,13 +73,12 @@ class Client:
 
 
 class ConnectionManager:
-    def __init__(self, sessions_repository: Sessions, players_repository: Players) -> None:
+    def __init__(self, sessions_repository: Sessions) -> None:
         self.clients: set[Client] = set()
         self._sessions = sessions_repository
-        self._players = players_repository
 
     async def __call__(self, socket: WebSocket) -> None:
-        client = Client(socket, self._sessions, self._players)
+        client = Client(socket, self._sessions)
         self.clients.add(client)
 
         await client()

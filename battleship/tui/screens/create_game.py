@@ -54,7 +54,7 @@ class CreateGame(Screen[None]):
     @on(NewGame.PlayPressed)
     async def announce_game(self, event: NewGame.PlayPressed) -> None:
         client = get_client()
-        name = event.name or f"{client.nickname}'s game"
+        name = event.name or f"{client.user.nickname}'s game"
         session = await client.create_session(
             name,
             event.roster.name,

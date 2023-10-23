@@ -41,4 +41,4 @@ class MainMenu(Screen[None]):
                 if not client.logged_in:
                     self.app.switch_screen(screens.Multiplayer())
                 else:
-                    self.app.switch_screen(screens.Lobby(nickname=client.nickname))
+                    self.app.switch_screen(screens.Lobby(nickname=client.user.nickname))
