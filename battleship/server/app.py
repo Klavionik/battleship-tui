@@ -3,9 +3,8 @@ from blacksheep import Application, FromJSON, Response, WebSocket
 from battleship.server.auth import AuthManager, FirebaseAuthManager
 from battleship.server.config import Config, get_config
 from battleship.server.connections import ConnectionManager
-from battleship.server.schemas import GuestUser, SessionCreate
 from battleship.server.sessions import Sessions
-from battleship.shared.sessions import Session
+from battleship.shared.models import Session, SessionCreate, User
 
 app = Application()
 
@@ -44,5 +43,5 @@ async def remove_session(
 
 
 @app.router.post("/login/guest")
-async def login_guest_user(auth_manager: AuthManager) -> GuestUser:
+async def login_guest_user(auth_manager: AuthManager) -> User:
     return await auth_manager.login_guest()

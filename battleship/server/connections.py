@@ -1,5 +1,3 @@
-import json
-from dataclasses import asdict
 from typing import Any, AsyncGenerator
 
 from blacksheep import WebSocket, WebSocketDisconnectError
@@ -7,7 +5,7 @@ from loguru import logger
 
 from battleship.server.sessions import Sessions
 from battleship.shared.events import ClientEvent, EventMessage, ServerEvent
-from battleship.shared.sessions import Action
+from battleship.shared.models import Action
 
 
 class WebSocketWrapper:
@@ -39,14 +37,14 @@ class Client:
         await self._connection.socket.close()
 
     async def send_event(self, event: EventMessage) -> None:
-        await self._connection.socket.send_text(event.as_json())
+        await self._connection.socket.send_text(event.to_json())
 
     async def _session_observer(self, session_id: str, action: Action) -> None:
         logger.info(f"Send session update for {session_id=}, {action=}.")
         payload: dict[str, Any] = dict(action=action)
 
         if action == Action.ADD:
-            payload["session"] = asdict(self._sessions.get(session_id))
+            payload["session"] = self._sessions.get(session_id)
 
         if action == Action.REMOVE:
             payload["session_id"] = session_id
@@ -60,7 +58,7 @@ class Client:
 
     async def __aiter__(self) -> AsyncGenerator[EventMessage, None]:
         async for message in self._connection:
-            yield EventMessage(**json.loads(message))
+            yield EventMessage.from_raw(message)
 
     async def __call__(self) -> None:
         async for event in self:

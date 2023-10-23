@@ -8,12 +8,12 @@ from httpx import AsyncClient
 from jwt import PyJWKClient
 
 from battleship.server.config import Config
-from battleship.server.schemas import GuestUser
+from battleship.shared.models import User
 
 
 class AuthManager(ABC):
     @abstractmethod
-    async def login_guest(self) -> GuestUser:
+    async def login_guest(self) -> User:
         pass
 
     @abstractmethod
@@ -33,13 +33,13 @@ class FirebaseAuthManager(AuthManager):
         self.jwk_client = PyJWKClient(self.jwks_url)
         self.key_param = dict(key=self.api_key)
 
-    async def login_guest(self) -> GuestUser:
+    async def login_guest(self) -> User:
         return await self.sign_in_anonymously()
 
     async def verify_user(self, token: str) -> None:
         await self.verify_id_token(token)
 
-    async def sign_in_anonymously(self) -> GuestUser:
+    async def sign_in_anonymously(self) -> User:
         async with self.client(base_url=self.identity_url) as client:
             response = await client.post(
                 "/accounts:signUp", params=self.key_param, json=dict(returnSecureToken=True)
@@ -59,7 +59,7 @@ class FirebaseAuthManager(AuthManager):
 
             id_token = await self.refresh_id_token(refresh_token)
 
-        return GuestUser(display_name=display_name, access_token=id_token)
+        return User(display_name=display_name, id_token=id_token)
 
     async def refresh_id_token(self, refresh_token: str) -> str:
         async with self.client(base_url=self.token_url) as client:

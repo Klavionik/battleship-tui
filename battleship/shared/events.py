@@ -1,7 +1,7 @@
-import dataclasses
-import json
 from enum import StrEnum
-from typing import Any, NotRequired, Self, TypeAlias, TypedDict
+from typing import Any, NotRequired, TypeAlias, TypedDict
+
+from battleship.shared.models import BaseModel
 
 
 class ClientEvent(StrEnum):
@@ -25,14 +25,6 @@ class EventMessageData(TypedDict):
     payload: NotRequired[EventPayload]
 
 
-@dataclasses.dataclass
-class EventMessage:
+class EventMessage(BaseModel):
     kind: Event
-    payload: EventPayload = dataclasses.field(default_factory=dict)
-
-    def as_json(self) -> str:
-        return json.dumps(dataclasses.asdict(self))
-
-    @classmethod
-    def from_raw(cls, data: str | bytes) -> Self:
-        return cls(**json.loads(data))
+    payload: EventPayload = {}

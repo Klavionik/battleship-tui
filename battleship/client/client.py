@@ -10,14 +10,13 @@ from pyee import AsyncIOEventEmitter
 # noinspection PyProtectedMember
 from websockets.client import WebSocketClientProtocol, connect
 
-from battleship.server.schemas import GuestUser
 from battleship.shared.events import (
     ClientEvent,
     EventMessage,
     EventMessageData,
     ServerEvent,
 )
-from battleship.shared.sessions import Action, Session, SessionId
+from battleship.shared.models import Action, Session, SessionID, User
 
 
 class SessionSubscription:
@@ -27,7 +26,7 @@ class SessionSubscription:
     def on_add(self, callback: Callable[[Session], Coroutine[Any, Any, Any]]) -> None:
         self._ee.add_listener("add", callback)
 
-    def on_remove(self, callback: Callable[[SessionId], Coroutine[Any, Any, Any]]) -> None:
+    def on_remove(self, callback: Callable[[SessionID], Coroutine[Any, Any, Any]]) -> None:
         self._ee.add_listener("remove", callback)
 
     def emit(self, event: str, *args: Any, **kwargs: Any) -> None:
@@ -71,7 +70,7 @@ class Client:
     async def login_as_guest(self) -> str:
         response = await self._session.post("/login/guest")
         data = response.json()
-        self.user = GuestUser(**data)
+        self.user = User(**data)
         return self.user.display_name
 
     async def create_session(
@@ -85,7 +84,7 @@ class Client:
         response = await self._session.post("/sessions", json=payload)
         return Session(**response.json())
 
-    async def delete_session(self, session_id: SessionId) -> None:
+    async def delete_session(self, session_id: SessionID) -> None:
         await self._session.delete(f"/sessions/{session_id}")
 
     async def fetch_sessions(self) -> list[Session]:

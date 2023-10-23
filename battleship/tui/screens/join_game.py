@@ -10,7 +10,7 @@ from textual.screen import Screen
 from textual.widgets import Footer, Label, ListItem, ListView, Static
 
 from battleship.client import SessionSubscription, get_client
-from battleship.shared.sessions import Session, SessionId
+from battleship.shared.models import Session, SessionID
 
 
 class SessionLabel(Label):
@@ -83,7 +83,7 @@ class JoinGame(Screen[None]):
             )
         )
 
-    async def remove_session(self, session_id: SessionId) -> None:
+    async def remove_session(self, session_id: SessionID) -> None:
         try:
             item = self._session_list.query_one(f"#{session_id}", ListItem)
             await item.remove()
