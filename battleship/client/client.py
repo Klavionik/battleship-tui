@@ -1,9 +1,9 @@
 import json
 from asyncio import Task, create_task
 from functools import cache
-from typing import Any, Callable, Coroutine, Optional
+from typing import Any, Callable, Coroutine, Generator, Optional
 
-from httpx import AsyncClient
+from httpx import AsyncClient, Auth, Request, Response
 from loguru import logger
 from pyee import AsyncIOEventEmitter
 
@@ -16,7 +16,7 @@ from battleship.shared.events import (
     EventMessageData,
     ServerEvent,
 )
-from battleship.shared.models import Action, Session, SessionID, User
+from battleship.shared.models import Action, LoginData, Session, SessionID, User
 
 
 class SessionSubscription:
@@ -33,6 +33,19 @@ class SessionSubscription:
         self._ee.emit(event, *args, **kwargs)
 
 
+class IDTokenAuth(Auth):
+    def __init__(self, id_token: str):
+        self.id_token = id_token
+
+    def auth_flow(self, request: Request) -> Generator[Request, Response, None]:
+        request.headers["Authorization"] = f"Bearer {self.id_token}"
+        yield request
+
+
+def _create_http_session(base_url: str, auth: Auth | None = None) -> AsyncClient:
+    return AsyncClient(base_url=base_url, auth=auth)
+
+
 class Client:
     """
     Provides a convenient interface to the server API and realtime events.
@@ -44,18 +57,27 @@ class Client:
         self._host = host
         self._port = port
         self._ws: Optional[WebSocketClientProtocol] = None
-        self._session = AsyncClient(base_url=f"http://{host}:{port}")
+        self._session = _create_http_session(base_url=self.base_url)
         self._emitter = AsyncIOEventEmitter()  # type: ignore[no-untyped-call]
         self._publish_task: Task[None] | None = None
         self.logged_in = False
         self.user: User | None = None
+        self.id_token: str | None = None
+
+    @property
+    def base_url(self) -> str:
+        return f"http://{self._host}:{self._port}"
+
+    @property
+    def base_url_ws(self) -> str:
+        return f"ws://{self._host}:{self._port}"
 
     async def connect(self) -> None:
         if self.user is None:
             raise RuntimeError("Must log in before trying to establish a WS connection.")
 
         self._ws = await connect(
-            f"ws://{self._host}:{self._port}/ws", extra_headers={"id_token": self.user.id_token}
+            self.base_url_ws + "/ws", extra_headers={"Authorization": f"Bearer {self.id_token}"}
         )
         self._publish_task = create_task(self._publish_events())
 
@@ -73,7 +95,12 @@ class Client:
     async def login_as_guest(self) -> str:
         response = await self._session.post("/login/guest")
         data = response.json()
-        self.user = User(**data)
+        login_data = LoginData(**data)
+
+        self.user = login_data.user
+        self.id_token = login_data.id_token
+        self.logged_in = True
+        self._session = _create_http_session(self.base_url, IDTokenAuth(self.id_token))
         return self.user.display_name
 
     async def create_session(

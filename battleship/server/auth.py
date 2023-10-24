@@ -1,15 +1,12 @@
-import asyncio
 from abc import ABC, abstractmethod
 from secrets import token_urlsafe
 from typing import cast
 
-import jwt
 from blacksheep import FromHeader
 from httpx import AsyncClient
-from jwt import PyJWKClient
 
 from battleship.server.config import Config
-from battleship.shared.models import User
+from battleship.shared.models import LoginData
 
 
 class AuthError(Exception):
@@ -26,33 +23,24 @@ class TokenHeader(FromHeader[str]):
 
 class AuthManager(ABC):
     @abstractmethod
-    async def login_guest(self) -> User:
-        pass
-
-    @abstractmethod
-    async def verify_user(self, token: str) -> User:
+    async def login_guest(self) -> LoginData:
         pass
 
 
 class FirebaseAuthManager(AuthManager):
     identity_url = "https://identitytoolkit.googleapis.com/v1/"
     token_url = "https://securetoken.googleapis.com/v1/"
-    jwks_url = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com"  # noqa
 
     def __init__(self, config: Config):
         self.project_id = config.FIREBASE_PROJECT_ID
         self.api_key = config.FIREBASE_WEB_API_KEY
         self.client = AsyncClient
-        self.jwk_client = PyJWKClient(self.jwks_url)
         self.key_param = dict(key=self.api_key)
 
-    async def login_guest(self) -> User:
+    async def login_guest(self) -> LoginData:
         return await self.sign_in_anonymously()
 
-    async def verify_user(self, token: str) -> User:
-        return await self.verify_id_token(token)
-
-    async def sign_in_anonymously(self) -> User:
+    async def sign_in_anonymously(self) -> LoginData:
         async with self.client(base_url=self.identity_url) as client:
             response = await client.post(
                 "/accounts:signUp", params=self.key_param, json=dict(returnSecureToken=True)
@@ -71,8 +59,9 @@ class FirebaseAuthManager(AuthManager):
             assert data["displayName"] == display_name
 
             id_token = await self.refresh_id_token(refresh_token)
-
-        return User(display_name=display_name, id_token=id_token, guest=True)
+        return LoginData.model_validate(
+            dict(id_token=id_token, user={"display_name": display_name, "guest": True})
+        )
 
     async def refresh_id_token(self, refresh_token: str) -> str:
         async with self.client(base_url=self.token_url) as client:
@@ -84,21 +73,6 @@ class FirebaseAuthManager(AuthManager):
             data = response.json()
             new_id_token = data["id_token"]
             return cast(str, new_id_token)
-
-    async def verify_id_token(self, id_token: str) -> User:
-        signing_key = await asyncio.to_thread(
-            self.jwk_client.get_signing_key_from_jwt, token=id_token
-        )
-        try:
-            payload = jwt.decode(
-                id_token, signing_key.key, algorithms=["RS256"], audience=self.project_id
-            )
-        except jwt.InvalidTokenError as exc:
-            raise UserVerificationFailed from exc
-
-        is_guest = payload["provider_id"] == "anonymous"
-        name = payload["name"]
-        return User(display_name=name, id_token=id_token, guest=is_guest)
 
 
 def _make_random_handle() -> str:
