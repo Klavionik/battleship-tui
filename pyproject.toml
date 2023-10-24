@@ -28,10 +28,6 @@ line-length = 100
 [tool.isort]
 profile = "black"
 
-[[tool.mypy.overrides]]
-module = "firebase_admin"
-ignore_missing_imports = true
-
 [tool.poetry.group.dev.dependencies]
 mypy = "^1.5.0"
 coverage = "^7.3.0"
