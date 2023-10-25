@@ -96,6 +96,10 @@ class Auth0AuthManager(AuthManager):
 
     async def assign_role(self, user_id: str, role: UserRole) -> None:
         role_id = self.roles[role]
+        sub_prefix = "auth0|"
+
+        if not user_id.startswith(sub_prefix):
+            user_id = sub_prefix + user_id
 
         def _assign_roles() -> None:
             self.mgmt.users.add_roles(user_id, [role_id])
@@ -118,8 +122,7 @@ class Auth0AuthManager(AuthManager):
             return cast(dict[str, Any], response)
 
         data = await asyncio.to_thread(_signup)
-        user_id = data["_id"]
-        await self.assign_role("auth0|" + user_id, UserRole.GUEST)
+        await self.assign_role(data["_id"], UserRole.GUEST)
         tokens = self.gettoken.login(nickname, password, realm=self.realm, scope="openid")
 
         return LoginData.model_validate(
