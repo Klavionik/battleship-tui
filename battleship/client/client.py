@@ -5,7 +5,7 @@ from typing import Any, Callable, Coroutine, Generator, Optional
 
 from httpx import AsyncClient, Auth, Request, Response
 from loguru import logger
-from pyee import AsyncIOEventEmitter
+from pyee.asyncio import AsyncIOEventEmitter
 
 # noinspection PyProtectedMember
 from websockets.client import WebSocketClientProtocol, connect
@@ -21,7 +21,7 @@ from battleship.shared.models import Action, LoginData, Session, SessionID, User
 
 class SessionSubscription:
     def __init__(self) -> None:
-        self._ee = AsyncIOEventEmitter()  # type: ignore[no-untyped-call]
+        self._ee = AsyncIOEventEmitter()
 
     def on_add(self, callback: Callable[[Session], Coroutine[Any, Any, Any]]) -> None:
         self._ee.add_listener("add", callback)
@@ -58,7 +58,7 @@ class Client:
         self._port = port
         self._ws: Optional[WebSocketClientProtocol] = None
         self._session = _create_http_session(base_url=self.base_url)
-        self._emitter = AsyncIOEventEmitter()  # type: ignore[no-untyped-call]
+        self._emitter = AsyncIOEventEmitter()
         self._publish_task: Task[None] | None = None
         self.logged_in = False
         self.user: User | None = None
