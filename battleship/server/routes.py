@@ -64,7 +64,7 @@ async def login_guest_user(auth_manager: AuthManager) -> LoginData:
 async def signup(credentials: SignupCredentials, auth_manager: AuthManager) -> Response:
     await auth_manager.signup(
         credentials.email,
-        str(credentials.password),
+        credentials.password,
         credentials.nickname,
     )
     return created()
@@ -73,4 +73,4 @@ async def signup(credentials: SignupCredentials, auth_manager: AuthManager) -> R
 @allow_anonymous()
 @router.post("/login")
 async def login(credentials: LoginCredentials, auth_manager: AuthManager) -> LoginData:
-    return await auth_manager.login(credentials.email, str(credentials.password))
+    return await auth_manager.login(credentials.email, credentials.password)
