@@ -3,7 +3,7 @@ import secrets
 from typing import Any, TypeAlias, TypeVar
 
 from pydantic import BaseModel as _BaseModel
-from pydantic import EmailStr
+from pydantic import EmailStr, Field
 
 SessionID: TypeAlias = str
 T = TypeVar("T", bound="BaseModel")
@@ -51,11 +51,11 @@ class LoginData(BaseModel):
 
 class LoginCredentials(BaseModel):
     email: EmailStr
-    password: str
+    password: str = Field(..., min_length=9)
 
 
 class SignupCredentials(LoginCredentials):
-    nickname: str
+    nickname: str = Field(..., min_length=7, max_length=20)
 
 
 def make_session_id() -> SessionID:
