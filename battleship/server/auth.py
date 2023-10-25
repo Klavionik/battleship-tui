@@ -1,24 +1,20 @@
+import asyncio
+import enum
 from abc import ABC, abstractmethod
 from secrets import token_urlsafe
-from typing import cast
+from typing import Any, cast
 
-from blacksheep import FromHeader
-from httpx import AsyncClient
+import jwt
+from auth0.authentication import Database, GetToken  # type: ignore[import]
+from auth0.management import Auth0  # type: ignore[import]
 
 from battleship.server.config import Config
 from battleship.shared.models import LoginData
 
 
-class AuthError(Exception):
-    pass
-
-
-class UserVerificationFailed(AuthError):
-    pass
-
-
-class TokenHeader(FromHeader[str]):
-    name = "id_token"
+class UserRole(enum.StrEnum):
+    GUEST = "guest"
+    USER = "user"
 
 
 class AuthManager(ABC):
@@ -26,54 +22,118 @@ class AuthManager(ABC):
     async def login_guest(self) -> LoginData:
         pass
 
+    @abstractmethod
+    async def login(self, username: str, password: str) -> LoginData:
+        pass
 
-class FirebaseAuthManager(AuthManager):
-    identity_url = "https://identitytoolkit.googleapis.com/v1/"
-    token_url = "https://securetoken.googleapis.com/v1/"
+    @abstractmethod
+    async def signup(self, email: str, password: str, nickname: str) -> None:
+        pass
 
+
+class Auth0AuthManager(AuthManager):
     def __init__(self, config: Config):
-        self.project_id = config.FIREBASE_PROJECT_ID
-        self.api_key = config.FIREBASE_WEB_API_KEY
-        self.client = AsyncClient
-        self.key_param = dict(key=self.api_key)
+        self.domain = config.AUTH0_DOMAIN
+        self.client_id = config.AUTH0_CLIENT_ID
+        self.client_secret = config.AUTH0_CLIENT_SECRET
+        self.audience = config.auth0_audience
+        self.realm = config.AUTH0_REALM
 
-    async def login_guest(self) -> LoginData:
-        return await self.sign_in_anonymously()
-
-    async def sign_in_anonymously(self) -> LoginData:
-        async with self.client(base_url=self.identity_url) as client:
-            response = await client.post(
-                "/accounts:signUp", params=self.key_param, json=dict(returnSecureToken=True)
-            )
-            data = response.json()
-            id_token, refresh_token = data["idToken"], data["refreshToken"]
-
-            display_name = _make_random_handle()
-            response = await client.post(
-                "/accounts:update",
-                params=self.key_param,
-                json=dict(returnSecureToken=True, idToken=id_token, displayName=display_name),
-            )
-            data = response.json()
-
-            assert data["displayName"] == display_name
-
-            id_token = await self.refresh_id_token(refresh_token)
-        return LoginData.model_validate(
-            dict(id_token=id_token, user={"display_name": display_name, "guest": True})
+        self.database = Database(
+            self.domain,
+            self.client_id,
+            self.client_secret,
+        )
+        self.gettoken = GetToken(
+            self.domain,
+            self.client_id,
+            self.client_secret,
         )
 
-    async def refresh_id_token(self, refresh_token: str) -> str:
-        async with self.client(base_url=self.token_url) as client:
-            response = await client.post(
-                "/token",
-                params=self.key_param,
-                json=dict(grant_type="refresh_token", refresh_token=refresh_token),
+        self.mgmt = Auth0(self.domain, self._fetch_management_token(self.audience))
+        self.roles: dict[UserRole, str] = self._fetch_roles()
+
+    def _fetch_roles(self) -> dict[UserRole, str]:
+        data = self.mgmt.roles.list()
+        return {role["name"]: role["id"] for role in data["roles"]}
+
+    async def login_guest(self) -> LoginData:
+        return await self.signup_anonymously()
+
+    async def login(self, username: str, password: str) -> LoginData:
+        def _login() -> Any:
+            return self.gettoken.login(
+                username, password, realm=self.realm, scope="openid offline_access"
             )
-            data = response.json()
-            new_id_token = data["id_token"]
-            return cast(str, new_id_token)
+
+        tokens = await asyncio.to_thread(_login)
+        id_token = tokens["id_token"]
+        payload = jwt.decode(id_token, algorithms=["RS256"], options=dict(verify_signature=False))
+
+        return LoginData.model_validate(
+            dict(
+                id_token=tokens["id_token"],
+                refresh_token=tokens["refresh_token"],
+                user=dict(nickname=payload["nickname"], guest=False),
+                expires_in=payload["exp"],
+            )
+        )
+
+    async def signup(self, email: str, password: str, nickname: str) -> None:
+        def _signup() -> dict[str, Any]:
+            response = self.database.signup(
+                email=email,
+                username=nickname,
+                password=password,
+                nickname=nickname,
+                connection=self.realm,
+            )
+
+            return cast(dict[str, Any], response)
+
+        data = await asyncio.to_thread(_signup)
+        await self.assign_role(data["_id"], UserRole.USER)
+
+    async def assign_role(self, user_id: str, role: UserRole) -> None:
+        role_id = self.roles[role]
+
+        def _assign_roles() -> None:
+            self.mgmt.users.add_roles(user_id, [role_id])
+
+        await asyncio.to_thread(_assign_roles)
+
+    async def signup_anonymously(self) -> LoginData:
+        nickname = _make_random_nickname()
+        password = _make_random_password()
+
+        def _signup() -> dict[str, Any]:
+            response = self.database.signup(
+                email=f"{nickname}@battleship.invalid",
+                password=password,
+                username=nickname,
+                nickname=nickname,
+                connection=self.realm,
+            )
+
+            return cast(dict[str, Any], response)
+
+        data = await asyncio.to_thread(_signup)
+        user_id = data["_id"]
+        await self.assign_role("auth0|" + user_id, UserRole.GUEST)
+        tokens = self.gettoken.login(nickname, password, realm=self.realm, scope="openid")
+
+        return LoginData.model_validate(
+            dict(id_token=tokens["id_token"], user={"nickname": nickname, "guest": True})
+        )
+
+    def _fetch_management_token(self, audience: str) -> str:
+        data = self.gettoken.client_credentials(audience)
+        return cast(str, data["access_token"])
 
 
-def _make_random_handle() -> str:
+def _make_random_nickname() -> str:
     return f"Guest_{token_urlsafe(6)}"
+
+
+def _make_random_password() -> str:
+    return token_urlsafe(6)

@@ -3,6 +3,7 @@ import secrets
 from typing import Any, TypeAlias, TypeVar
 
 from pydantic import BaseModel as _BaseModel
+from pydantic import EmailStr, SecretStr
 
 SessionID: TypeAlias = str
 T = TypeVar("T", bound="BaseModel")
@@ -37,13 +38,24 @@ class Session(SessionCreate):
 
 
 class User(BaseModel):
-    display_name: str
+    nickname: str
     guest: bool
 
 
 class LoginData(BaseModel):
     user: User
     id_token: str
+    refresh_token: str = ""
+    expires_at: int = -1
+
+
+class LoginCredentials(BaseModel):
+    email: EmailStr
+    password: SecretStr
+
+
+class SignupCredentials(LoginCredentials):
+    nickname: str
 
 
 def make_session_id() -> SessionID:

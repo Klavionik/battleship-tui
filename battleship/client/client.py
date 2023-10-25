@@ -101,7 +101,7 @@ class Client:
         self.id_token = login_data.id_token
         self.logged_in = True
         self._session = _create_http_session(self.base_url, IDTokenAuth(self.id_token))
-        return self.user.display_name
+        return self.user.nickname
 
     async def create_session(
         self,

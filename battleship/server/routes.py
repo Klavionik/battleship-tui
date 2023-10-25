@@ -1,11 +1,18 @@
-from blacksheep import FromJSON, Response, Router, WebSocket, no_content
+from blacksheep import FromJSON, Response, Router, WebSocket, created, no_content
 from blacksheep.server.authorization import allow_anonymous
 from guardpost.authentication import Identity
 
 from battleship.server.auth import AuthManager
 from battleship.server.connections import ConnectionManager
 from battleship.server.sessions import Sessions
-from battleship.shared.models import LoginData, Session, SessionCreate, User
+from battleship.shared.models import (
+    LoginCredentials,
+    LoginData,
+    Session,
+    SessionCreate,
+    SignupCredentials,
+    User,
+)
 
 router = Router()  # type: ignore[no-untyped-call]
 
@@ -18,7 +25,8 @@ async def ws(
 ) -> None:
     await websocket.accept()
     user = User(
-        display_name=identity["name"], guest=identity.has_claim_value("provider_id", "anonymous")
+        nickname=identity.claims["nickname"],
+        guest=identity.has_claim_value("battleship/role", "guest"),
     )
     await connection_handler(websocket, user)
 
@@ -49,3 +57,20 @@ async def remove_session(
 @router.post("/login/guest")
 async def login_guest_user(auth_manager: AuthManager) -> LoginData:
     return await auth_manager.login_guest()
+
+
+@allow_anonymous()
+@router.post("/signup")
+async def signup(credentials: SignupCredentials, auth_manager: AuthManager) -> Response:
+    await auth_manager.signup(
+        credentials.email,
+        str(credentials.password),
+        credentials.nickname,
+    )
+    return created()
+
+
+@allow_anonymous()
+@router.post("/login")
+async def login(credentials: LoginCredentials, auth_manager: AuthManager) -> LoginData:
+    return await auth_manager.login(credentials.email, str(credentials.password))
