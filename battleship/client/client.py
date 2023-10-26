@@ -22,7 +22,14 @@ from battleship.shared.events import (
     EventMessageData,
     ServerEvent,
 )
-from battleship.shared.models import Action, LoginData, Session, SessionID, User
+from battleship.shared.models import (
+    Action,
+    IDToken,
+    LoginData,
+    Session,
+    SessionID,
+    User,
+)
 
 
 class SessionSubscription:
@@ -110,6 +117,22 @@ class Client:
                 id_token=login_data.id_token,
                 refresh_token=login_data.refresh_token,
                 expires_at=login_data.expires_at,
+            )
+        )
+        self.update_credentials(credentials)
+
+    async def refresh_id_token(self, refresh_token: str) -> None:
+        assert self.user
+
+        payload = dict(refresh_token=refresh_token)
+        response = await self._session.post("/refresh", json=payload)
+        id_token = IDToken.from_dict(response.json())
+        credentials = Credentials.from_dict(
+            dict(
+                nickname=self.user.nickname,
+                id_token=id_token.id_token,
+                refresh_token=refresh_token,
+                expires_at=id_token.expires_at,
             )
         )
         self.update_credentials(credentials)

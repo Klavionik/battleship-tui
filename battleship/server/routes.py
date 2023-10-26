@@ -6,8 +6,10 @@ from battleship.server.auth import AuthManager
 from battleship.server.connections import ConnectionManager
 from battleship.server.sessions import Sessions
 from battleship.shared.models import (
+    IDToken,
     LoginCredentials,
     LoginData,
+    RefreshToken,
     Session,
     SessionCreate,
     SignupCredentials,
@@ -74,3 +76,9 @@ async def signup(credentials: SignupCredentials, auth_manager: AuthManager) -> R
 @router.post("/login")
 async def login(credentials: LoginCredentials, auth_manager: AuthManager) -> LoginData:
     return await auth_manager.login(credentials.email, credentials.password)
+
+
+@allow_anonymous()
+@router.post("/refresh")
+async def refresh_id_token(refresh_token: RefreshToken, auth_manager: AuthManager) -> IDToken:
+    return await auth_manager.refresh_id_token(refresh_token.refresh_token)

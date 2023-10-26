@@ -46,6 +46,15 @@ class User(BaseModel):
     guest: bool | None = None
 
 
+class RefreshToken(BaseModel):
+    refresh_token: str
+
+
+class IDToken(BaseModel):
+    id_token: str
+    expires_at: int
+
+
 class LoginData(BaseModel):
     nickname: str
     id_token: str

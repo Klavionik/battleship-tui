@@ -9,7 +9,7 @@ from auth0.authentication import Database, GetToken  # type: ignore[import]
 from auth0.management import Auth0  # type: ignore[import]
 
 from battleship.server.config import Config
-from battleship.shared.models import LoginData
+from battleship.shared.models import IDToken, LoginData
 
 
 class UserRole(enum.StrEnum):
@@ -28,6 +28,10 @@ class AuthManager(ABC):
 
     @abstractmethod
     async def signup(self, email: str, password: str, nickname: str) -> None:
+        pass
+
+    @abstractmethod
+    async def refresh_id_token(self, refresh_token: str) -> IDToken:
         pass
 
 
@@ -53,10 +57,6 @@ class Auth0AuthManager(AuthManager):
         self.mgmt = Auth0(self.domain, self._fetch_management_token(self.audience))
         self.roles: dict[UserRole, str] = self._fetch_roles()
 
-    def _fetch_roles(self) -> dict[UserRole, str]:
-        data = self.mgmt.roles.list()
-        return {role["name"]: role["id"] for role in data["roles"]}
-
     async def login_guest(self) -> LoginData:
         return await self.signup_anonymously()
 
@@ -68,7 +68,7 @@ class Auth0AuthManager(AuthManager):
 
         tokens = await asyncio.to_thread(_login)
         id_token = tokens["id_token"]
-        payload = jwt.decode(id_token, algorithms=["RS256"], options=dict(verify_signature=False))
+        payload = _read_token(id_token)
 
         return LoginData.from_dict(
             dict(
@@ -93,6 +93,17 @@ class Auth0AuthManager(AuthManager):
 
         data = await asyncio.to_thread(_signup)
         await self.assign_role(data["_id"], UserRole.USER)
+
+    async def refresh_id_token(self, refresh_token: str) -> IDToken:
+        def _refresh_id_token() -> dict[str, Any]:
+            response = self.gettoken.refresh_token(refresh_token)
+
+            return cast(dict[str, Any], response)
+
+        data = await asyncio.to_thread(_refresh_id_token)
+        id_token = data["id_token"]
+        payload = _read_token(id_token)
+        return IDToken(id_token=id_token, expires_at=payload["exp"])
 
     async def assign_role(self, user_id: str, role: UserRole) -> None:
         role_id = self.roles[role]
@@ -131,6 +142,10 @@ class Auth0AuthManager(AuthManager):
         data = self.gettoken.client_credentials(audience)
         return cast(str, data["access_token"])
 
+    def _fetch_roles(self) -> dict[UserRole, str]:
+        data = self.mgmt.roles.list()
+        return {role["name"]: role["id"] for role in data["roles"]}
+
 
 def _make_random_nickname() -> str:
     return f"Guest_{token_urlsafe(6)}"
@@ -138,3 +153,10 @@ def _make_random_nickname() -> str:
 
 def _make_random_password() -> str:
     return token_urlsafe(6)
+
+
+def _read_token(token: str) -> dict[str, Any]:
+    return cast(
+        dict[str, Any],
+        jwt.decode(token, algorithms=["RS256"], options=dict(verify_signature=False)),
+    )
