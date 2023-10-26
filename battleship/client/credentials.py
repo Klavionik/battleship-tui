@@ -17,7 +17,7 @@ class Credentials(BaseModel):
 
     def is_expired(self, leeway: int = DEFAULT_LEEWAY_SECONDS) -> bool:
         delta = timedelta(seconds=leeway)
-        now = datetime.now()
+        now = datetime.now(tz=timezone.utc)
         return now > (self.expires_at - delta)
 
 
@@ -39,9 +39,10 @@ class FilesystemCredentialsProvider(CredentialsProvider):
     root = "battleship"
     permission = 0o600  # Read-write for user.
 
-    def __init__(self, filename: str = ".credentials", cache_dir: str | None = None):
+    def __init__(self, filename: str = ".credentials.json", cache_dir: str | None = None):
         cache = Path(cache_dir) if cache_dir else xdg_cache_home()
         self.cache = cache / self.root / filename
+        self._ensure_cache_dir()
 
     def save(self, credentials: Credentials) -> None:
         with self.cache.open(mode="w") as cache:
@@ -57,7 +58,11 @@ class FilesystemCredentialsProvider(CredentialsProvider):
             credentials = Credentials.from_raw(cache.read())
 
         if credentials.is_expired():
+            self.clear()
             return None
 
     def clear(self) -> None:
         self.cache.unlink(missing_ok=True)
+
+    def _ensure_cache_dir(self) -> None:
+        self.cache.parent.mkdir(parents=True, exist_ok=True)

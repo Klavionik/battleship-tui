@@ -75,7 +75,7 @@ async def signup(credentials: SignupCredentials, auth_manager: AuthManager) -> R
 @allow_anonymous()
 @router.post("/login")
 async def login(credentials: LoginCredentials, auth_manager: AuthManager) -> LoginData:
-    return await auth_manager.login(credentials.email, credentials.password)
+    return await auth_manager.login(credentials.nickname, credentials.password)
 
 
 @allow_anonymous()

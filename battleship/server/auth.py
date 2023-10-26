@@ -1,7 +1,9 @@
 import asyncio
 import enum
 from abc import ABC, abstractmethod
+from random import choice
 from secrets import token_urlsafe
+from string import ascii_letters, digits
 from typing import Any, cast
 
 import jwt
@@ -23,7 +25,7 @@ class AuthManager(ABC):
         pass
 
     @abstractmethod
-    async def login(self, username: str, password: str) -> LoginData:
+    async def login(self, nickname: str, password: str) -> LoginData:
         pass
 
     @abstractmethod
@@ -60,23 +62,21 @@ class Auth0AuthManager(AuthManager):
     async def login_guest(self) -> LoginData:
         return await self.signup_anonymously()
 
-    async def login(self, username: str, password: str) -> LoginData:
+    async def login(self, nickname: str, password: str) -> LoginData:
         def _login() -> Any:
             return self.gettoken.login(
-                username, password, realm=self.realm, scope="openid offline_access"
+                nickname, password, realm=self.realm, scope="openid offline_access"
             )
 
         tokens = await asyncio.to_thread(_login)
         id_token = tokens["id_token"]
         payload = _read_token(id_token)
 
-        return LoginData.from_dict(
-            dict(
-                id_token=tokens["id_token"],
-                refresh_token=tokens["refresh_token"],
-                nickname=payload["nickname"],
-                expires_in=payload["exp"],
-            )
+        return LoginData(
+            id_token=tokens["id_token"],
+            refresh_token=tokens["refresh_token"],
+            nickname=payload["nickname"],
+            expires_at=payload["exp"],
         )
 
     async def signup(self, email: str, password: str, nickname: str) -> None:
@@ -147,12 +147,16 @@ class Auth0AuthManager(AuthManager):
         return {role["name"]: role["id"] for role in data["roles"]}
 
 
-def _make_random_nickname() -> str:
-    return f"Guest_{token_urlsafe(6)}"
+def _make_random_nickname(postfix_length: int = 7) -> str:
+    def _make_postfix() -> str:
+        namespace = ascii_letters + digits
+        return "".join(choice(namespace) for _ in range(postfix_length))
+
+    return f"Guest_{_make_postfix()}"
 
 
 def _make_random_password() -> str:
-    return token_urlsafe(6)
+    return token_urlsafe(12)
 
 
 def _read_token(token: str) -> dict[str, Any]:

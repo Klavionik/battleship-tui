@@ -104,10 +104,18 @@ class Client:
 
         self.user = User(nickname=login_data.nickname)
         self.auth.set_token(login_data.id_token)
+        self.credentials = Credentials.from_dict(
+            dict(
+                nickname=login_data.nickname,
+                id_token=login_data.id_token,
+                refresh_token=login_data.refresh_token,
+                expires_at=login_data.expires_at,
+            )
+        )
         return self.user.nickname
 
-    async def login(self, username: str, password: str) -> None:
-        payload = dict(username=username, password=password)
+    async def login(self, nickname: str, password: str) -> str:
+        payload = dict(nickname=nickname, password=password)
         response = await self._session.post("/login", json=payload)
         data = response.json()
         login_data = LoginData(**data)
@@ -119,7 +127,9 @@ class Client:
                 expires_at=login_data.expires_at,
             )
         )
+        self.user = User(nickname=login_data.nickname)
         self.update_credentials(credentials)
+        return self.user.nickname
 
     async def refresh_id_token(self, refresh_token: str) -> None:
         assert self.user

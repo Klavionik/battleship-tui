@@ -63,12 +63,12 @@ class LoginData(BaseModel):
 
 
 class LoginCredentials(BaseModel):
-    email: EmailStr
+    nickname: str = Field(..., min_length=7, max_length=20)
     password: str = Field(..., min_length=9)
 
 
 class SignupCredentials(LoginCredentials):
-    nickname: str = Field(..., min_length=7, max_length=20)
+    email: EmailStr
 
 
 def make_session_id() -> SessionID:
