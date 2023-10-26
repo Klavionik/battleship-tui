@@ -97,26 +97,18 @@ class Client:
         self.auth.clear_token()
         self.clear_credentials()
 
-    async def login_as_guest(self) -> str:
-        response = await self._session.post("/login/guest")
-        data = response.json()
-        login_data = LoginData(**data)
+    async def login(self, nickname: str = "", password: str = "", *, guest: bool = False) -> str:
+        if not guest and not (nickname and password):
+            raise ValueError("Non-guest login must pass nickname and password.")
 
-        self.user = User(nickname=login_data.nickname)
-        self.auth.set_token(login_data.id_token)
-        self.credentials = Credentials.from_dict(
-            dict(
-                nickname=login_data.nickname,
-                id_token=login_data.id_token,
-                refresh_token=login_data.refresh_token,
-                expires_at=login_data.expires_at,
-            )
-        )
-        return self.user.nickname
+        if guest:
+            endpoint = "/login/guest"
+            payload = None
+        else:
+            endpoint = "/login"
+            payload = dict(nickname=nickname, password=password)
 
-    async def login(self, nickname: str, password: str) -> str:
-        payload = dict(nickname=nickname, password=password)
-        response = await self._session.post("/login", json=payload)
+        response = await self._session.post(endpoint, json=payload)
         data = response.json()
         login_data = LoginData(**data)
         credentials = Credentials.from_dict(

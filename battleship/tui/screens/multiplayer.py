@@ -67,7 +67,7 @@ class Multiplayer(Screen[None]):
         client = get_client()
 
         if guest:
-            nickname = await client.login_as_guest()
+            nickname = await client.login(guest=True)
         else:
             nickname = await client.login(self._nickname, self._password)
 

@@ -58,8 +58,8 @@ class IDToken(BaseModel):
 class LoginData(BaseModel):
     nickname: str
     id_token: str
-    refresh_token: str = ""
-    expires_at: int = -1
+    refresh_token: str
+    expires_at: int
 
 
 class LoginCredentials(BaseModel):

@@ -60,6 +60,7 @@ class FilesystemCredentialsProvider(CredentialsProvider):
         if credentials.is_expired():
             self.clear()
             return None
+        return credentials
 
     def clear(self) -> None:
         self.cache.unlink(missing_ok=True)

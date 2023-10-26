@@ -53,11 +53,18 @@ class Auth0AuthManager(AuthManager):
 
         data = await self.api.signup(email, nickname, password)
         await self.assign_role(data["_id"], UserRole.GUEST)
-        tokens = await self.api.login(nickname, password, scope="openid")
-        return LoginData(id_token=tokens["id_token"], nickname=nickname)
+        tokens = await self.api.login(nickname, password)
+        id_token = tokens["id_token"]
+        payload = _read_token(id_token)
+        return LoginData(
+            id_token=tokens["id_token"],
+            refresh_token=tokens["refresh_token"],
+            nickname=nickname,
+            expires_at=payload["exp"],
+        )
 
     async def login(self, nickname: str, password: str) -> LoginData:
-        tokens = await self.api.login(nickname, password, scope="openid offline_access")
+        tokens = await self.api.login(nickname, password)
         id_token = tokens["id_token"]
         payload = _read_token(id_token)
 
@@ -141,7 +148,9 @@ class Auth0API:
         data = await asyncio.to_thread(func)
         return cast(JSONPayload, data)
 
-    async def login(self, username: str, password: str, scope: str) -> JSONPayload:
+    async def login(
+        self, username: str, password: str, scope: str = "openid offline_access"
+    ) -> JSONPayload:
         func = partial(self.gettoken.login, username, password, scope=scope, realm=self.realm)
         data = await asyncio.to_thread(func)
         return cast(JSONPayload, data)
