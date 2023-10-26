@@ -25,6 +25,10 @@ class BaseModel(_BaseModel):
     def from_raw(cls: type[T], data: str | bytes) -> T:
         return cls.model_validate_json(data)
 
+    @classmethod
+    def from_dict(cls: type[T], obj: dict[str, Any]) -> T:
+        return cls.model_validate(obj)
+
 
 class SessionCreate(BaseModel):
     name: str
@@ -39,11 +43,11 @@ class Session(SessionCreate):
 
 class User(BaseModel):
     nickname: str
-    guest: bool
+    guest: bool | None = None
 
 
 class LoginData(BaseModel):
-    user: User
+    nickname: str
     id_token: str
     refresh_token: str = ""
     expires_at: int = -1

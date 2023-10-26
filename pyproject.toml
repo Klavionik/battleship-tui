@@ -22,6 +22,7 @@ uvloop = "^0.19.0"
 email-validator = "^2.1.0.post1"
 auth0-python = "^4.5.0"
 typer = "^0.9.0"
+xdg-base-dirs = "^6.0.1"
 
 [tool.poetry.scripts]
 battleship = "battleship.tui.app:run"

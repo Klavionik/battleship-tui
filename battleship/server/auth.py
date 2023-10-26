@@ -70,11 +70,11 @@ class Auth0AuthManager(AuthManager):
         id_token = tokens["id_token"]
         payload = jwt.decode(id_token, algorithms=["RS256"], options=dict(verify_signature=False))
 
-        return LoginData.model_validate(
+        return LoginData.from_dict(
             dict(
                 id_token=tokens["id_token"],
                 refresh_token=tokens["refresh_token"],
-                user=dict(nickname=payload["nickname"], guest=False),
+                nickname=payload["nickname"],
                 expires_in=payload["exp"],
             )
         )
@@ -125,9 +125,7 @@ class Auth0AuthManager(AuthManager):
         await self.assign_role(data["_id"], UserRole.GUEST)
         tokens = self.gettoken.login(nickname, password, realm=self.realm, scope="openid")
 
-        return LoginData.model_validate(
-            dict(id_token=tokens["id_token"], user={"nickname": nickname, "guest": True})
-        )
+        return LoginData(id_token=tokens["id_token"], nickname=nickname)
 
     def _fetch_management_token(self, audience: str) -> str:
         data = self.gettoken.client_credentials(audience)
