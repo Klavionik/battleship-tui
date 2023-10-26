@@ -1,14 +1,15 @@
 import asyncio
 import enum
 from abc import ABC, abstractmethod
+from functools import partial
 from random import choice
 from secrets import token_urlsafe
 from string import ascii_letters, digits
-from typing import Any, cast
+from typing import Any, TypeAlias, cast
 
 import jwt
 from auth0.authentication import Database, GetToken  # type: ignore[import]
-from auth0.management import Auth0  # type: ignore[import]
+from auth0.management import Auth0 as _Auth0  # type: ignore[import]
 
 from battleship.server.config import Config
 from battleship.shared.models import IDToken, LoginData
@@ -17,6 +18,9 @@ from battleship.shared.models import IDToken, LoginData
 class UserRole(enum.StrEnum):
     GUEST = "guest"
     USER = "user"
+
+
+JSONPayload: TypeAlias = dict[str, Any]
 
 
 class AuthManager(ABC):
@@ -39,36 +43,21 @@ class AuthManager(ABC):
 
 class Auth0AuthManager(AuthManager):
     def __init__(self, config: Config):
-        self.domain = config.AUTH0_DOMAIN
-        self.client_id = config.AUTH0_CLIENT_ID
-        self.client_secret = config.AUTH0_CLIENT_SECRET
-        self.audience = config.auth0_audience
-        self.realm = config.AUTH0_REALM
-
-        self.database = Database(
-            self.domain,
-            self.client_id,
-            self.client_secret,
-        )
-        self.gettoken = GetToken(
-            self.domain,
-            self.client_id,
-            self.client_secret,
-        )
-
-        self.mgmt = Auth0(self.domain, self._fetch_management_token(self.audience))
-        self.roles: dict[UserRole, str] = self._fetch_roles()
+        self.api = Auth0API.from_config(config)
+        self.roles: dict[str, str] = config.AUTH0_ROLES
 
     async def login_guest(self) -> LoginData:
-        return await self.signup_anonymously()
+        nickname = _make_random_nickname()
+        password = _make_random_password()
+        email = f"{nickname}@battleship.invalid"
+
+        data = await self.api.signup(email, nickname, password)
+        await self.assign_role(data["_id"], UserRole.GUEST)
+        tokens = await self.api.login(nickname, password, scope="openid")
+        return LoginData(id_token=tokens["id_token"], nickname=nickname)
 
     async def login(self, nickname: str, password: str) -> LoginData:
-        def _login() -> Any:
-            return self.gettoken.login(
-                nickname, password, realm=self.realm, scope="openid offline_access"
-            )
-
-        tokens = await asyncio.to_thread(_login)
+        tokens = await self.api.login(nickname, password, scope="openid offline_access")
         id_token = tokens["id_token"]
         payload = _read_token(id_token)
 
@@ -80,27 +69,11 @@ class Auth0AuthManager(AuthManager):
         )
 
     async def signup(self, email: str, password: str, nickname: str) -> None:
-        def _signup() -> dict[str, Any]:
-            response = self.database.signup(
-                email=email,
-                username=nickname,
-                password=password,
-                nickname=nickname,
-                connection=self.realm,
-            )
-
-            return cast(dict[str, Any], response)
-
-        data = await asyncio.to_thread(_signup)
+        data = await self.api.signup(email, nickname, password)
         await self.assign_role(data["_id"], UserRole.USER)
 
     async def refresh_id_token(self, refresh_token: str) -> IDToken:
-        def _refresh_id_token() -> dict[str, Any]:
-            response = self.gettoken.refresh_token(refresh_token)
-
-            return cast(dict[str, Any], response)
-
-        data = await asyncio.to_thread(_refresh_id_token)
+        data = await self.api.refresh_token(refresh_token)
         id_token = data["id_token"]
         payload = _read_token(id_token)
         return IDToken(id_token=id_token, expires_at=payload["exp"])
@@ -112,39 +85,75 @@ class Auth0AuthManager(AuthManager):
         if not user_id.startswith(sub_prefix):
             user_id = sub_prefix + user_id
 
-        def _assign_roles() -> None:
-            self.mgmt.users.add_roles(user_id, [role_id])
+        await self.api.add_roles(user_id, role_id)
 
-        await asyncio.to_thread(_assign_roles)
 
-    async def signup_anonymously(self) -> LoginData:
-        nickname = _make_random_nickname()
-        password = _make_random_password()
+class Auth0API:
+    def __init__(self, domain: str, client_id: str, client_secret: str, realm: str, audience: str):
+        self.domain = domain
+        self.client_id = client_id
+        self.client_secret = client_secret
+        self.audience = audience
+        self.realm = realm
 
-        def _signup() -> dict[str, Any]:
-            response = self.database.signup(
-                email=f"{nickname}@battleship.invalid",
-                password=password,
-                username=nickname,
-                nickname=nickname,
-                connection=self.realm,
-            )
+        self.database = Database(
+            self.domain,
+            self.client_id,
+            self.client_secret,
+        )
+        self.gettoken = GetToken(
+            self.domain,
+            self.client_id,
+            self.client_secret,
+        )
+        self._mgmt: _Auth0 | None = None
 
-            return cast(dict[str, Any], response)
+    @classmethod
+    def from_config(cls, config: Config) -> "Auth0API":
+        return cls(
+            config.AUTH0_DOMAIN,
+            config.AUTH0_CLIENT_ID,
+            config.AUTH0_CLIENT_SECRET,
+            config.AUTH0_REALM,
+            config.auth0_audience,
+        )
 
-        data = await asyncio.to_thread(_signup)
-        await self.assign_role(data["_id"], UserRole.GUEST)
-        tokens = self.gettoken.login(nickname, password, realm=self.realm, scope="openid")
+    @property
+    def mgmt(self) -> _Auth0:
+        if self._mgmt is None:
+            self._mgmt = _Auth0(self.domain, self._fetch_management_token(self.audience))
+        return self._mgmt
 
-        return LoginData(id_token=tokens["id_token"], nickname=nickname)
+    async def add_roles(self, user_id: str, *roles: str) -> JSONPayload:
+        func = partial(self.mgmt.users.add_roles, id=user_id, roles=roles)
+        data = await asyncio.to_thread(func)
+        return cast(JSONPayload, data)
+
+    async def signup(self, email: str, nickname: str, password: str) -> JSONPayload:
+        func = partial(
+            self.database.signup,
+            email=email,
+            username=nickname,
+            password=password,
+            nickname=nickname,
+            connection=self.realm,
+        )
+        data = await asyncio.to_thread(func)
+        return cast(JSONPayload, data)
+
+    async def login(self, username: str, password: str, scope: str) -> JSONPayload:
+        func = partial(self.gettoken.login, username, password, scope=scope, realm=self.realm)
+        data = await asyncio.to_thread(func)
+        return cast(JSONPayload, data)
+
+    async def refresh_token(self, refresh_token: str) -> JSONPayload:
+        func = partial(self.gettoken.refresh_token, refresh_token=refresh_token)
+        data = await asyncio.to_thread(func)
+        return cast(JSONPayload, data)
 
     def _fetch_management_token(self, audience: str) -> str:
         data = self.gettoken.client_credentials(audience)
         return cast(str, data["access_token"])
-
-    def _fetch_roles(self) -> dict[UserRole, str]:
-        data = self.mgmt.roles.list()
-        return {role["name"]: role["id"] for role in data["roles"]}
 
 
 def _make_random_nickname(postfix_length: int = 7) -> str:
