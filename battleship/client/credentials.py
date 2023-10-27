@@ -57,9 +57,6 @@ class FilesystemCredentialsProvider(CredentialsProvider):
         with self.cache.open() as cache:
             credentials = Credentials.from_raw(cache.read())
 
-        if credentials.is_expired():
-            self.clear()
-            return None
         return credentials
 
     def clear(self) -> None:

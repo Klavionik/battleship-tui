@@ -1,9 +1,10 @@
-import json
+import asyncio
+import json as json_
 from asyncio import Task, create_task
 from functools import cache
 from typing import Any, Callable, Coroutine, Optional
 
-from httpx import AsyncClient
+from httpx import AsyncClient, Request, Response
 from loguru import logger
 from pyee.asyncio import AsyncIOEventEmitter
 
@@ -32,6 +33,21 @@ from battleship.shared.models import (
 )
 
 
+class RefreshEvent:
+    def __init__(self) -> None:
+        self._event = asyncio.Event()
+        self._event.set()
+
+    async def wait(self) -> None:
+        await self._event.wait()
+
+    def refreshing(self) -> None:
+        self._event.clear()
+
+    def done(self) -> None:
+        self._event.set()
+
+
 class SessionSubscription:
     def __init__(self) -> None:
         self._ee = AsyncIOEventEmitter()
@@ -53,7 +69,14 @@ class Client:
     WebSocket messages as events via an async event emitter.
     """
 
-    def __init__(self, host: str, port: int, credentials_provider: CredentialsProvider) -> None:
+    def __init__(
+        self,
+        host: str,
+        port: int,
+        credentials_provider: CredentialsProvider,
+        refresh_interval: int = 20,
+        http_timeout: int = 20,
+    ) -> None:
         self._host = host
         self._port = port
         self._ws: Optional[WebSocketClientProtocol] = None
@@ -62,10 +85,15 @@ class Client:
         self.user: User | None = None
         self.credentials: Credentials | None = None
         self.auth = IDTokenAuth()
-        self._session = AsyncClient(base_url=self.base_url, auth=self.auth)
+        self._session = AsyncClient(base_url=self.base_url, auth=self.auth, timeout=http_timeout)
+        self._session.event_hooks = {"request": [log_request]}
         self.credentials_provider = credentials_provider
 
         self.load_credentials()
+
+        self._refresh_interval = refresh_interval
+        self._refresh_event = RefreshEvent()
+        self._refresh_watcher = self._run_refresh_watcher()
 
     @property
     def base_url(self) -> str:
@@ -108,7 +136,7 @@ class Client:
             endpoint = "/login"
             payload = dict(nickname=nickname, password=password)
 
-        response = await self._session.post(endpoint, json=payload)
+        response = await self._request("POST", endpoint, json=payload)
         data = response.json()
         login_data = LoginData(**data)
         credentials = Credentials.from_dict(
@@ -127,7 +155,9 @@ class Client:
         assert self.user
 
         payload = dict(refresh_token=refresh_token)
-        response = await self._session.post("/refresh", json=payload)
+        response = await self._request(
+            "POST", "/refresh", json=payload, ensure_not_refreshing=False
+        )
         id_token = IDToken.from_dict(response.json())
         credentials = Credentials.from_dict(
             dict(
@@ -163,14 +193,14 @@ class Client:
         salvo_mode: bool,
     ) -> Session:
         payload = dict(name=name, roster=roster, firing_order=firing_order, salvo_mode=salvo_mode)
-        response = await self._session.post("/sessions", json=payload)
+        response = await self._request("POST", "/sessions", json=payload)
         return Session(**response.json())
 
     async def delete_session(self, session_id: SessionID) -> None:
-        await self._session.delete(f"/sessions/{session_id}")
+        await self._request("DELETE", f"/sessions/{session_id}")
 
     async def fetch_sessions(self) -> list[Session]:
-        response = await self._session.get("/sessions")
+        response = await self._request("GET", "/sessions")
         return [Session(**data) for data in response.json()]
 
     async def sessions_subscribe(self) -> SessionSubscription:
@@ -214,7 +244,39 @@ class Client:
             logger.warning("Trying to send a message, but connection is closed.")
             return
 
-        await self._ws.send(json.dumps(msg))
+        await self._ws.send(json_.dumps(msg))
+
+    async def _request(
+        self,
+        method: str,
+        url: str,
+        json: Any | None = None,
+        ensure_not_refreshing: bool = True,
+    ) -> Response:
+        if ensure_not_refreshing:
+            await self._refresh_event.wait()
+
+        return await self._session.request(method, url, json=json)
+
+    def _run_refresh_watcher(self) -> Task[None]:
+        @logger.catch
+        async def watcher() -> None:
+            logger.debug("Start credentials refresh watcher.")
+
+            while True:
+                if self.credentials and self.credentials.is_expired():
+                    logger.debug("Credentials expired, refresh.")
+                    self._refresh_event.refreshing()
+                    await self.refresh_id_token(self.credentials.refresh_token)
+                    self._refresh_event.done()
+
+                await asyncio.sleep(self._refresh_interval)
+
+        return asyncio.create_task(watcher())
+
+
+async def log_request(request: Request) -> None:
+    logger.debug(f"Making {request.method} request to {request.url.path}.")
 
 
 @cache
