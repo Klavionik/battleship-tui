@@ -25,8 +25,7 @@ typer = "^0.9.0"
 xdg-base-dirs = "^6.0.1"
 
 [tool.poetry.scripts]
-battleship = "battleship.tui.app:run"
-battleship-cli = "battleship.cli:app"
+battleship = "battleship.cli:app"
 
 [tool.black]
 line-length = 100
