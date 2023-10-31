@@ -3,6 +3,7 @@ from typing import Any
 from textual import on
 from textual.app import ComposeResult
 from textual.containers import Container, VerticalScroll
+from textual.events import Mount
 from textual.screen import Screen
 from textual.widgets import Footer, Label, ListItem, ListView, Markdown, Static
 
@@ -39,9 +40,15 @@ class Lobby(Screen[None]):
     def action_back(self) -> None:
         self.app.switch_screen(screens.MainMenu())
 
+    @on(Mount)
+    async def connect_ws(self) -> None:
+        client = get_client()
+        await client.connect()
+
     @on(ListView.Selected, item="#logout")
     async def logout(self) -> None:
         client = get_client()
+        await client.disconnect()
         await client.logout()
         await self.app.switch_screen(screens.Multiplayer())
 
