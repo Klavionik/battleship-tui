@@ -1,8 +1,8 @@
 from typing import Any, AsyncGenerator
 
 from blacksheep import WebSocket, WebSocketDisconnectError
-from loguru import logger
 
+from battleship.logger import server_logger as logger
 from battleship.server.sessions import Sessions
 from battleship.shared.events import ClientEvent, EventMessage, ServerEvent
 from battleship.shared.models import Action, User
@@ -31,6 +31,9 @@ class Client:
         self._sessions = sessions_repository
         self._user = user
 
+    def __repr__(self) -> str:
+        return f"<Client: {self.local_address} {self._user.nickname}>"
+
     @property
     def local_address(self) -> str:
         return self._connection.socket.client_ip
@@ -42,7 +45,7 @@ class Client:
         await self._connection.socket.send_text(event.to_json())
 
     async def _session_observer(self, session_id: str, action: Action) -> None:
-        logger.info(f"Send session update for {session_id=}, {action=}.")
+        logger.info(f"Session {session_id}, action {action.value}.")
         payload: dict[str, Any] = dict(action=action)
 
         if action == Action.ADD:
@@ -80,7 +83,9 @@ class ConnectionManager:
     async def __call__(self, socket: WebSocket, user: User) -> None:
         client = Client(socket, self._sessions, user)
         self.clients.add(client)
+        logger.debug(f"Handle client {client}.")
 
         await client()
-
         self.clients.remove(client)
+
+        logger.debug(f"Disconnect client {client}.")

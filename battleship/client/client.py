@@ -1,11 +1,10 @@
 import asyncio
 import json as json_
-from asyncio import Task, create_task
+from asyncio import Task
 from functools import cache
 from typing import Any, Callable, Coroutine, Optional
 
 from httpx import AsyncClient, Request, Response
-from loguru import logger
 from pyee.asyncio import AsyncIOEventEmitter
 
 # noinspection PyProtectedMember
@@ -17,6 +16,7 @@ from battleship.client.credentials import (
     CredentialsProvider,
     FilesystemCredentialsProvider,
 )
+from battleship.logger import client_logger as logger
 from battleship.shared.events import (
     ClientEvent,
     EventMessage,
@@ -81,7 +81,7 @@ class Client:
         self._port = port
         self._ws: Optional[WebSocketClientProtocol] = None
         self._emitter = AsyncIOEventEmitter()
-        self._publish_task: Task[None] | None = None
+        self._events_worker: Task[None] | None = None
         self.user: User | None = None
         self.credentials: Credentials | None = None
         self.auth = IDTokenAuth()
@@ -93,7 +93,7 @@ class Client:
 
         self._refresh_interval = refresh_interval
         self._refresh_event = RefreshEvent()
-        self._refresh_watcher = self._run_refresh_watcher()
+        self._credentials_worker = self._run_credentials_worker()
 
     @property
     def base_url(self) -> str:
@@ -111,13 +111,15 @@ class Client:
             self.base_url_ws + "/ws",
             extra_headers={"Authorization": f"Bearer {self.credentials.id_token}"},
         )
-        self._publish_task = create_task(self._publish_events())
+        self._events_worker = self._run_events_worker()
 
     async def disconnect(self) -> None:
-        if self._publish_task:
-            self._publish_task.cancel()
+        if self._events_worker:
+            logger.debug("Disconnect: cancel events worker.")
+            self._events_worker.cancel()
 
         if self._ws:
+            logger.debug("Disconnect: close WS connection.")
             await self._ws.close()
 
     async def logout(self) -> None:
@@ -171,6 +173,7 @@ class Client:
 
     def load_credentials(self) -> None:
         self.credentials = self.credentials_provider.load()
+        logger.debug("Credentials loaded: {creds}.", creds=self.credentials)
 
         if self.credentials:
             self.user = User(nickname=self.credentials.nickname)
@@ -228,13 +231,23 @@ class Client:
     def add_listener(self, event: str, handler: Callable[..., Any]) -> None:
         self._emitter.add_listener(event, handler)
 
-    async def _publish_events(self) -> None:
-        if self._ws is None:
-            raise RuntimeError("Cannot receive messages, no connection.")
+    def _run_events_worker(self) -> Task[None]:
+        async def events_worker() -> None:
+            if self._ws is None:
+                raise RuntimeError("Cannot receive messages, no connection.")
 
-        async for message in self._ws:
-            event = EventMessage.from_raw(message)
-            self._emitter.emit(event.kind, event.payload)
+            logger.debug("Run events worker.")
+
+            try:
+                async for message in self._ws:
+                    event = EventMessage.from_raw(message)
+                    logger.debug("Received WebSocket event: {event}.", event=event)
+                    self._emitter.emit(event.kind, event.payload)
+            except asyncio.CancelledError:
+                logger.debug("Stop events worker.")
+                raise
+
+        return asyncio.create_task(events_worker())
 
     async def _send(self, msg: EventMessageData) -> None:
         if self._ws is None:
@@ -258,25 +271,33 @@ class Client:
 
         return await self._session.request(method, url, json=json)
 
-    def _run_refresh_watcher(self) -> Task[None]:
-        @logger.catch
-        async def watcher() -> None:
-            logger.debug("Start credentials refresh watcher.")
+    def _run_credentials_worker(self) -> Task[None]:
+        async def credentials_worker() -> None:
+            logger.debug("Start credentials worker.")
 
-            while True:
-                if self.credentials and self.credentials.is_expired():
-                    logger.debug("Credentials expired, refresh.")
-                    self._refresh_event.refreshing()
-                    await self.refresh_id_token(self.credentials.refresh_token)
-                    self._refresh_event.done()
+            try:
+                while True:
+                    if self.credentials and self.credentials.is_expired():
+                        self._refresh_event.refreshing()
+                        logger.debug("Credentials expired, refresh.")
+                        await self.refresh_id_token(self.credentials.refresh_token)
+                        self._refresh_event.done()
 
-                await asyncio.sleep(self._refresh_interval)
+                    await asyncio.sleep(self._refresh_interval)
+            except asyncio.CancelledError:
+                logger.debug("Stop credentials worker.")
+                raise
 
-        return asyncio.create_task(watcher())
+        return asyncio.create_task(credentials_worker())
 
 
 async def log_request(request: Request) -> None:
-    logger.debug(f"Making {request.method} request to {request.url.path}.")
+    logger.debug(
+        "Make {method} request to {path} with content {content}.",
+        method=request.method,
+        path=request.url.path,
+        content=request.content.decode() if request.method in ["POST"] else None,
+    )
 
 
 @cache

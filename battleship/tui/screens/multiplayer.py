@@ -71,5 +71,4 @@ class Multiplayer(Screen[None]):
         else:
             nickname = await client.login(self._nickname, self._password)
 
-        await client.connect()
         await self.app.switch_screen(screens.Lobby(nickname=nickname))
