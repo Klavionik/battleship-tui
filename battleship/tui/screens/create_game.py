@@ -52,8 +52,9 @@ class CreateGame(Screen[None]):
         self.app.pop_screen()
 
     @on(NewGame.PlayPressed)
-    async def announce_game(self, event: NewGame.PlayPressed) -> None:
+    async def create_session(self, event: NewGame.PlayPressed) -> None:
         client = get_client()
+        assert client.user
         name = event.name or f"{client.user.nickname}'s game"
         session = await client.create_session(
             name,
