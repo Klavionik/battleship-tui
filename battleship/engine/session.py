@@ -65,7 +65,6 @@ class SingleplayerSession(Session):
         self._target_caller = ai.TargetCaller(self._player.board)
         self._autoplacer = ai.Autoplacer(self._enemy.board, self._roster)
         self._game = self._create_game()
-        self._ships_to_place = list(self._roster)
         self._ee = AsyncIOEventEmitter()
 
     @property
@@ -177,7 +176,6 @@ class MultiplayerSession(Session):
         self._target_caller = ai.TargetCaller(self._player.board)
         self._autoplacer = ai.Autoplacer(self._enemy.board, self._roster)
         self._game = self._create_game()
-        self._ships_to_place = list(self._roster)
         self._ee = AsyncIOEventEmitter()
 
     @property
