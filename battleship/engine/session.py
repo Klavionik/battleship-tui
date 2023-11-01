@@ -37,11 +37,15 @@ class Session(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def notify(self, event: str, *args: Any, **kwargs: Any) -> None:
+    def start(self) -> None:
         pass
 
     @abc.abstractmethod
-    def start(self) -> None:
+    def spawn_ship(self, ship_id: str, position: Collection[str]) -> None:
+        pass
+
+    @abc.abstractmethod
+    def fire(self, position: Collection[str]) -> None:
         pass
 
 
@@ -63,9 +67,6 @@ class SingleplayerSession(Session):
         self._game = self._create_game()
         self._ships_to_place = list(self._roster)
         self._ee = AsyncIOEventEmitter()
-
-        self._ee.add_listener("spawn_ship", self._spawn_ship)
-        self._ee.add_listener("fire", self._fire)
 
     @property
     def player_name(self) -> str:
@@ -90,9 +91,6 @@ class SingleplayerSession(Session):
     def subscribe(self, event: str, handler: Callable[..., Any]) -> None:
         self._ee.add_listener(event, handler)
 
-    def notify(self, event: str, *args: Any, **kwargs: Any) -> None:
-        self._ee.emit(event, *args, **kwargs)
-
     def start(self) -> None:
         self._spawn_enemy_fleet()
 
@@ -106,7 +104,7 @@ class SingleplayerSession(Session):
         )
         return game
 
-    def _spawn_ship(self, ship_id: str, position: Collection[str]) -> None:
+    def spawn_ship(self, ship_id: str, position: Collection[str]) -> None:
         item = self.roster[ship_id]
         self._game.add_ship(self._player, position, item.id)
         self._ee.emit("ship_spawned", ship_id=ship_id, position=position)
@@ -138,9 +136,9 @@ class SingleplayerSession(Session):
             count = 1
         target = self._target_caller.call_out(count=count)
 
-        self._fire(target)
+        self.fire(target)
 
-    def _fire(self, position: Collection[str]) -> None:
+    def fire(self, position: Collection[str]) -> None:
         actor = self._game.current_player
         salvo = self._game.fire(position)
         self._ee.emit("salvo", salvo=salvo)
@@ -182,9 +180,6 @@ class MultiplayerSession(Session):
         self._ships_to_place = list(self._roster)
         self._ee = AsyncIOEventEmitter()
 
-        self._ee.add_listener("spawn_ship", self._spawn_ship)
-        self._ee.add_listener("fire", self._fire)
-
     @property
     def player_name(self) -> str:
         return self._player.name
@@ -208,9 +203,6 @@ class MultiplayerSession(Session):
     def subscribe(self, event: str, handler: Callable[..., Any]) -> None:
         self._ee.add_listener(event, handler)
 
-    def notify(self, event: str, *args: Any, **kwargs: Any) -> None:
-        self._ee.emit(event, *args, **kwargs)
-
     def start(self) -> None:
         self._spawn_enemy_fleet()
 
@@ -224,7 +216,7 @@ class MultiplayerSession(Session):
         )
         return game
 
-    def _spawn_ship(self, ship_id: str, position: Collection[str]) -> None:
+    def spawn_ship(self, ship_id: str, position: Collection[str]) -> None:
         item = self.roster[ship_id]
         self._game.add_ship(self._player, position, item.id)
         self._ee.emit("ship_spawned", ship_id=ship_id, position=position)
@@ -256,9 +248,9 @@ class MultiplayerSession(Session):
             count = 1
         target = self._target_caller.call_out(count=count)
 
-        self._fire(target)
+        self.fire(target)
 
-    def _fire(self, position: Collection[str]) -> None:
+    def fire(self, position: Collection[str]) -> None:
         actor = self._game.current_player
         salvo = self._game.fire(position)
         self._ee.emit("salvo", salvo=salvo)

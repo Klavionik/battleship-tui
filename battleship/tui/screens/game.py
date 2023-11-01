@@ -122,7 +122,7 @@ class Game(Screen[None]):
     def spawn_ship(self, event: Board.ShipPlaced) -> None:
         self.player_board.mode = Board.Mode.DISPLAY
         position = [convert_to_coordinate(c) for c in event.coordinates]
-        self._session.notify("spawn_ship", ship_id=event.ship.id, position=position)
+        self._session.spawn_ship(ship_id=event.ship.id, position=position)
 
     def on_fleet_ready(self, player: domain.Player) -> None:
         self.write_as_game(f"{player.name}'s fleet is ready")
@@ -182,7 +182,7 @@ class Game(Screen[None]):
     def fire(self, event: Board.CellShot) -> None:
         self.enemy_board.mode = Board.Mode.DISPLAY
         position = [convert_to_coordinate(c) for c in event.coordinates]
-        self._session.notify("fire", position=position)
+        self._session.fire(position=position)
 
     def action_back(self) -> None:
         self.app.switch_screen(screens.MainMenu())
