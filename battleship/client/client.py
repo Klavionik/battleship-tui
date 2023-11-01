@@ -37,7 +37,6 @@ from battleship.shared.models import (
 class RefreshEvent:
     def __init__(self) -> None:
         self._event = asyncio.Event()
-        self._event.set()
 
     async def wait(self) -> None:
         await self._event.wait()
@@ -113,6 +112,8 @@ class Client:
     async def connect(self) -> None:
         if self.credentials is None:
             raise RuntimeError("Must log in before trying to establish a WS connection.")
+
+        await self._refresh_event.wait()
 
         self._ws = await connect(
             self.base_url_ws + "/ws",
@@ -303,6 +304,11 @@ class Client:
                         self._refresh_event.refreshing()
                         logger.debug("Credentials expired, refresh.")
                         await self.refresh_id_token(self.credentials.refresh_token)
+                        self._refresh_event.done()
+                    else:
+                        # Refresh event is unset on client initialization to ensure
+                        # we have a chance to refresh id token in case it expired
+                        # before making any requests or trying to establish a WS connection.
                         self._refresh_event.done()
 
                     await asyncio.sleep(self._refresh_interval)
