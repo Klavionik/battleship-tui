@@ -1,4 +1,5 @@
 import asyncio
+import weakref
 from asyncio import Task
 from typing import Callable, Coroutine, TypeAlias
 
@@ -16,7 +17,7 @@ Listener: TypeAlias = Callable[[SessionID, Action], Coroutine]
 class Sessions:
     def __init__(self) -> None:
         self._sessions: dict[SessionID, Session] = {}
-        self._listeners: set[Listener] = set()
+        self._listeners: weakref.WeakSet[Listener] = weakref.WeakSet()
         self._notify_task: Task[None] | None = None
 
     def add(self, data: SessionCreate) -> Session:

@@ -7,7 +7,7 @@ from guardpost.authentication import Identity
 from battleship.logger import server_logger as logger
 from battleship.server.auth import AuthManager
 from battleship.server.clients import Clients
-from battleship.server.handlers import ConnectionHandler, SessionHandler
+from battleship.server.handlers import GameHandler, SessionSubscriptionHandler
 from battleship.server.sessions import Sessions
 from battleship.server.websocket import ClientID
 from battleship.shared.models import (
@@ -41,10 +41,11 @@ async def ws(
         guest=identity.has_claim_value("battleship/role", "guest"),
     )
     client = client_repository.add(client_id.value, websocket, user)
-    handler = ConnectionHandler(client, session_repository, client_repository)
+    handler = SessionSubscriptionHandler(client, session_repository)
+    client.add_handler(handler)
 
     logger.debug(f"Handle client {client}.")
-    await handler()
+    await client.listen()
     logger.debug(f"Disconnect client {client}.")
     client_repository.remove(client.id)
 
@@ -80,7 +81,7 @@ async def join_session(
 ) -> None:
     session = session_repository.get(session_id)
     player, enemy = client_repository.get(session.client_id), client_repository.get(client_id.value)
-    handler = SessionHandler(player, enemy)
+    handler = GameHandler(player, enemy)
     game = asyncio.create_task(handler())
     games.add(game)
 
