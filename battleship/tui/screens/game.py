@@ -36,9 +36,7 @@ def convert_from_coordinate(coordinate: str) -> Coordinate:
 class Game(Screen[None]):
     BINDINGS = [("escape", "back", "Back")]
 
-    def __init__(
-        self, *args: Any, session_factory: Callable[[], session.SingleplayerSession], **kwargs: Any
-    ):
+    def __init__(self, *args: Any, session_factory: Callable[[], session.Session], **kwargs: Any):
         super().__init__(*args, **kwargs)
         self._session_factory = session_factory
         self._session = session_factory()

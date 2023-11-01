@@ -7,15 +7,13 @@ from textual.screen import ModalScreen, Screen
 from textual.widgets import Button, Footer, Label, LoadingIndicator, Markdown
 
 from battleship.client import get_client
-from battleship.tui import resources
+from battleship.engine.session import MultiplayerSession
+from battleship.shared.events import ServerEvent
+from battleship.tui import resources, screens
 from battleship.tui.widgets.new_game import NewGame
 
 
 class WaitingModal(ModalScreen[None]):
-    def __init__(self, *args: Any, session_id: str, **kwargs: Any):
-        super().__init__(*args, **kwargs)
-        self._session_id = session_id
-
     def compose(self) -> ComposeResult:
         with Container(id="dialog"):
             yield Label("Waiting for the second player...")
@@ -24,9 +22,7 @@ class WaitingModal(ModalScreen[None]):
 
     @on(Button.Pressed)
     async def abort_waiting(self) -> None:
-        client = get_client()
-        await client.delete_session(self._session_id)
-        self.app.pop_screen()
+        self.dismiss(None)
 
 
 class CreateGame(Screen[None]):
@@ -58,8 +54,30 @@ class CreateGame(Screen[None]):
         name = event.name or f"{client.user.nickname}'s game"
         session = await client.create_session(
             name,
-            event.roster.name,
+            event.roster,
             event.firing_order,
             event.salvo_mode,
         )
-        await self.app.push_screen(WaitingModal(session_id=session.id))
+        waiting_modal = WaitingModal()
+
+        def on_start_game(payload: dict[str, Any]) -> None:
+            def session_factory() -> MultiplayerSession:
+                enemy_nickname = payload["enemy"]
+                return MultiplayerSession(
+                    client.user.nickname,  # type: ignore[union-attr]
+                    enemy_nickname,
+                    event.roster,
+                    event.firing_order,
+                    event.salvo_mode,
+                )
+
+            waiting_modal.dismiss(None)
+            self.app.switch_screen(screens.Game(session_factory=session_factory))
+
+        client.add_listener(ServerEvent.START_GAME, on_start_game)
+
+        async def on_modal_dismiss(result: None) -> None:
+            client.remove_listener(ServerEvent.START_GAME, on_start_game)
+            await client.delete_session(session.id)
+
+        await self.app.push_screen(waiting_modal, callback=on_modal_dismiss)

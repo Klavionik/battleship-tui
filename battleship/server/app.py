@@ -4,8 +4,8 @@ from blacksheep.server.authorization import Policy
 from guardpost.common import AuthenticatedRequirement
 
 from battleship.server.auth import Auth0AuthManager, AuthManager
+from battleship.server.clients import Clients
 from battleship.server.config import Config, get_config
-from battleship.server.connections import ConnectionManager
 from battleship.server.routes import router
 from battleship.server.sessions import Sessions
 
@@ -17,7 +17,7 @@ def create_app() -> Application:
     app.services.add_instance(config, Config)
     app.services.add_singleton(AuthManager, Auth0AuthManager)
     app.services.add_singleton(Sessions)
-    app.services.add_singleton(ConnectionManager)
+    app.services.add_singleton(Clients)
 
     app.use_authentication().add(
         JWTBearerAuthentication(

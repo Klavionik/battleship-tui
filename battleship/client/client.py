@@ -1,5 +1,6 @@
 import asyncio
 import json as json_
+import uuid
 from asyncio import Task
 from functools import cache
 from typing import Any, Callable, Coroutine, Optional
@@ -77,6 +78,7 @@ class Client:
         refresh_interval: int = 20,
         http_timeout: int = 20,
     ) -> None:
+        self._client_id = str(uuid.uuid4())
         self._host = host
         self._port = port
         self._ws: Optional[WebSocketClientProtocol] = None
@@ -85,7 +87,12 @@ class Client:
         self.user: User | None = None
         self.credentials: Credentials | None = None
         self.auth = IDTokenAuth()
-        self._session = AsyncClient(base_url=self.base_url, auth=self.auth, timeout=http_timeout)
+        self._session = AsyncClient(
+            base_url=self.base_url,
+            auth=self.auth,
+            timeout=http_timeout,
+            headers={"X-Battleship-Client-ID": self._client_id},
+        )
         self._session.event_hooks = {"request": [log_request]}
         self.credentials_provider = credentials_provider
 
@@ -109,7 +116,10 @@ class Client:
 
         self._ws = await connect(
             self.base_url_ws + "/ws",
-            extra_headers={"Authorization": f"Bearer {self.credentials.id_token}"},
+            extra_headers={
+                "Authorization": f"Bearer {self.credentials.id_token}",
+                "X-Battleship-Client-ID": self._client_id,
+            },
         )
         self._events_worker = self._run_events_worker()
 
@@ -195,7 +205,13 @@ class Client:
         firing_order: str,
         salvo_mode: bool,
     ) -> Session:
-        payload = dict(name=name, roster=roster, firing_order=firing_order, salvo_mode=salvo_mode)
+        payload = dict(
+            name=name,
+            roster=roster,
+            firing_order=firing_order,
+            salvo_mode=salvo_mode,
+            client_id=self._client_id,
+        )
         response = await self._request("POST", "/sessions", json=payload)
         return Session(**response.json())
 
@@ -230,6 +246,12 @@ class Client:
 
     def add_listener(self, event: str, handler: Callable[..., Any]) -> None:
         self._emitter.add_listener(event, handler)
+
+    def remove_listener(self, event: str, handler: Callable[..., Any]) -> None:
+        self._emitter.remove_listener(event, handler)
+
+    async def join_game(self, session_id: str) -> None:
+        await self._request("POST", f"/sessions/{session_id}/join")
 
     def _run_events_worker(self) -> Task[None]:
         async def events_worker() -> None:

@@ -14,6 +14,7 @@ class ClientEvent(StrEnum):
 class ServerEvent(StrEnum):
     LOGIN = "login"
     SESSIONS_UPDATE = "sessions_update"
+    START_GAME = "start_game"
 
 
 Event: TypeAlias = ServerEvent | ClientEvent

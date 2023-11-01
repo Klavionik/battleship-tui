@@ -35,6 +35,7 @@ class SessionCreate(BaseModel):
     roster: str
     firing_order: str
     salvo_mode: bool
+    client_id: str
 
 
 class Session(SessionCreate):

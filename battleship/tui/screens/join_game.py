@@ -10,25 +10,35 @@ from textual.screen import Screen
 from textual.widgets import Footer, Label, ListItem, ListView, Static
 
 from battleship.client import SessionSubscription, get_client
+from battleship.engine.session import MultiplayerSession
+from battleship.shared.events import ServerEvent
 from battleship.shared.models import Session, SessionID
+from battleship.tui import screens
 
 
-class SessionLabel(Label):
-    TEMPLATE = "$name | Roster: $roster | Firing order: $firing_order | Salvo mode: $salvo_mode"
+def format_session(template: str, session: Session) -> str:
+    salvo_mode = "Yes" if session.salvo_mode else "No"
+    firing_order = session.firing_order.replace("_", " ").capitalize()
+    return Template(template).substitute(
+        name=session.name,
+        salvo_mode=salvo_mode,
+        firing_order=firing_order,
+        roster=session.roster.capitalize(),
+    )
 
-    def __init__(self, *args: Any, session: Session, **kwargs: Any):
+
+class SessionItem(ListItem):
+    LABEL_TEMPLATE = (
+        "$name | Roster: $roster | Firing order: $firing_order | Salvo mode: $salvo_mode"
+    )
+
+    def __init__(self, *args: Any, session: Session, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
-        self.update(self.format_session(session))
+        self.log(session)
+        self.session = session
 
-    def format_session(self, session: Session) -> str:
-        salvo_mode = "Yes" if session.salvo_mode else "No"
-        firing_order = session.firing_order.replace("_", " ").capitalize()
-        return Template(self.TEMPLATE).substitute(
-            name=session.name,
-            salvo_mode=salvo_mode,
-            firing_order=firing_order,
-            roster=session.roster.capitalize(),
-        )
+    def compose(self) -> ComposeResult:
+        yield Label(format_session(self.LABEL_TEMPLATE, self.session))
 
 
 class JoinGame(Screen[None]):
@@ -68,6 +78,31 @@ class JoinGame(Screen[None]):
         await client.sessions_unsubscribe()
         self._subscription = None
 
+    @on(ListView.Selected)
+    async def join(self, event: ListView.Selected) -> None:
+        item: SessionItem = event.item  # type: ignore
+        session = item.session
+        client = get_client()
+
+        def on_start_game(payload: dict[str, Any]) -> None:
+            def session_factory() -> MultiplayerSession:
+                enemy_nickname = payload["enemy"]
+                return MultiplayerSession(
+                    client.user.nickname,  # type: ignore[union-attr]
+                    enemy_nickname,
+                    session.roster,
+                    session.firing_order,
+                    session.salvo_mode,
+                )
+
+            self.app.switch_screen(screens.Game(session_factory=session_factory))
+
+            client.remove_listener(ServerEvent.START_GAME, on_start_game)
+
+        client.add_listener(ServerEvent.START_GAME, on_start_game)
+
+        await client.join_game(session.id)
+
     async def add_session(self, session: Session) -> None:
         try:
             # Remove possible duplicate.
@@ -76,12 +111,7 @@ class JoinGame(Screen[None]):
         except NoMatches:
             pass
 
-        await self._session_list.append(
-            ListItem(
-                SessionLabel(session=session),
-                id=session.id,
-            )
-        )
+        await self._session_list.append(SessionItem(id=session.id, session=session))
 
     async def remove_session(self, session_id: SessionID) -> None:
         try:

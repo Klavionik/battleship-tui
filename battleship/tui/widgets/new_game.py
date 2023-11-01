@@ -6,7 +6,7 @@ from textual.message import Message
 from textual.widget import Widget
 from textual.widgets import Button, Checkbox, Input, RadioButton, RadioSet
 
-from battleship.engine import domain, roster
+from battleship.engine import domain
 
 
 class NewGame(Widget):
@@ -14,7 +14,7 @@ class NewGame(Widget):
         def __init__(
             self,
             name: str,
-            roster: roster.Roster,
+            roster: str,
             firing_order: domain.FiringOrder,
             salvo_mode: bool,
         ) -> None:
@@ -28,7 +28,7 @@ class NewGame(Widget):
         super().__init__(*args, **kwargs)
         self._with_name = with_name
         self.game_name = ""
-        self.roster = roster.get_roster("classic")
+        self.roster = "classic"
         self.firing_order = domain.FiringOrder.ALTERNATELY
         self.salvo_mode = False
 
@@ -55,7 +55,7 @@ class NewGame(Widget):
 
     @on(RadioSet.Changed, "#roster")
     def update_roster(self, event: RadioSet.Changed) -> None:
-        self.roster = roster.get_roster(event.pressed.name)  # type: ignore[arg-type]
+        self.roster = event.pressed.name  # type: ignore[assignment]
 
     @on(RadioSet.Changed, "#firing_order")
     def update_firing_order(self, event: RadioSet.Changed) -> None:

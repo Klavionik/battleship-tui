@@ -1,10 +1,15 @@
+import asyncio
+
 from blacksheep import FromJSON, Response, Router, WebSocket, created, no_content
 from blacksheep.server.authorization import allow_anonymous
 from guardpost.authentication import Identity
 
+from battleship.logger import server_logger as logger
 from battleship.server.auth import AuthManager
-from battleship.server.connections import ConnectionManager
+from battleship.server.clients import Clients
+from battleship.server.handlers import ConnectionHandler, SessionHandler
 from battleship.server.sessions import Sessions
+from battleship.server.websocket import ClientID
 from battleship.shared.models import (
     IDToken,
     LoginCredentials,
@@ -19,18 +24,29 @@ from battleship.shared.models import (
 router = Router()  # type: ignore[no-untyped-call]
 
 
+games = set()
+
+
 @router.ws("/ws")
 async def ws(
     websocket: WebSocket,
     identity: Identity,
-    connection_handler: ConnectionManager,
+    client_id: ClientID,
+    client_repository: Clients,
+    session_repository: Sessions,
 ) -> None:
     await websocket.accept()
     user = User(
         nickname=identity.claims["nickname"],
         guest=identity.has_claim_value("battleship/role", "guest"),
     )
-    await connection_handler(websocket, user)
+    client = client_repository.add(client_id.value, websocket, user)
+    handler = ConnectionHandler(client, session_repository, client_repository)
+
+    logger.debug(f"Handle client {client}.")
+    await handler()
+    logger.debug(f"Disconnect client {client}.")
+    client_repository.remove(client.id)
 
 
 @router.get("/sessions")
@@ -53,6 +69,20 @@ async def remove_session(
 ) -> Response:
     session_repository.remove(session_id)
     return no_content()
+
+
+@router.post("/sessions/{session_id}/join")
+async def join_session(
+    session_id: str,
+    client_id: ClientID,
+    session_repository: Sessions,
+    client_repository: Clients,
+) -> None:
+    session = session_repository.get(session_id)
+    player, enemy = client_repository.get(session.client_id), client_repository.get(client_id.value)
+    handler = SessionHandler(player, enemy)
+    game = asyncio.create_task(handler())
+    games.add(game)
 
 
 @allow_anonymous()
