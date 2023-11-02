@@ -29,14 +29,17 @@ class GameHandler(EventHandler):
             session.salvo_mode,
         )
 
+        self.game.register_next_move_hook(self.send_awaiting_move)
+        self.game.register_ended_hook(self.send_winner)
+
+        self.announce_game_start()
+
     def broadcast(self, event: EventMessage) -> None:
         for client in self.clients:
             asyncio.create_task(client.send_event(event))
 
-    def send_awaiting_move(self) -> None:
-        payload = dict(
-            actor=self.game.current_player.name, subject=self.game.player_under_attack.name
-        )
+    def send_awaiting_move(self, game: domain.Game) -> None:
+        payload = dict(actor=game.current_player.name, subject=game.player_under_attack.name)
 
         self.broadcast(
             EventMessage(
@@ -53,17 +56,26 @@ class GameHandler(EventHandler):
         event = EventMessage(kind=ServerEvent.SALVO, payload=dict(salvo=model.to_json()))
         self.broadcast(event)
 
-    async def __call__(self) -> None:
-        await self.client_a.send_event(
-            EventMessage(
-                kind=ServerEvent.START_GAME,
-                payload=dict(enemy=self.client_b.user.nickname, roster=asdict(self.roster)),
+    def send_winner(self, game: domain.Game) -> None:
+        assert game.winner
+        event = EventMessage(kind=ServerEvent.GAME_ENDED, payload=dict(winner=game.winner.name))
+        self.broadcast(event)
+
+    def announce_game_start(self) -> None:
+        asyncio.create_task(
+            self.client_a.send_event(
+                EventMessage(
+                    kind=ServerEvent.START_GAME,
+                    payload=dict(enemy=self.client_b.user.nickname, roster=asdict(self.roster)),
+                )
             )
         )
-        await self.client_b.send_event(
-            EventMessage(
-                kind=ServerEvent.START_GAME,
-                payload=dict(enemy=self.client_a.user.nickname, roster=asdict(self.roster)),
+        asyncio.create_task(
+            self.client_b.send_event(
+                EventMessage(
+                    kind=ServerEvent.START_GAME,
+                    payload=dict(enemy=self.client_a.user.nickname, roster=asdict(self.roster)),
+                )
             )
         )
 
@@ -81,22 +93,11 @@ class GameHandler(EventHandler):
 
                 if self.game.is_fleet_ready(player):
                     self.send_fleet_ready(player.name)
-
-                if self.game.ready:
-                    self.send_awaiting_move()
             case EventMessage(kind=ClientEvent.FIRE):
                 position = event.payload["position"]
                 salvo = self.game.fire(position)
                 self.send_salvo(salvo)
-
-                if self.game.winner:
-                    self.broadcast(
-                        EventMessage(
-                            kind=ServerEvent.GAME_ENDED, payload=dict(winner=self.game.winner.name)
-                        )
-                    )
-                else:
-                    self.send_awaiting_move()
+                self.game.turn(salvo)
 
 
 class SessionSubscriptionHandler(EventHandler):

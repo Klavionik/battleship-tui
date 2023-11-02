@@ -1,5 +1,3 @@
-import asyncio
-
 from blacksheep import FromJSON, Response, Router, WebSocket, created, no_content
 from blacksheep.server.authorization import allow_anonymous
 from guardpost.authentication import Identity
@@ -22,9 +20,6 @@ from battleship.shared.models import (
 )
 
 router = Router()  # type: ignore[no-untyped-call]
-
-
-games = set()
 
 
 @router.ws("/ws")
@@ -84,8 +79,6 @@ async def join_session(
     handler = GameHandler(player, enemy, session)
     player.add_handler(handler)
     enemy.add_handler(handler)
-    game = asyncio.create_task(handler())
-    games.add(game)
 
 
 @allow_anonymous()

@@ -1,4 +1,5 @@
 import random
+from unittest.mock import Mock, call
 
 import pytest
 
@@ -15,6 +16,13 @@ def test():
 @pytest.fixture
 def test_roster():
     return roster.get_roster("test")
+
+
+@pytest.fixture
+def test_game(test_roster) -> domain.Game:
+    player_a = domain.Player(name="player_a")
+    player_b = domain.Player(name="player_b")
+    return domain.Game(player_a, player_b, test_roster)
 
 
 def test_ship_can_be_damaged():
@@ -397,12 +405,12 @@ def test_game_alternates_players_after_every_shot(test_roster):
     assert game.current_player is player_a
     assert game.player_under_attack is player_b
 
-    game.fire(["B2"])
+    game.turn(game.fire(["B2"]))
 
     assert game.current_player is player_b
     assert game.player_under_attack is player_a
 
-    game.fire(["A5"])
+    game.turn(game.fire(["A5"]))
 
     assert game.current_player is player_a
     assert game.player_under_attack is player_b
@@ -422,12 +430,12 @@ def test_game_alternates_players_after_first_miss(test_roster):
     assert game.current_player is player_a
     assert game.player_under_attack is player_b
 
-    game.fire(["B2"])
+    game.turn(game.fire(["B2"]))
 
     assert game.current_player is player_a
     assert game.player_under_attack is player_b
 
-    game.fire(["B1"])
+    game.turn(game.fire(["B1"]))
 
     assert game.current_player is player_b
     assert game.player_under_attack is player_a
@@ -454,12 +462,12 @@ def test_game_alternates_players_after_first_miss_salvo_mode(test_roster):
     assert game.current_player is player_a
     assert game.player_under_attack is player_b
 
-    game.fire(["B2", "C3"])  # One hit, one miss.
+    game.turn(game.fire(["B2", "C3"]))  # One hit, one miss.
 
     assert game.current_player is player_a
     assert game.player_under_attack is player_b
 
-    game.fire(["B1", "F5"])  # Both miss.
+    game.turn(game.fire(["B1", "F5"]))  # Both miss.
 
     assert game.current_player is player_b
     assert game.player_under_attack is player_a
@@ -477,13 +485,13 @@ def test_game_ends_if_player_has_no_more_ships(test_roster):
     game.add_ship(player_b, position=["B2", "B3"], roster_id=item_1.id)
     game.add_ship(player_b, position=["F4", "G4"], roster_id=item_2.id)
 
-    game.fire(["B2"])  # Player A hit.
-    game.fire(["A4"])  # Player B missed.
-    game.fire(["B3"])  # Player A hit. Ship sunk.
-    game.fire(["D4"])  # Player B hit.
-    game.fire(["F4"])  # Player A hit.
-    game.fire(["C4"])  # Player B hit. Ship sunk.
-    game.fire(["G4"])  # Player A hit. Ship sunk.
+    game.turn(game.fire(["B2"]))  # Player A hit.
+    game.turn(game.fire(["A4"]))  # Player B missed.
+    game.turn(game.fire(["B3"]))  # Player A hit. Ship sunk.
+    game.turn(game.fire(["D4"]))  # Player B hit.
+    game.turn(game.fire(["F4"]))  # Player A hit.
+    game.turn(game.fire(["C4"]))  # Player B hit. Ship sunk.
+    game.turn(game.fire(["G4"]))  # Player A hit. Ship sunk.
 
     assert game.winner is player_a
 
@@ -504,3 +512,33 @@ def test_board_gets_adjacent_cell():
     assert down.coordinate == "B2"
     assert right.coordinate == "C1"
     assert left.coordinate == "A1"
+
+
+def test_game_calls_hooks(test_roster, test_game):
+    [item] = test_roster
+    game = test_game
+    next_move_hook = Mock()
+    ended_hook = Mock()
+    game.register_next_move_hook(next_move_hook)
+    game.register_ended_hook(ended_hook)
+    game.add_ship(game.player_a, position=["A2", "A3"], roster_id=item.id)
+    game.add_ship(game.player_b, position=["A2", "A3"], roster_id=item.id)
+
+    assert next_move_hook.call_count == 1
+    assert next_move_hook.call_args == call(game)
+
+    game.turn(game.fire(["A2"]))
+
+    assert next_move_hook.call_count == 2
+    assert next_move_hook.call_args == call(game)
+
+    game.turn(game.fire(["A2"]))
+
+    assert next_move_hook.call_count == 3
+    assert next_move_hook.call_args == call(game)
+
+    game.turn(game.fire(["A3"]))
+
+    assert next_move_hook.call_count == 3
+    assert ended_hook.call_count == 1
+    assert ended_hook.call_args == call(game)

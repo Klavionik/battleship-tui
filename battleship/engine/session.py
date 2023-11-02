@@ -141,16 +141,17 @@ class SingleplayerSession(Session):
         self.fire(target)
 
     def fire(self, position: Collection[str]) -> None:
-        actor = self._game.current_player
         salvo = self._game.fire(position)
         self._ee.emit("salvo", salvo=salvo)
+
+        if self._game.current_player is self._enemy:
+            self._target_caller.provide_feedback(salvo)
+
+        self._game.turn(salvo)
 
         if self._game.winner:
             self._ee.emit("game_ended", winner=self._game.winner.name)
             return
-
-        if actor is self._enemy:
-            self._target_caller.provide_feedback(salvo)
 
         if self._game.current_player is self._enemy:
             self._make_enemy_move()

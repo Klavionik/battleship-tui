@@ -5,7 +5,7 @@ import random
 import string
 from functools import cached_property
 from itertools import cycle
-from typing import Collection, Iterable, Iterator
+from typing import Any, Callable, Collection, Iterable, Iterator
 
 from battleship.engine import errors, roster
 
@@ -186,6 +186,9 @@ class Player:
     name: str
     board: Board = dataclasses.field(default_factory=Board, hash=False)
 
+    def __repr__(self) -> str:
+        return self.name
+
     def add_ship(self, position: Collection[str], ship: Ship) -> None:
         self.board.place_ship(position, ship)
 
@@ -258,15 +261,20 @@ class Game:
         self.roster = roster
         self.firing_order = firing_order
         self.salvo_mode = salvo_mode
-        self._player_a = player_a
-        self._player_b = player_b
+        self.player_a = player_a
+        self.player_b = player_b
         self._player_cycle = cycle(random.sample([player_a, player_b], k=2))
         self._current_player = next(self._player_cycle)
         self._started = False
         self._winner: Player | None = None
+        self._hooks: dict[str, Callable[["Game"], Any] | None] = {
+            "next_move": None,
+            "ended": None,
+        }
+        self._make_turn = False
 
     def __str__(self) -> str:
-        return f"Game <{self._player_a} vs {self._player_b}> <Winner: {self._winner}>"
+        return f"Game <{self.player_a} vs {self.player_b}> <Winner: {self._winner}>"
 
     def add_ship(self, player: Player, position: Collection[str], roster_id: roster.ShipId) -> None:
         if player.get_ship(roster_id) is None:
@@ -276,6 +284,15 @@ class Game:
             raise errors.ShipLimitExceeded(
                 f"Player {player.name} already has a ship with roster id {roster_id}."
             )
+
+        if self.ready and (next_move_hook := self._hooks["next_move"]):
+            next_move_hook(self)
+
+    def register_next_move_hook(self, hook: Callable[["Game"], Any]) -> None:
+        self._hooks["next_move"] = hook
+
+    def register_ended_hook(self, hook: Callable[["Game"], Any]) -> None:
+        self._hooks["ended"] = hook
 
     def is_fleet_ready(self, player: Player) -> bool:
         return {ship.id for ship in player.ships} == {item.id for item in self.roster}
@@ -301,7 +318,7 @@ class Game:
 
     @property
     def ready(self) -> bool:
-        return self.is_fleet_ready(self._player_a) and self.is_fleet_ready(self._player_b)
+        return self.is_fleet_ready(self.player_a) and self.is_fleet_ready(self.player_b)
 
     def fire(self, coordinates: Collection[str]) -> Salvo:
         if not self.ready:
@@ -333,15 +350,27 @@ class Game:
             )
             salvo.add_shot(shot)
 
+        self._make_turn = True
+        return salvo
+
+    def turn(self, salvo: Salvo) -> None:
+        if not self._make_turn:
+            raise RuntimeError("Cannot make turn at this time. Try calling fire() before.")
+
         if self.player_under_attack.ships_alive == 0:
             self._winner = self.current_player
-            return salvo
 
-        if (
-            self.firing_order == FiringOrder.ALTERNATELY
-            or self.firing_order == FiringOrder.UNTIL_MISS
-            and salvo.miss
-        ):
-            self._current_player = next(self._player_cycle)
+            if ended_hook := self._hooks["ended"]:
+                ended_hook(self)
+        else:
+            if (
+                self.firing_order == FiringOrder.ALTERNATELY
+                or self.firing_order == FiringOrder.UNTIL_MISS
+                and salvo.miss
+            ):
+                self._current_player = next(self._player_cycle)
 
-        return salvo
+            if next_move_hook := self._hooks["next_move"]:
+                next_move_hook(self)
+
+        self._make_turn = False
