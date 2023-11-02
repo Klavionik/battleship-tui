@@ -10,6 +10,7 @@ from textual.screen import Screen
 from textual.widgets import Footer
 
 from battleship.engine import domain, session
+from battleship.shared import models
 from battleship.tui import screens
 from battleship.tui.widgets.announcement import (
     PHASE_BATTLE,
@@ -124,28 +125,28 @@ class Game(Screen[None]):
         position = [convert_to_coordinate(c) for c in event.coordinates]
         self._session.spawn_ship(ship_id=event.ship.id, position=position)
 
-    def on_fleet_ready(self, player: domain.Player) -> None:
-        self.write_as_game(f"{player.name}'s fleet is ready")
+    def on_fleet_ready(self, player: str) -> None:
+        self.write_as_game(f"{player}'s fleet is ready")
         self.players_ready += 1
 
         if self.players_ready == 2:
             text = PHASE_BATTLE_SALVO if self._session.salvo_mode else PHASE_BATTLE
             self.query_one(Announcement).update_phase(text)
 
-    def on_awaiting_move(self, actor: domain.Player, subject: domain.Player) -> None:
-        self.board_map[actor.name].mode = Board.Mode.DISPLAY
-        self.board_map[subject.name].mode = Board.Mode.TARGET
-        self.write_as_game(f"{actor.name}'s turn. Fire at will!")
+    def on_awaiting_move(self, actor: str, subject: str) -> None:
+        self.board_map[actor].mode = Board.Mode.DISPLAY
+        self.board_map[subject].mode = Board.Mode.TARGET
+        self.write_as_game(f"{actor}'s turn. Fire at will!")
 
     def on_ship_spawned(self, ship_id: str, position: Iterable[str]) -> None:
         self.player_board.paint_ship([convert_from_coordinate(p) for p in position])
         self.player_fleet.place(ship_id)
 
-    def on_salvo(self, salvo: domain.Salvo) -> None:
+    def on_salvo(self, salvo: models.Salvo) -> None:
         board = self.board_map[salvo.subject.name]
         fleet = self.fleet_map[salvo.subject.name]
 
-        for shot in salvo:
+        for shot in salvo.shots:
             coor = convert_from_coordinate(shot.coordinate)
 
             if shot.miss:
@@ -169,13 +170,13 @@ class Game(Screen[None]):
         if self._session.salvo_mode:
             self.board_map[salvo.actor.name].min_targets = salvo.ships_left
 
-    def on_game_ended(self, winner: domain.Player) -> None:
+    def on_game_ended(self, winner: str) -> None:
         for board in self.board_map.values():
             board.mode = Board.Mode.DISPLAY
 
-        self.write_as_game(f"{winner.name} has won!")
+        self.write_as_game(f"{winner} has won!")
 
-        text = PHASE_VICTORY if self._session.player_name == winner.name else PHASE_DEFEAT
+        text = PHASE_VICTORY if self._session.player_name == winner else PHASE_DEFEAT
         self.query_one(Announcement).update_phase(text)
 
     @on(Board.CellShot)

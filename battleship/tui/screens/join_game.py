@@ -10,6 +10,7 @@ from textual.screen import Screen
 from textual.widgets import Footer, Label, ListItem, ListView, Static
 
 from battleship.client import SessionSubscription, get_client
+from battleship.engine.roster import Roster, RosterItem
 from battleship.engine.session import MultiplayerSession
 from battleship.shared.events import ServerEvent
 from battleship.shared.models import Session, SessionID
@@ -87,10 +88,16 @@ class JoinGame(Screen[None]):
         def on_start_game(payload: dict[str, Any]) -> None:
             def session_factory() -> MultiplayerSession:
                 enemy_nickname = payload["enemy"]
+                data = payload["roster"]
+                roster = Roster(
+                    name=data["name"], items=[RosterItem(*item) for item in data["items"]]
+                )
+
                 return MultiplayerSession(
+                    client,
                     client.user.nickname,  # type: ignore[union-attr]
                     enemy_nickname,
-                    session.roster,
+                    roster,
                     session.firing_order,
                     session.salvo_mode,
                 )

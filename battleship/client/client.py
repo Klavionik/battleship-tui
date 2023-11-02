@@ -3,7 +3,7 @@ import json as json_
 import uuid
 from asyncio import Task
 from functools import cache
-from typing import Any, Callable, Coroutine, Optional
+from typing import Any, Callable, Collection, Coroutine, Optional
 
 from httpx import AsyncClient, Request, Response
 from pyee.asyncio import AsyncIOEventEmitter
@@ -253,6 +253,14 @@ class Client:
 
     async def join_game(self, session_id: str) -> None:
         await self._request("POST", f"/sessions/{session_id}/join")
+
+    async def spawn_ship(self, ship_id: str, position: Collection[str]) -> None:
+        payload = dict(ship_id=ship_id, position=position)
+        await self._send(dict(kind=ClientEvent.SPAWN_SHIP, payload=payload))
+
+    async def fire(self, position: Collection[str]) -> None:
+        payload = dict(position=position)
+        await self._send(dict(kind=ClientEvent.FIRE, payload=payload))
 
     def _run_events_worker(self) -> Task[None]:
         async def events_worker() -> None:

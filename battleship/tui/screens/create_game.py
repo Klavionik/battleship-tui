@@ -7,7 +7,9 @@ from textual.screen import ModalScreen, Screen
 from textual.widgets import Button, Footer, Label, LoadingIndicator, Markdown
 
 from battleship.client import get_client
+from battleship.engine.roster import Roster, RosterItem
 from battleship.engine.session import MultiplayerSession
+from battleship.logger import client_logger as logger
 from battleship.shared.events import ServerEvent
 from battleship.tui import resources, screens
 from battleship.tui.widgets.new_game import NewGame
@@ -60,13 +62,19 @@ class CreateGame(Screen[None]):
         )
         waiting_modal = WaitingModal()
 
+        @logger.catch
         def on_start_game(payload: dict[str, Any]) -> None:
             def session_factory() -> MultiplayerSession:
                 enemy_nickname = payload["enemy"]
+                data = payload["roster"]
+                roster = Roster(
+                    name=data["name"], items=[RosterItem(*item) for item in data["items"]]
+                )
                 return MultiplayerSession(
+                    client,
                     client.user.nickname,  # type: ignore[union-attr]
                     enemy_nickname,
-                    event.roster,
+                    roster,
                     event.firing_order,
                     event.salvo_mode,
                 )

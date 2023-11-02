@@ -1,8 +1,8 @@
 import asyncio
-import weakref
 from asyncio import Task
 from typing import Callable, Coroutine, TypeAlias
 
+from battleship.logger import server_logger as logger
 from battleship.shared.models import (
     Action,
     Session,
@@ -17,7 +17,7 @@ Listener: TypeAlias = Callable[[SessionID, Action], Coroutine]
 class Sessions:
     def __init__(self) -> None:
         self._sessions: dict[SessionID, Session] = {}
-        self._listeners: weakref.WeakSet[Listener] = weakref.WeakSet()
+        self._listeners: dict[str, Listener] = {}
         self._notify_task: Task[None] | None = None
 
     def add(self, data: SessionCreate) -> Session:
@@ -36,15 +36,17 @@ class Sessions:
         self._sessions.pop(session_id, None)
         self._notify_listeners(session_id, Action.REMOVE)
 
-    def subscribe(self, callback: Listener) -> None:
-        self._listeners.add(callback)
+    def subscribe(self, client_id: str, callback: Listener) -> None:
+        self._listeners[client_id] = callback
 
-    def unsubscribe(self, callback: Listener) -> None:
-        self._listeners.discard(callback)
+    def unsubscribe(self, client_id: str) -> None:
+        self._listeners.pop(client_id, None)
 
     def _notify_listeners(self, session_id: str, action: Action) -> None:
         async def notify_task() -> None:
-            for subscriber in self._listeners:
+            logger.debug(f"Notify {len(self._listeners)} listeners.")
+
+            for subscriber in self._listeners.values():
                 await subscriber(session_id, action)
 
         self._notify_task = asyncio.create_task(notify_task())

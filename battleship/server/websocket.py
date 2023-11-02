@@ -26,7 +26,7 @@ class WebSocketWrapper:
 
 class EventHandler(abc.ABC):
     @abc.abstractmethod
-    async def handle(self, event: EventMessage) -> None:
+    async def handle(self, client: "Client", event: EventMessage) -> None:
         pass
 
 
@@ -63,7 +63,7 @@ class Client:
         async for event in self:
             logger.info(event)
             for handler in self._handlers.values():
-                await handler.handle(event)
+                await handler.handle(self, event)
 
     def add_handler(self, handler: EventHandler) -> None:
         handler_type = handler.__class__

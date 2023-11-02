@@ -1,20 +1,27 @@
-from enum import StrEnum
+from enum import StrEnum, auto
 from typing import Any, NotRequired, TypeAlias, TypedDict
 
 from battleship.shared.models import BaseModel
 
 
 class ClientEvent(StrEnum):
-    LOGIN = "login"
-    LOGOUT = "logout"
-    SESSIONS_SUBSCRIBE = "sessions_subscribe"
-    SESSIONS_UNSUBSCRIBE = "sessions_unsubscribe"
+    LOGIN = auto()
+    LOGOUT = auto()
+    SESSIONS_SUBSCRIBE = auto()
+    SESSIONS_UNSUBSCRIBE = auto()
+    SPAWN_SHIP = auto()
+    FIRE = auto()
 
 
 class ServerEvent(StrEnum):
-    LOGIN = "login"
-    SESSIONS_UPDATE = "sessions_update"
-    START_GAME = "start_game"
+    LOGIN = auto()
+    SESSIONS_UPDATE = auto()
+    START_GAME = auto()
+    SHIP_SPAWNED = auto()
+    FLEET_READY = auto()
+    AWAITING_MOVE = auto()
+    SALVO = auto()
+    GAME_ENDED = auto()
 
 
 Event: TypeAlias = ServerEvent | ClientEvent

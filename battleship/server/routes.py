@@ -81,7 +81,9 @@ async def join_session(
 ) -> None:
     session = session_repository.get(session_id)
     player, enemy = client_repository.get(session.client_id), client_repository.get(client_id.value)
-    handler = GameHandler(player, enemy)
+    handler = GameHandler(player, enemy, session)
+    player.add_handler(handler)
+    enemy.add_handler(handler)
     game = asyncio.create_task(handler())
     games.add(game)
 

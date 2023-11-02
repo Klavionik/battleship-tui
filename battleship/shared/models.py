@@ -5,6 +5,8 @@ from typing import Any, TypeAlias, TypeVar
 from pydantic import BaseModel as _BaseModel
 from pydantic import EmailStr, Field
 
+from battleship.engine import domain
+
 SessionID: TypeAlias = str
 T = TypeVar("T", bound="BaseModel")
 
@@ -70,6 +72,65 @@ class LoginCredentials(BaseModel):
 
 class SignupCredentials(LoginCredentials):
     email: EmailStr
+
+
+class Player(BaseModel):
+    name: str
+    ships_alive: int
+
+
+class Ship(BaseModel):
+    id: str
+    type: str
+    destroyed: bool
+    cells: list[str]
+
+
+class Shot(BaseModel):
+    coordinate: str
+    hit: bool
+    ship: Ship | None
+
+    @property
+    def miss(self) -> bool:
+        return not self.hit
+
+
+class Salvo(BaseModel):
+    actor: Player
+    subject: Player
+    shots: list[Shot] = []
+
+    @property
+    def miss(self) -> bool:
+        return all(shot.miss for shot in self.shots)
+
+    @property
+    def ships_left(self) -> int:
+        return self.subject.ships_alive
+
+    def __len__(self) -> int:
+        return len(self.shots)
+
+
+def salvo_to_model(salvo: domain.Salvo) -> Salvo:
+    def serialize_ship(ship: domain.Ship | None) -> Ship | None:
+        if ship is None:
+            return None
+
+        return Ship(id=ship.id, type=ship.type, destroyed=ship.destroyed, cells=ship.cells)
+
+    def serialize_player(player: domain.Player) -> Player:
+        return Player(name=player.name, ships_alive=player.ships_alive)
+
+    def serialize_shot(shot: domain.Shot) -> Shot:
+        return Shot(coordinate=shot.coordinate, hit=shot.hit, ship=serialize_ship(shot.ship))
+
+    return Salvo(
+        actor=serialize_player(salvo.actor),
+        subject=serialize_player(salvo.subject),
+        shots=[serialize_shot(shot) for shot in salvo],
+    )
 
 
 def make_session_id() -> SessionID:
