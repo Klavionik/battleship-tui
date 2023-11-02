@@ -262,28 +262,18 @@ def test_game_fleet_ready(test_roster):
     assert game.is_fleet_ready(player_a)
 
 
-def test_game_starts_if_both_fleets_ready(test_roster):
+def test_game_ready_if_both_fleets_ready(test_roster):
     player_a = domain.Player(name="player_a")
     player_b = domain.Player(name="player_b")
     [item] = test_roster
     game = domain.Game(player_a, player_b, test_roster)
     game.add_ship(player_a, position=["A2", "A3"], roster_id=item.id)
+
+    assert not game.ready
+
     game.add_ship(player_b, position=["A2", "A3"], roster_id=item.id)
 
-    game.start()
-
-    assert game.started
-
-
-def test_game_cannot_start_if_fleets_not_ready():
-    player_a = domain.Player(name="player_a")
-    player_b = domain.Player(name="player_b")
-    game = domain.Game(player_a, player_b, roster.get_roster("test"))
-
-    with pytest.raises(errors.ShipsNotPlaced):
-        game.start()
-
-    assert not game.started
+    assert game.ready
 
 
 def test_game_current_player_and_player_under_attack_differs():
@@ -301,7 +291,7 @@ def test_game_cannot_fire_if_not_started():
     player_b = domain.Player(name="player_b")
     game = domain.Game(player_a, player_b, roster.get_roster("test"))
 
-    with pytest.raises(errors.GameNotStarted):
+    with pytest.raises(errors.GameNotReady):
         game.fire(["A1"])
 
 
@@ -312,7 +302,6 @@ def test_game_cannot_fire_multiple_shots_if_not_salvo_mode(test_roster):
     game = domain.Game(player_a, player_b, test_roster)
     game.add_ship(player_a, position=["A2", "A3"], roster_id=item.id)
     game.add_ship(player_b, position=["B2", "B3"], roster_id=item.id)
-    game.start()
 
     with pytest.raises(errors.TooManyShots):
         game.fire(["A1", "A2"])
@@ -325,7 +314,6 @@ def test_game_shots_count_must_match_ships_count(test_roster):
     [item] = test_roster
     game.add_ship(player_a, position=["A2", "A3"], roster_id=item.id)
     game.add_ship(player_b, position=["B2", "B3"], roster_id=item.id)
-    game.start()
 
     with pytest.raises(errors.IncorrectShots):
         game.fire(["A1", "A2"])
@@ -339,7 +327,6 @@ def test_game_fire_returns_correct_salvo_if_miss(test_roster):
     [item] = test_roster
     game.add_ship(player_a, position=["A2", "A3"], roster_id=item.id)
     game.add_ship(player_b, position=["B2", "B3"], roster_id=item.id)
-    game.start()
 
     salvo = game.fire(["B4"])
 
@@ -360,7 +347,6 @@ def test_game_fire_returns_correct_salvo_if_hit(test_roster):
     [item] = test_roster
     game.add_ship(player_a, position=["A2", "A3"], roster_id=item.id)
     game.add_ship(player_b, position=["B2", "B3"], roster_id=item.id)
-    game.start()
 
     salvo = game.fire(["B2"])
 
@@ -384,7 +370,6 @@ def test_game_fire_returns_correct_salvo_in_salvo_mode(test_roster):
     game.add_ship(player_a, position=["C4", "D4"], roster_id=item_2.id)
     game.add_ship(player_b, position=["B2", "B3"], roster_id=item_1.id)
     game.add_ship(player_b, position=["F4", "G4"], roster_id=item_2.id)
-    game.start()
     attempt_hit: domain.Result  # type: ignore
     attempt_miss: domain.Result  # type: ignore
 
@@ -408,7 +393,6 @@ def test_game_alternates_players_after_every_shot(test_roster):
     [item] = test_roster
     game.add_ship(player_a, position=["A2", "A3"], roster_id=item.id)
     game.add_ship(player_b, position=["B2", "B3"], roster_id=item.id)
-    game.start()
 
     assert game.current_player is player_a
     assert game.player_under_attack is player_b
@@ -434,7 +418,6 @@ def test_game_alternates_players_after_first_miss(test_roster):
     [item] = test_roster
     game.add_ship(player_a, position=["A2", "A3"], roster_id=item.id)
     game.add_ship(player_b, position=["B2", "B3"], roster_id=item.id)
-    game.start()
 
     assert game.current_player is player_a
     assert game.player_under_attack is player_b
@@ -467,7 +450,6 @@ def test_game_alternates_players_after_first_miss_salvo_mode(test_roster):
     game.add_ship(player_a, position=["C4", "D4"], roster_id=item_2.id)
     game.add_ship(player_b, position=["B2", "B3"], roster_id=item_1.id)
     game.add_ship(player_b, position=["F4", "G4"], roster_id=item_2.id)
-    game.start()
 
     assert game.current_player is player_a
     assert game.player_under_attack is player_b
@@ -494,7 +476,6 @@ def test_game_ends_if_player_has_no_more_ships(test_roster):
     game.add_ship(player_a, position=["C4", "D4"], roster_id=item_2.id)
     game.add_ship(player_b, position=["B2", "B3"], roster_id=item_1.id)
     game.add_ship(player_b, position=["F4", "G4"], roster_id=item_2.id)
-    game.start()
 
     game.fire(["B2"])  # Player A hit.
     game.fire(["A4"])  # Player B missed.

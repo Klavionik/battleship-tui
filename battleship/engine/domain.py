@@ -300,18 +300,12 @@ class Game:
         return self._winner
 
     @property
-    def started(self) -> bool:
-        return self._started
-
-    def start(self) -> None:
-        if not (self.is_fleet_ready(self._player_a) and self.is_fleet_ready(self._player_b)):
-            raise errors.ShipsNotPlaced("There are still some ships to be placed before start.")
-
-        self._started = True
+    def ready(self) -> bool:
+        return self.is_fleet_ready(self._player_a) and self.is_fleet_ready(self._player_b)
 
     def fire(self, coordinates: Collection[str]) -> Salvo:
-        if not self._started:
-            raise errors.GameNotStarted("Place ships and call `start()` before firing.")
+        if not self.ready:
+            raise errors.GameNotReady("Place all ships before firing.")
 
         if self.winner:
             raise errors.GameEnded(f"{self.winner} won this game.")

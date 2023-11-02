@@ -38,7 +38,7 @@ class InvalidPosition(BattleshipError):
     pass
 
 
-class GameNotStarted(BattleshipError):
+class GameNotReady(BattleshipError):
     pass
 
 

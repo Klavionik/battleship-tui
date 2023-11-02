@@ -114,7 +114,6 @@ class SingleplayerSession(Session):
 
         if self._game.is_fleet_ready(self._player):
             self._ee.emit("fleet_ready", player=self._player.name)
-            self._game.start()
 
             if self._game.current_player is self._enemy:
                 self._make_enemy_move()

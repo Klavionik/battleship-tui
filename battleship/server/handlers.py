@@ -28,7 +28,6 @@ class GameHandler(EventHandler):
             session.firing_order,  # type: ignore
             session.salvo_mode,
         )
-        self.players_ready = 0
 
     def broadcast(self, event: EventMessage) -> None:
         for client in self.clients:
@@ -83,11 +82,8 @@ class GameHandler(EventHandler):
                 if self.game.is_fleet_ready(player):
                     self.send_fleet_ready(player.name)
 
-                    self.players_ready += 1
-
-                    if self.players_ready == 2:
-                        self.game.start()
-                        self.send_awaiting_move()
+                if self.game.ready:
+                    self.send_awaiting_move()
             case EventMessage(kind=ClientEvent.FIRE):
                 position = event.payload["position"]
                 salvo = self.game.fire(position)
