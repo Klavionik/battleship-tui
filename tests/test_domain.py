@@ -505,7 +505,6 @@ def test_game_ends_if_player_has_no_more_ships(test_roster):
     game.fire(["G4"])  # Player A hit. Ship sunk.
 
     assert game.winner is player_a
-    assert game.ended
 
     with pytest.raises(errors.GameEnded):
         game.fire(["A1"])

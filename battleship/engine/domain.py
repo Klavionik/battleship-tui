@@ -303,10 +303,6 @@ class Game:
     def started(self) -> bool:
         return self._started
 
-    @property
-    def ended(self) -> bool:
-        return self._winner is not None
-
     def start(self) -> None:
         if not (self.is_fleet_ready(self._player_a) and self.is_fleet_ready(self._player_b)):
             raise errors.ShipsNotPlaced("There are still some ships to be placed before start.")
@@ -317,7 +313,7 @@ class Game:
         if not self._started:
             raise errors.GameNotStarted("Place ships and call `start()` before firing.")
 
-        if self.ended:
+        if self.winner:
             raise errors.GameEnded(f"{self.winner} won this game.")
 
         if len(coordinates) > 1 and not self.salvo_mode:
