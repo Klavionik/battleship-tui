@@ -135,7 +135,10 @@ class Game(Screen[None]):
 
     def on_awaiting_move(self, actor: str, subject: str) -> None:
         self.board_map[actor].mode = Board.Mode.DISPLAY
-        self.board_map[subject].mode = Board.Mode.TARGET
+
+        if (subject_board := self.board_map[subject]) != self.player_board:
+            subject_board.mode = Board.Mode.TARGET
+
         self.write_as_game(f"{actor}'s turn. Fire at will!")
 
     def on_ship_spawned(self, ship_id: str, position: Iterable[str]) -> None:
