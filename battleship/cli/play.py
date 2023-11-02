@@ -6,7 +6,6 @@ from typer import Typer
 
 from battleship.cli.console import get_console
 from battleship.engine.domain import FiringOrder
-from battleship.engine.roster import get_roster
 from battleship.engine.session import SingleplayerSession
 from battleship.tui.app import BattleshipApp
 
@@ -26,7 +25,7 @@ def single(
     salvo_mode: Annotated[bool, typer.Option("--salvo")] = False,
 ) -> None:
     def session_factory() -> SingleplayerSession:
-        return SingleplayerSession("Player", get_roster(roster), firing_order, salvo_mode)
+        return SingleplayerSession("Player", roster, firing_order, salvo_mode)
 
     tui = BattleshipApp.singleplayer(session_factory)
     tui.run()
