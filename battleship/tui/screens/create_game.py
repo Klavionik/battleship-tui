@@ -7,11 +7,11 @@ from textual.screen import ModalScreen, Screen
 from textual.widgets import Button, Footer, Label, LoadingIndicator, Markdown
 
 from battleship.client import get_client
+from battleship.engine import create_game
 from battleship.engine.roster import Roster, RosterItem
-from battleship.engine.session import MultiplayerSession
 from battleship.logger import client_logger as logger
 from battleship.shared.events import ServerEvent
-from battleship.tui import resources, screens
+from battleship.tui import resources, screens, strategies
 from battleship.tui.widgets.new_game import NewGame
 
 
@@ -53,7 +53,8 @@ class CreateGame(Screen[None]):
     async def create_session(self, event: NewGame.PlayPressed) -> None:
         client = get_client()
         assert client.user
-        name = event.name or f"{client.user.nickname}'s game"
+        nickname = client.user.nickname
+        name = event.name or f"{nickname}'s game"
         session = await client.create_session(
             name,
             event.roster,
@@ -64,23 +65,15 @@ class CreateGame(Screen[None]):
 
         @logger.catch
         def on_start_game(payload: dict[str, Any]) -> None:
-            def session_factory() -> MultiplayerSession:
-                enemy_nickname = payload["enemy"]
-                data = payload["roster"]
-                roster = Roster(
-                    name=data["name"], items=[RosterItem(*item) for item in data["items"]]
-                )
-                return MultiplayerSession(
-                    client,
-                    client.user.nickname,  # type: ignore[union-attr]
-                    enemy_nickname,
-                    roster,
-                    event.firing_order,
-                    event.salvo_mode,
-                )
-
+            enemy_nickname = payload["enemy"]
+            data = payload["roster"]
+            roster = Roster(name=data["name"], items=[RosterItem(*item) for item in data["items"]])
+            game = create_game(
+                nickname, enemy_nickname, roster, event.firing_order, event.salvo_mode
+            )
+            strategy = strategies.MultiplayerStrategy(client)
             waiting_modal.dismiss(None)
-            self.app.switch_screen(screens.Game(session_factory=session_factory))
+            self.app.switch_screen(screens.Game(game=game, strategy=strategy))
 
         client.add_listener(ServerEvent.START_GAME, on_start_game)
 

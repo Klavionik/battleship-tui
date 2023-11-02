@@ -10,11 +10,11 @@ from textual.screen import Screen
 from textual.widgets import Footer, Label, ListItem, ListView, Static
 
 from battleship.client import SessionSubscription, get_client
+from battleship.engine import create_game
 from battleship.engine.roster import Roster, RosterItem
-from battleship.engine.session import MultiplayerSession
 from battleship.shared.events import ServerEvent
 from battleship.shared.models import Session, SessionID
-from battleship.tui import screens
+from battleship.tui import screens, strategies
 
 
 def format_session(template: str, session: Session) -> str:
@@ -86,25 +86,24 @@ class JoinGame(Screen[None]):
         client = get_client()
 
         def on_start_game(payload: dict[str, Any]) -> None:
-            def session_factory() -> MultiplayerSession:
-                enemy_nickname = payload["enemy"]
-                data = payload["roster"]
-                roster = Roster(
-                    name=data["name"], items=[RosterItem(*item) for item in data["items"]]
-                )
-
-                return MultiplayerSession(
-                    client,
-                    client.user.nickname,  # type: ignore[union-attr]
-                    enemy_nickname,
-                    roster,
-                    session.firing_order,
-                    session.salvo_mode,
-                )
-
-            self.app.switch_screen(screens.Game(session_factory=session_factory))
-
             client.remove_listener(ServerEvent.START_GAME, on_start_game)
+
+            enemy_nickname = payload["enemy"]
+            data = payload["roster"]
+            roster = Roster(name=data["name"], items=[RosterItem(*item) for item in data["items"]])
+
+            assert client.user
+
+            game = create_game(
+                client.user.nickname,
+                enemy_nickname,
+                roster,
+                session.firing_order,
+                session.salvo_mode,
+            )
+            strategy = strategies.MultiplayerStrategy(client)
+
+            self.app.switch_screen(screens.Game(game=game, strategy=strategy))
 
         client.add_listener(ServerEvent.START_GAME, on_start_game)
 

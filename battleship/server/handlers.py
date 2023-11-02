@@ -3,7 +3,7 @@ import weakref
 from dataclasses import asdict
 from typing import Any, Collection
 
-from battleship.engine import domain
+from battleship.engine import create_game, domain
 from battleship.engine.roster import get_roster
 from battleship.logger import server_logger as logger
 from battleship.server.sessions import Sessions
@@ -17,17 +17,15 @@ class GameHandler(EventHandler):
         self.client_a = client_a
         self.client_b = client_b
         self.clients = (client_a, client_b)
-        self.player_a = domain.Player(client_a.user.nickname)
-        self.player_b = domain.Player(client_b.user.nickname)
-        self.player = {client_a.id: self.player_a, client_b.id: self.player_b}
         self.roster = get_roster(session.roster)
-        self.game = domain.Game(
-            self.player_a,
-            self.player_b,
-            self.roster,
-            session.firing_order,  # type: ignore
-            session.salvo_mode,
+        self.game = create_game(
+            player_a=client_a.user.nickname,
+            player_b=client_b.user.nickname,
+            roster=self.roster,
+            firing_order=session.firing_order,
+            salvo_mode=session.salvo_mode,
         )
+        self.players = {client_a.id: self.game.player_a, client_b.id: self.game.player_b}
 
         self.game.register_next_move_hook(self.send_awaiting_move)
         self.game.register_ended_hook(self.send_winner)
@@ -84,7 +82,7 @@ class GameHandler(EventHandler):
             case EventMessage(kind=ClientEvent.SPAWN_SHIP):
                 ship_id: str = event.payload["ship_id"]
                 position: Collection[str] = event.payload["position"]
-                player = self.player[client.id]
+                player = self.players[client.id]
                 self.game.add_ship(player, position, ship_id)
 
                 await client.send_event(

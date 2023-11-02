@@ -1,6 +1,6 @@
 from datetime import datetime
 from string import Template
-from typing import Any, Callable, Iterable
+from typing import Any, Iterable
 
 from textual import on
 from textual.app import DEFAULT_COLORS, ComposeResult
@@ -9,9 +9,9 @@ from textual.coordinate import Coordinate
 from textual.screen import Screen
 from textual.widgets import Footer
 
-from battleship.engine import domain, session
+from battleship.engine import domain
 from battleship.shared import models
-from battleship.tui import screens
+from battleship.tui import screens, strategies
 from battleship.tui.widgets.announcement import (
     PHASE_BATTLE,
     PHASE_BATTLE_SALVO,
@@ -37,39 +37,48 @@ def convert_from_coordinate(coordinate: str) -> Coordinate:
 class Game(Screen[None]):
     BINDINGS = [("escape", "back", "Back")]
 
-    def __init__(self, *args: Any, session_factory: Callable[[], session.Session], **kwargs: Any):
+    def __init__(
+        self,
+        *args: Any,
+        game: domain.Game,
+        strategy: strategies.GameStrategy,
+        **kwargs: Any,
+    ):
         super().__init__(*args, **kwargs)
-        self._session_factory = session_factory
-        self._session = session_factory()
+        self._game = game
+        self._strategy = strategy
 
         dark_theme = DEFAULT_COLORS.get("dark")
         assert dark_theme
         colors = dark_theme.generate()
 
+        self._player_name = game.player_a.name
+        self._enemy_name = game.player_b.name
+
         player_cell_factory = CellFactory(ship_bg=colors["success-darken-1"])
         enemy_cell_factory = CellFactory(ship_bg=colors["accent-darken-1"])
 
         self.player_board = Board(
-            player_name=self._session.player_name,
+            player_name=game.player_a.name,
             size=domain.DEFAULT_BOARD_SIZE,
             cell_factory=player_cell_factory,
             classes="player",
         )
         self.enemy_board = Board(
-            player_name=self._session.enemy_name,
+            player_name=game.player_b.name,
             size=domain.DEFAULT_BOARD_SIZE,
             cell_factory=enemy_cell_factory,
             classes="enemy",
         )
 
         self.player_fleet = Fleet(
-            roster=self._session.roster,
+            roster=game.roster,
             cell_factory=player_cell_factory,
             classes="player",
         )
         self.player_fleet.border_title = "Your fleet"
         self.enemy_fleet = Fleet(
-            roster=self._session.roster,
+            roster=game.roster,
             cell_factory=enemy_cell_factory,
             allow_placing=False,
             classes="enemy",
@@ -77,27 +86,27 @@ class Game(Screen[None]):
         self.enemy_fleet.border_title = "Enemy fleet"
 
         self.board_map = {
-            self._session.player_name: self.player_board,
-            self._session.enemy_name: self.enemy_board,
+            self._player_name: self.player_board,
+            self._enemy_name: self.enemy_board,
         }
         self.fleet_map = {
-            self._session.player_name: self.player_fleet,
-            self._session.enemy_name: self.enemy_fleet,
+            self._player_name: self.player_fleet,
+            self._enemy_name: self.enemy_fleet,
         }
         self.players_ready = 0
 
-        if self._session.salvo_mode:
-            self.enemy_board.min_targets = len(self._session.roster)
+        if game.salvo_mode:
+            self.enemy_board.min_targets = len(game.roster)
 
         self.battle_log = BattleLog()
 
         self.announcement = Announcement(rules=self._format_rules(RULES_TEMPLATE))
 
-        self._session.subscribe("fleet_ready", self.on_fleet_ready)
-        self._session.subscribe("ship_spawned", self.on_ship_spawned)
-        self._session.subscribe("awaiting_move", self.on_awaiting_move)
-        self._session.subscribe("salvo", self.on_salvo)
-        self._session.subscribe("game_ended", self.on_game_ended)
+        self._strategy.subscribe("fleet_ready", self.on_fleet_ready)
+        self._strategy.subscribe("ship_spawned", self.on_ship_spawned)
+        self._strategy.subscribe("awaiting_move", self.on_awaiting_move)
+        self._strategy.subscribe("salvo", self.on_salvo)
+        self._strategy.subscribe("game_ended", self.on_game_ended)
 
     def compose(self) -> ComposeResult:
         with Grid(id="content"):
@@ -110,9 +119,6 @@ class Game(Screen[None]):
 
         yield Footer()
 
-    def on_mount(self) -> None:
-        self._session.start()
-
     def write_as_game(self, text: str) -> None:
         now = datetime.now().strftime("%H:%M")
         time = f"[cyan]{now}[/]"
@@ -123,14 +129,14 @@ class Game(Screen[None]):
     def spawn_ship(self, event: Board.ShipPlaced) -> None:
         self.player_board.mode = Board.Mode.DISPLAY
         position = [convert_to_coordinate(c) for c in event.coordinates]
-        self._session.spawn_ship(ship_id=event.ship.id, position=position)
+        self._strategy.spawn_ship(ship_id=event.ship.id, position=position)
 
     def on_fleet_ready(self, player: str) -> None:
         self.write_as_game(f"{player}'s fleet is ready")
         self.players_ready += 1
 
         if self.players_ready == 2:
-            text = PHASE_BATTLE_SALVO if self._session.salvo_mode else PHASE_BATTLE
+            text = PHASE_BATTLE_SALVO if self._game.salvo_mode else PHASE_BATTLE
             self.query_one(Announcement).update_phase(text)
 
     def on_awaiting_move(self, actor: str, subject: str) -> None:
@@ -170,7 +176,7 @@ class Game(Screen[None]):
 
             self.write_as_game(f"{salvo.actor.name} attacks {shot.coordinate}. {result}")
 
-        if self._session.salvo_mode:
+        if self._game.salvo_mode:
             self.board_map[salvo.actor.name].min_targets = salvo.ships_left
 
     def on_game_ended(self, winner: str) -> None:
@@ -179,14 +185,14 @@ class Game(Screen[None]):
 
         self.write_as_game(f"{winner} has won!")
 
-        text = PHASE_VICTORY if self._session.player_name == winner else PHASE_DEFEAT
+        text = PHASE_VICTORY if self._game.player_a.name == winner else PHASE_DEFEAT
         self.query_one(Announcement).update_phase(text)
 
     @on(Board.CellShot)
     def fire(self, event: Board.CellShot) -> None:
         self.enemy_board.mode = Board.Mode.DISPLAY
         position = [convert_to_coordinate(c) for c in event.coordinates]
-        self._session.fire(position=position)
+        self._strategy.fire(position=position)
 
     def action_back(self) -> None:
         self.app.switch_screen(screens.MainMenu())
@@ -194,14 +200,14 @@ class Game(Screen[None]):
     @on(Ship.ShowPreview)
     def show_ship_preview(self, event: Ship.ShowPreview) -> None:
         self.player_board.mode = Board.Mode.ARRANGE
-        roster_item = self._session.roster[event.ship_key]
+        roster_item = self._game.roster[event.ship_key]
         self.player_board.show_ship_preview(ship_id=roster_item.id, ship_hp=roster_item.hp)
 
     def _format_rules(self, template: str) -> str:
-        salvo_mode = "Yes" if self._session.salvo_mode else "No"
-        firing_order = self._session.firing_order.replace("_", " ").capitalize()
+        salvo_mode = "Yes" if self._game.salvo_mode else "No"
+        firing_order = self._game.firing_order.replace("_", " ").capitalize()
         return Template(template).substitute(
             salvo_mode=salvo_mode,
             firing_order=firing_order,
-            roster=self._session.roster.name.capitalize(),
+            roster=self._game.roster.name.capitalize(),
         )

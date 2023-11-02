@@ -6,8 +6,9 @@ from textual.containers import Container, VerticalScroll
 from textual.screen import Screen
 from textual.widgets import Footer, Markdown
 
-from battleship.engine import session
-from battleship.tui import resources, screens
+from battleship.engine import create_game
+from battleship.engine.roster import get_roster
+from battleship.tui import resources, screens, strategies
 from battleship.tui.widgets.new_game import NewGame
 
 
@@ -35,9 +36,14 @@ class Singleplayer(Screen[None]):
 
     @on(NewGame.PlayPressed)
     def start_game(self, event: NewGame.PlayPressed) -> None:
-        def session_factory() -> session.SingleplayerSession:
-            return session.SingleplayerSession(
-                "Player", event.roster, event.firing_order, event.salvo_mode
-            )
-
-        self.app.switch_screen(screens.Game(session_factory=session_factory))
+        roster = get_roster(event.roster)
+        game = create_game(
+            "Player",
+            "Computer",
+            roster=roster,
+            firing_order=event.firing_order,
+            salvo_mode=event.salvo_mode,
+        )
+        self.app.switch_screen(
+            screens.Game(game=game, strategy=strategies.SingleplayerStrategy(game))
+        )

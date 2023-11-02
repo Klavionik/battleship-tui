@@ -257,12 +257,13 @@ class Game:
         firing_order: FiringOrder = FiringOrder.ALTERNATELY,
         salvo_mode: bool = False,
     ) -> None:
-        self.players = {player_a, player_b}
+        self.player_a = player_a
+        self.player_b = player_b
         self.roster = roster
         self.firing_order = firing_order
         self.salvo_mode = salvo_mode
-        self.player_a = player_a
-        self.player_b = player_b
+
+        self._players = {player_a, player_b}
         self._player_cycle = cycle(random.sample([player_a, player_b], k=2))
         self._current_player = next(self._player_cycle)
         self._started = False
@@ -310,7 +311,7 @@ class Game:
 
     @property
     def player_under_attack(self) -> Player:
-        return (self.players - {self.current_player}).pop()
+        return (self._players - {self.current_player}).pop()
 
     @property
     def winner(self) -> Player | None:
