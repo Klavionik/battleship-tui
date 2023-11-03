@@ -8,21 +8,25 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = "^3.11"
 websockets = "^12.0.0"
-rich = "^13.5.2"
 loguru = "^0.7.0"
 pyee = "^11.0.0"
-textual = "^0.41.0"
-blacksheep = "^1.2.18"
-uvicorn = "^0.23.2"
+textual = { version = "^0.41.0", optional = true }
+blacksheep = { version ="^1.2.18", optional = true }
+uvicorn = { version = "^0.23.2", optional = true }
 httpx = "^0.25.0"
 pydantic = "^2.4.2"
 pydantic-settings = "^2.0.3"
-pyjwt = {extras = ["crypto"], version = "^2.8.0"}
-uvloop = "^0.19.0"
+pyjwt = {extras = ["crypto"], version = "^2.8.0", optional = true}
+uvloop = { version = "^0.19.0", optional = true }
 email-validator = "^2.1.0.post1"
-auth0-python = "^4.5.0"
-typer = "^0.9.0"
+auth0-python = { version = "^4.5.0", optional = true }
+typer = { version = "^0.9.0", optional = true }
 xdg-base-dirs = "^6.0.1"
+
+
+[tool.poetry.extras]
+server = ["blacksheep", "uvicorn", "auth0-python", "pyjwt", "uvloop"]
+client = ["textual", "typer"]
 
 [tool.poetry.scripts]
 battleship = "battleship.cli:app"
