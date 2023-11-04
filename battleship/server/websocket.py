@@ -33,21 +33,19 @@ class EventHandler(abc.ABC):
 class Client:
     def __init__(
         self,
-        client_id: str,
         connection: WebSocket,
         user: User,
     ) -> None:
-        self._client_id = client_id
         self._connection = WebSocketWrapper(connection)
         self._handlers: dict[type[EventHandler], EventHandler] = {}
         self.user = user
 
     def __repr__(self) -> str:
-        return f"<Client: {self.id} {self.local_address} {self.user.nickname}>"
+        return f"<Client: {self.id} {self.local_address}>"
 
     @property
     def id(self) -> str:
-        return self._client_id
+        return self.user.nickname
 
     @property
     def local_address(self) -> str:

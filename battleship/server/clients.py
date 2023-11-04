@@ -8,16 +8,16 @@ class Clients:
     def __init__(self) -> None:
         self._clients: dict[str, Client] = {}
 
-    def add(self, client_id: str, socket: WebSocket, user: User) -> Client:
-        client = Client(client_id, socket, user)
-        self._clients[client_id] = client
+    def add(self, socket: WebSocket, user: User) -> Client:
+        client = Client(socket, user)
+        self._clients[client.id] = client
         return client
 
-    def get(self, client_id: str) -> Client:
-        return self._clients[client_id]
+    def get(self, nickname: str) -> Client:
+        return self._clients[nickname]
 
     def list(self) -> list[Client]:
         return list(self._clients.values())
 
-    def remove(self, client_id: str) -> None:
-        self._clients.pop(client_id, None)
+    def remove(self, nickname: str) -> None:
+        self._clients.pop(nickname, None)

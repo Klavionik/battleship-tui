@@ -20,8 +20,8 @@ class Sessions:
         self._listeners: dict[str, Listener] = {}
         self._notify_task: Task[None] | None = None
 
-    def add(self, data: SessionCreate) -> Session:
-        session = Session(id=make_session_id(), **data.to_dict())
+    def add(self, host_id: str, data: SessionCreate) -> Session:
+        session = Session(id=make_session_id(), host_id=host_id, **data.to_dict())
         self._sessions[session.id] = session
         self._notify_listeners(session.id, Action.ADD)
         return session
@@ -36,16 +36,17 @@ class Sessions:
         self._sessions.pop(session_id, None)
         self._notify_listeners(session_id, Action.REMOVE)
 
-    def start(self, session_id: str) -> None:
+    def start(self, session_id: str, guest_id: str) -> None:
         session = self.get(session_id)
         session.started = True
+        session.guest_id = guest_id
         self._notify_listeners(session_id, Action.START)
 
-    def subscribe(self, client_id: str, callback: Listener) -> None:
-        self._listeners[client_id] = callback
+    def subscribe(self, nickname: str, callback: Listener) -> None:
+        self._listeners[nickname] = callback
 
-    def unsubscribe(self, client_id: str) -> None:
-        self._listeners.pop(client_id, None)
+    def unsubscribe(self, nickname: str) -> None:
+        self._listeners.pop(nickname, None)
 
     def _notify_listeners(self, session_id: str, action: Action) -> None:
         async def notify_task() -> None:

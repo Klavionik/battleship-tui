@@ -16,7 +16,6 @@ class GameHandler(EventHandler):
     def __init__(self, client_a: Client, client_b: Client, session: Session) -> None:
         self.client_a = client_a
         self.client_b = client_b
-        self.clients = {client_a.id: client_a, client_b.id: client_b}
         self.roster = get_roster(session.roster)
         self.game = create_game(
             player_a=client_a.user.nickname,
@@ -25,7 +24,11 @@ class GameHandler(EventHandler):
             firing_order=session.firing_order,
             salvo_mode=session.salvo_mode,
         )
-        self.players = {client_a.id: self.game.player_a, client_b.id: self.game.player_b}
+        self.clients = {self.game.player_a.name: client_a, self.game.player_b.name: client_b}
+        self.players = {
+            self.game.player_a.name: self.game.player_a,
+            self.game.player_b.name: self.game.player_b,
+        }
 
         self.game.register_hook(domain.Hook.SHIP_ADDED, self.send_ship_spawned)
         self.game.register_hook(domain.Hook.FLEET_READY, self.send_fleet_ready)
@@ -67,12 +70,9 @@ class GameHandler(EventHandler):
         ship_id: str,
         position: Collection[str],
     ) -> None:
-        client_id = next(
-            client_id for client_id, player_ in self.players.items() if player_ is player
-        )
         payload = dict(player=player.name, ship_id=ship_id, position=position)
         event = EventMessage(kind=ServerEvent.SHIP_SPAWNED, payload=payload)
-        asyncio.create_task(self.clients[client_id].send_event(event))
+        asyncio.create_task(self.clients[player.name].send_event(event))
 
     def announce_game_start(self) -> None:
         asyncio.create_task(

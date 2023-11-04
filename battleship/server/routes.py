@@ -7,7 +7,6 @@ from battleship.server.auth import AuthManager
 from battleship.server.clients import Clients
 from battleship.server.handlers import GameHandler, SessionSubscriptionHandler
 from battleship.server.sessions import Sessions
-from battleship.server.websocket import ClientID
 from battleship.shared.models import (
     IDToken,
     LoginCredentials,
@@ -26,7 +25,6 @@ router = Router()  # type: ignore[no-untyped-call]
 async def ws(
     websocket: WebSocket,
     identity: Identity,
-    client_id: ClientID,
     client_repository: Clients,
     session_repository: Sessions,
 ) -> None:
@@ -35,7 +33,7 @@ async def ws(
         nickname=identity.claims["nickname"],
         guest=identity.has_claim_value("battleship/role", "guest"),
     )
-    client = client_repository.add(client_id.value, websocket, user)
+    client = client_repository.add(websocket, user)
     handler = SessionSubscriptionHandler(client, session_repository)
     client.add_handler(handler)
 
@@ -53,10 +51,12 @@ async def list_sessions(session_repository: Sessions) -> list[Session]:
 
 @router.post("/sessions")
 async def create_session(
+    identity: Identity,
     session: FromJSON[SessionCreate],
     session_repository: Sessions,
 ) -> Session:
-    return session_repository.add(session.value)
+    nickname = identity.claims["nickname"]
+    return session_repository.add(nickname, session.value)
 
 
 @router.delete("/sessions/{session_id}")
@@ -70,17 +70,18 @@ async def remove_session(
 
 @router.post("/sessions/{session_id}/join")
 async def join_session(
+    identity: Identity,
     session_id: str,
-    client_id: ClientID,
     session_repository: Sessions,
     client_repository: Clients,
 ) -> None:
+    nickname = identity.claims["nickname"]
     session = session_repository.get(session_id)
-    player, enemy = client_repository.get(session.client_id), client_repository.get(client_id.value)
+    player, enemy = client_repository.get(session.host_id), client_repository.get(nickname)
     handler = GameHandler(player, enemy, session)
     player.add_handler(handler)
     enemy.add_handler(handler)
-    session_repository.start(session.id)
+    session_repository.start(session.id, enemy.id)
 
 
 @allow_anonymous()

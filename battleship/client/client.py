@@ -1,6 +1,5 @@
 import asyncio
 import json as json_
-import uuid
 from asyncio import Task
 from functools import cache
 from typing import Any, Callable, Collection, Coroutine, Optional
@@ -80,7 +79,6 @@ class Client:
         refresh_interval: int = 20,
         http_timeout: int = 20,
     ) -> None:
-        self._client_id = str(uuid.uuid4())
         self._host = host
         self._port = port
         self._ws: Optional[WebSocketClientProtocol] = None
@@ -93,7 +91,6 @@ class Client:
             base_url=self.base_url,
             auth=self.auth,
             timeout=http_timeout,
-            headers={"X-Battleship-Client-ID": self._client_id},
         )
         self._session.event_hooks = {"request": [log_request]}
         self.credentials_provider = credentials_provider
@@ -120,10 +117,7 @@ class Client:
 
         self._ws = await connect(
             self.base_url_ws + "/ws",
-            extra_headers={
-                "Authorization": f"Bearer {self.credentials.id_token}",
-                "X-Battleship-Client-ID": self._client_id,
-            },
+            extra_headers={"Authorization": f"Bearer {self.credentials.id_token}"},
         )
         self._events_worker = self._run_events_worker()
 
@@ -214,7 +208,6 @@ class Client:
             roster=roster,
             firing_order=firing_order,
             salvo_mode=salvo_mode,
-            client_id=self._client_id,
         )
         response = await self._request("POST", "/sessions", json=payload)
         return Session(**response.json())

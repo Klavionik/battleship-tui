@@ -38,12 +38,13 @@ class SessionCreate(BaseModel):
     roster: str
     firing_order: str
     salvo_mode: bool
-    client_id: str
 
 
 class Session(SessionCreate):
     id: SessionID
+    host_id: str
     started: bool = False
+    guest_id: str = ""
 
 
 class User(BaseModel):
