@@ -27,8 +27,8 @@ class GameStrategy(abc.ABC):
     def subscribe(self, event: str, handler: Callable[..., Any]) -> None:
         self._ee.add_listener(event, handler)
 
-    def emit_ship_spawned(self, ship_id: str, position: Collection[str]) -> None:
-        self._ee.emit("ship_spawned", ship_id=ship_id, position=position)
+    def emit_ship_spawned(self, player: str, ship_id: str, position: Collection[str]) -> None:
+        self._ee.emit("ship_spawned", player=player, ship_id=ship_id, position=position)
 
     def emit_fleet_ready(self, player: str) -> None:
         self._ee.emit("fleet_ready", player=player)
@@ -61,9 +61,10 @@ class MultiplayerStrategy(GameStrategy):
         create_task(self._client.fire(position))
 
     def _on_ship_spawned(self, payload: dict[str, Any]) -> None:
+        player = payload["player"]
         ship_id = payload["ship_id"]
         position = payload["position"]
-        self.emit_ship_spawned(ship_id, position)
+        self.emit_ship_spawned(player, ship_id, position)
 
     def _on_fleet_ready(self, payload: dict[str, Any]) -> None:
         player = payload["player"]
@@ -92,8 +93,10 @@ class SingleplayerStrategy(GameStrategy):
         self._target_caller = ai.TargetCaller(self._human_player.board)
         self._autoplacer = ai.Autoplacer(self._bot_player.board, self._game.roster)
 
-        game.register_next_move_hook(self._next_move_hook)
-        game.register_ended_hook(self._game_ended_hook)
+        game.register_hook(domain.Hook.SHIP_ADDED, self._ship_added_hook)
+        game.register_hook(domain.Hook.FLEET_READY, self._fleet_ready_hook)
+        game.register_hook(domain.Hook.NEXT_MOVE, self._next_move_hook)
+        game.register_hook(domain.Hook.GAME_ENDED, self._game_ended_hook)
 
     def _next_move_hook(self, game: domain.Game) -> None:
         self.emit_awaiting_move(
@@ -108,15 +111,23 @@ class SingleplayerStrategy(GameStrategy):
         assert game.winner
         self.emit_game_ended(game.winner.name)
 
+    def _ship_added_hook(
+        self,
+        player: domain.Player,
+        ship_id: str,
+        position: Collection[str],
+    ) -> None:
+        if player is self._human_player:
+            self.emit_ship_spawned(player.name, ship_id, position)
+
+    def _fleet_ready_hook(self, player: domain.Player) -> None:
+        self.emit_fleet_ready(player.name)
+
+        if player is self._human_player:
+            self._spawn_bot_fleet()
+
     def spawn_ship(self, ship_id: str, position: Collection[str]) -> None:
         self._game.add_ship(self._game.player_a, position, ship_id)
-        self._ee.emit("ship_spawned", ship_id=ship_id, position=position)
-
-        if self._game.is_fleet_ready(self._game.player_a):
-            self._ee.emit("fleet_ready", player=self._game.player_a.name)
-            self._ee.emit("fleet_ready", player=self._game.player_b.name)
-
-            self._spawn_bot_fleet()
 
     def fire(self, position: Collection[str]) -> None:
         salvo = self._game.fire(position)

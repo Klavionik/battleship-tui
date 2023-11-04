@@ -248,6 +248,13 @@ class Salvo:
         return iter(self.shots)
 
 
+class Hook(enum.StrEnum):
+    SHIP_ADDED = enum.auto()
+    FLEET_READY = enum.auto()
+    NEXT_MOVE = enum.auto()
+    GAME_ENDED = enum.auto()
+
+
 class Game:
     def __init__(
         self,
@@ -268,10 +275,7 @@ class Game:
         self._current_player = next(self._player_cycle)
         self._started = False
         self._winner: Player | None = None
-        self._hooks: dict[str, Callable[["Game"], Any] | None] = {
-            "next_move": None,
-            "ended": None,
-        }
+        self._hooks: dict[Hook, Callable[..., Any] | None] = dict.fromkeys(Hook, None)
         self._make_turn = False
 
     def __str__(self) -> str:
@@ -286,14 +290,20 @@ class Game:
                 f"Player {player.name} already has a ship with roster id {roster_id}."
             )
 
-        if self.ready and (next_move_hook := self._hooks["next_move"]):
+        if ship_added_hook := self._hooks[Hook.SHIP_ADDED]:
+            ship_added_hook(player, roster_id, position)
+
+        if self.is_fleet_ready(player) and (fleet_ready_hook := self._hooks[Hook.FLEET_READY]):
+            fleet_ready_hook(player)
+
+        if self.ready and (next_move_hook := self._hooks[Hook.NEXT_MOVE]):
             next_move_hook(self)
 
-    def register_next_move_hook(self, hook: Callable[["Game"], Any]) -> None:
-        self._hooks["next_move"] = hook
+    def register_hook(self, name: Hook, hook: Callable[..., Any]) -> None:
+        if not callable(hook):
+            raise TypeError("Hook must be a callable.")
 
-    def register_ended_hook(self, hook: Callable[["Game"], Any]) -> None:
-        self._hooks["ended"] = hook
+        self._hooks[name] = hook
 
     def is_fleet_ready(self, player: Player) -> bool:
         return {ship.id for ship in player.ships} == {item.id for item in self.roster}
@@ -361,7 +371,7 @@ class Game:
         if self.player_under_attack.ships_alive == 0:
             self._winner = self.current_player
 
-            if ended_hook := self._hooks["ended"]:
+            if ended_hook := self._hooks[Hook.GAME_ENDED]:
                 ended_hook(self)
         else:
             if (
@@ -371,7 +381,7 @@ class Game:
             ):
                 self._current_player = next(self._player_cycle)
 
-            if next_move_hook := self._hooks["next_move"]:
+            if next_move_hook := self._hooks[Hook.NEXT_MOVE]:
                 next_move_hook(self)
 
         self._make_turn = False

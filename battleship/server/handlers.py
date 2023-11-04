@@ -27,8 +27,10 @@ class GameHandler(EventHandler):
         )
         self.players = {client_a.id: self.game.player_a, client_b.id: self.game.player_b}
 
-        self.game.register_next_move_hook(self.send_awaiting_move)
-        self.game.register_ended_hook(self.send_winner)
+        self.game.register_hook(domain.Hook.SHIP_ADDED, self.send_ship_spawned)
+        self.game.register_hook(domain.Hook.FLEET_READY, self.send_fleet_ready)
+        self.game.register_hook(domain.Hook.NEXT_MOVE, self.send_awaiting_move)
+        self.game.register_hook(domain.Hook.GAME_ENDED, self.send_winner)
 
         self.announce_game_start()
 
@@ -46,8 +48,8 @@ class GameHandler(EventHandler):
             )
         )
 
-    def send_fleet_ready(self, player_name: str) -> None:
-        self.broadcast(EventMessage(kind=ServerEvent.FLEET_READY, payload=dict(player=player_name)))
+    def send_fleet_ready(self, player: domain.Player) -> None:
+        self.broadcast(EventMessage(kind=ServerEvent.FLEET_READY, payload=dict(player=player.name)))
 
     def send_salvo(self, salvo: domain.Salvo) -> None:
         model = salvo_to_model(salvo)
@@ -59,15 +61,18 @@ class GameHandler(EventHandler):
         event = EventMessage(kind=ServerEvent.GAME_ENDED, payload=dict(winner=game.winner.name))
         self.broadcast(event)
 
-    async def send_ship_spawned(
+    def send_ship_spawned(
         self,
-        client_id: str,
+        player: domain.Player,
         ship_id: str,
         position: Collection[str],
     ) -> None:
-        payload = dict(ship_id=ship_id, position=position)
+        client_id = next(
+            client_id for client_id, player_ in self.players.items() if player_ is player
+        )
+        payload = dict(player=player.name, ship_id=ship_id, position=position)
         event = EventMessage(kind=ServerEvent.SHIP_SPAWNED, payload=payload)
-        await self.clients[client_id].send_event(event)
+        asyncio.create_task(self.clients[client_id].send_event(event))
 
     def announce_game_start(self) -> None:
         asyncio.create_task(
@@ -94,11 +99,6 @@ class GameHandler(EventHandler):
                 position: Collection[str] = event.payload["position"]
                 player = self.players[client.id]
                 self.game.add_ship(player, position, ship_id)
-
-                await self.send_ship_spawned(client.id, ship_id, position)
-
-                if self.game.is_fleet_ready(player):
-                    self.send_fleet_ready(player.name)
             case EventMessage(kind=ClientEvent.FIRE):
                 position = event.payload["position"]
                 salvo = self.game.fire(position)

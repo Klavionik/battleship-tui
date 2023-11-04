@@ -147,9 +147,9 @@ class Game(Screen[None]):
 
         self.write_as_game(f"{actor}'s turn. Fire at will!")
 
-    def on_ship_spawned(self, ship_id: str, position: Iterable[str]) -> None:
-        self.player_board.paint_ship([convert_from_coordinate(p) for p in position])
-        self.player_fleet.place(ship_id)
+    def on_ship_spawned(self, player: str, ship_id: str, position: Iterable[str]) -> None:
+        self.board_map[player].paint_ship([convert_from_coordinate(p) for p in position])
+        self.fleet_map[player].place(ship_id)
 
     def on_salvo(self, salvo: models.Salvo) -> None:
         board = self.board_map[salvo.subject.name]

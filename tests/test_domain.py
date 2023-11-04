@@ -517,12 +517,28 @@ def test_board_gets_adjacent_cell():
 def test_game_calls_hooks(test_roster, test_game):
     [item] = test_roster
     game = test_game
+    ship_added_hook = Mock()
+    fleet_ready_hook = Mock()
     next_move_hook = Mock()
     ended_hook = Mock()
-    game.register_next_move_hook(next_move_hook)
-    game.register_ended_hook(ended_hook)
+    game.register_hook(domain.Hook.SHIP_ADDED, ship_added_hook)
+    game.register_hook(domain.Hook.FLEET_READY, fleet_ready_hook)
+    game.register_hook(domain.Hook.NEXT_MOVE, next_move_hook)
+    game.register_hook(domain.Hook.GAME_ENDED, ended_hook)
+
     game.add_ship(game.player_a, position=["A2", "A3"], roster_id=item.id)
+
+    assert ship_added_hook.call_count == 1
+    assert ship_added_hook.call_args == call(game.player_a, item.id, ["A2", "A3"])
+    assert fleet_ready_hook.call_count == 1
+    assert fleet_ready_hook.call_args == call(game.player_a)
+
     game.add_ship(game.player_b, position=["A2", "A3"], roster_id=item.id)
+
+    assert ship_added_hook.call_count == 2
+    assert ship_added_hook.call_args == call(game.player_b, item.id, ["A2", "A3"])
+    assert fleet_ready_hook.call_count == 2
+    assert fleet_ready_hook.call_args == call(game.player_b)
 
     assert next_move_hook.call_count == 1
     assert next_move_hook.call_args == call(game)
