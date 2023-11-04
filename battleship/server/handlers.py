@@ -16,7 +16,7 @@ class GameHandler(EventHandler):
     def __init__(self, client_a: Client, client_b: Client, session: Session) -> None:
         self.client_a = client_a
         self.client_b = client_b
-        self.clients = (client_a, client_b)
+        self.clients = {client_a.id: client_a, client_b.id: client_b}
         self.roster = get_roster(session.roster)
         self.game = create_game(
             player_a=client_a.user.nickname,
@@ -33,7 +33,7 @@ class GameHandler(EventHandler):
         self.announce_game_start()
 
     def broadcast(self, event: EventMessage) -> None:
-        for client in self.clients:
+        for client in self.clients.values():
             asyncio.create_task(client.send_event(event))
 
     def send_awaiting_move(self, game: domain.Game) -> None:
@@ -58,6 +58,16 @@ class GameHandler(EventHandler):
         assert game.winner
         event = EventMessage(kind=ServerEvent.GAME_ENDED, payload=dict(winner=game.winner.name))
         self.broadcast(event)
+
+    async def send_ship_spawned(
+        self,
+        client_id: str,
+        ship_id: str,
+        position: Collection[str],
+    ) -> None:
+        payload = dict(ship_id=ship_id, position=position)
+        event = EventMessage(kind=ServerEvent.SHIP_SPAWNED, payload=payload)
+        await self.clients[client_id].send_event(event)
 
     def announce_game_start(self) -> None:
         asyncio.create_task(
@@ -85,9 +95,7 @@ class GameHandler(EventHandler):
                 player = self.players[client.id]
                 self.game.add_ship(player, position, ship_id)
 
-                await client.send_event(
-                    EventMessage(kind=ServerEvent.SHIP_SPAWNED, payload=event.payload.copy())
-                )
+                await self.send_ship_spawned(client.id, ship_id, position)
 
                 if self.game.is_fleet_ready(player):
                     self.send_fleet_ready(player.name)
