@@ -36,6 +36,11 @@ class Sessions:
         self._sessions.pop(session_id, None)
         self._notify_listeners(session_id, Action.REMOVE)
 
+    def start(self, session_id: str) -> None:
+        session = self.get(session_id)
+        session.started = True
+        self._notify_listeners(session_id, Action.START)
+
     def subscribe(self, client_id: str, callback: Listener) -> None:
         self._listeners[client_id] = callback
 

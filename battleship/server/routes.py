@@ -47,7 +47,8 @@ async def ws(
 
 @router.get("/sessions")
 async def list_sessions(session_repository: Sessions) -> list[Session]:
-    return session_repository.list()
+    sessions = session_repository.list()
+    return [s for s in sessions if not s.started]
 
 
 @router.post("/sessions")
@@ -79,6 +80,7 @@ async def join_session(
     handler = GameHandler(player, enemy, session)
     player.add_handler(handler)
     enemy.add_handler(handler)
+    session_repository.start(session.id)
 
 
 @allow_anonymous()

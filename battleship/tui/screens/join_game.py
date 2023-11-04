@@ -67,6 +67,7 @@ class JoinGame(Screen[None]):
         self._subscription = await client.sessions_subscribe()
         self._subscription.on_add(self.add_session)
         self._subscription.on_remove(self.remove_session)
+        self._subscription.on_start(self.remove_session)
 
         sessions = await client.fetch_sessions()
 

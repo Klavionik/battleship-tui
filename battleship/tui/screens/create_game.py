@@ -15,7 +15,7 @@ from battleship.tui import resources, screens, strategies
 from battleship.tui.widgets.new_game import NewGame
 
 
-class WaitingModal(ModalScreen[None]):
+class WaitingModal(ModalScreen[bool]):
     def compose(self) -> ComposeResult:
         with Container(id="dialog"):
             yield Label("Waiting for the second player...")
@@ -24,7 +24,7 @@ class WaitingModal(ModalScreen[None]):
 
     @on(Button.Pressed)
     async def abort_waiting(self) -> None:
-        self.dismiss(None)
+        self.dismiss(False)
 
 
 class CreateGame(Screen[None]):
@@ -72,13 +72,15 @@ class CreateGame(Screen[None]):
                 nickname, enemy_nickname, roster, event.firing_order, event.salvo_mode
             )
             strategy = strategies.MultiplayerStrategy(client)
-            waiting_modal.dismiss(None)
+            waiting_modal.dismiss(True)
             self.app.switch_screen(screens.Game(game=game, strategy=strategy))
 
         client.add_listener(ServerEvent.START_GAME, on_start_game)
 
-        async def on_modal_dismiss(result: None) -> None:
+        async def on_modal_dismiss(game_started: bool) -> None:
             client.remove_listener(ServerEvent.START_GAME, on_start_game)
-            await client.delete_session(session.id)
+
+            if not game_started:
+                await client.delete_session(session.id)
 
         await self.app.push_screen(waiting_modal, callback=on_modal_dismiss)

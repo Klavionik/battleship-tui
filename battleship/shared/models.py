@@ -14,6 +14,7 @@ T = TypeVar("T", bound="BaseModel")
 class Action(enum.StrEnum):
     ADD = enum.auto()
     REMOVE = enum.auto()
+    START = enum.auto()
 
 
 class BaseModel(_BaseModel):
@@ -42,6 +43,7 @@ class SessionCreate(BaseModel):
 
 class Session(SessionCreate):
     id: SessionID
+    started: bool = False
 
 
 class User(BaseModel):

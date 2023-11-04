@@ -118,7 +118,7 @@ class SessionSubscriptionHandler(EventHandler):
         if action == Action.ADD:
             payload["session"] = self._sessions.get(session_id)
 
-        if action == Action.REMOVE:
+        if action in [Action.REMOVE, Action.START]:
             payload["session_id"] = session_id
 
         client = self._client()

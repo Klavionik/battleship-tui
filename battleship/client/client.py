@@ -53,10 +53,13 @@ class SessionSubscription:
         self._ee = AsyncIOEventEmitter()
 
     def on_add(self, callback: Callable[[Session], Coroutine[Any, Any, Any]]) -> None:
-        self._ee.add_listener("add", callback)
+        self._ee.add_listener(Action.ADD, callback)
 
     def on_remove(self, callback: Callable[[SessionID], Coroutine[Any, Any, Any]]) -> None:
-        self._ee.add_listener("remove", callback)
+        self._ee.add_listener(Action.REMOVE, callback)
+
+    def on_start(self, callback: Callable[[SessionID], Coroutine[Any, Any, Any]]) -> None:
+        self._ee.add_listener(Action.START, callback)
 
     def emit(self, event: str, *args: Any, **kwargs: Any) -> None:
         self._ee.emit(event, *args, **kwargs)
@@ -227,13 +230,13 @@ class Client:
         subscription = SessionSubscription()
 
         async def publish_update(payload: dict) -> None:  # type: ignore[type-arg]
-            action = payload["action"].lower()
+            action = payload["action"]
             kwargs: dict[str, str | Session] = {}
 
-            if action == Action.ADD.lower():
+            if action == Action.ADD:
                 kwargs.update(session=Session(**payload["session"]))
 
-            if action == Action.REMOVE.lower():
+            if action in [Action.REMOVE, Action.START]:
                 kwargs.update(session_id=payload["session_id"])
 
             subscription.emit(action, **kwargs)
