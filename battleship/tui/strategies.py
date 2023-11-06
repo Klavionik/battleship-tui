@@ -93,6 +93,8 @@ class SingleplayerStrategy(GameStrategy):
         self._target_caller = ai.TargetCaller(self._human_player.board)
         self._autoplacer = ai.Autoplacer(self._bot_player.board, self._game.roster)
 
+        self._spawn_bot_fleet()
+
         game.register_hook(domain.Hook.SHIP_ADDED, self._ship_added_hook)
         game.register_hook(domain.Hook.FLEET_READY, self._fleet_ready_hook)
         game.register_hook(domain.Hook.NEXT_MOVE, self._next_move_hook)
@@ -117,14 +119,13 @@ class SingleplayerStrategy(GameStrategy):
         ship_id: str,
         position: Collection[str],
     ) -> None:
-        if player is self._human_player:
-            self.emit_ship_spawned(player.name, ship_id, position)
+        self.emit_ship_spawned(player.name, ship_id, position)
 
     def _fleet_ready_hook(self, player: domain.Player) -> None:
         self.emit_fleet_ready(player.name)
 
-        if player is self._human_player:
-            self._spawn_bot_fleet()
+        # When player's fleet is ready, emit ready for bot fleet.
+        self.emit_fleet_ready(self._bot_player.name)
 
     def spawn_ship(self, ship_id: str, position: Collection[str]) -> None:
         self._game.add_ship(self._game.player_a, position, ship_id)
