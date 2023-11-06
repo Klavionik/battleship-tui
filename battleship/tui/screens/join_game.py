@@ -103,7 +103,7 @@ class JoinGame(Screen[None]):
             )
             strategy = strategies.MultiplayerStrategy(self._client)
 
-            self.app.switch_screen(screens.Game(game=game, strategy=strategy))
+            self.app.push_screen(screens.Game(game=game, strategy=strategy))
 
         self._client.add_listener(ServerEvent.START_GAME, on_start_game)
 

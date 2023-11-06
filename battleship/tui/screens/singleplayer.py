@@ -44,6 +44,6 @@ class Singleplayer(Screen[None]):
             firing_order=event.firing_order,
             salvo_mode=event.salvo_mode,
         )
-        self.app.switch_screen(
+        self.app.push_screen(
             screens.Game(game=game, strategy=strategies.SingleplayerStrategy(game))
         )

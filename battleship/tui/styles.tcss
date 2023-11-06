@@ -154,22 +154,22 @@ JoinGame ListItem {
 }
 
 
-/* WaitingModal screen */
+/* Modal screens */
 
-WaitingModal {
+ModalScreen {
   align: center middle;
 }
 
-WaitingModal #dialog LoadingIndicator {
+ModalScreen #dialog LoadingIndicator {
   width: 1fr;
   column-span: 2;
   height: auto;
 }
 
-WaitingModal #dialog {
+ModalScreen #dialog {
   layout: grid;
   width: 60;
-  grid-size: 2 3;
+  grid-size: 2;
   grid-rows: 1fr;
   grid-gutter: 1;
   padding: 1 3;
@@ -178,13 +178,18 @@ WaitingModal #dialog {
   height: 13;
 }
 
-WaitingModal Label {
+ModalScreen Label {
   column-span: 2;
   width: 1fr;
   content-align: center middle;
 }
 
-WaitingModal Button {
+ModalScreen #buttons {
+  layout: horizontal;
   column-span: 2;
+}
+
+ModalScreen Button {
   width: 1fr;
+  margin: 0 1;
 }

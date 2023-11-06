@@ -11,7 +11,7 @@ from textual.widgets import Footer
 
 from battleship.engine import domain
 from battleship.shared import models
-from battleship.tui import screens, strategies
+from battleship.tui import strategies
 from battleship.tui.widgets.announcement import (
     PHASE_BATTLE,
     PHASE_BATTLE_SALVO,
@@ -23,6 +23,7 @@ from battleship.tui.widgets.announcement import (
 from battleship.tui.widgets.battle_log import BattleLog
 from battleship.tui.widgets.board import Board, CellFactory
 from battleship.tui.widgets.fleet import Fleet, Ship
+from battleship.tui.widgets.modals import SessionEndModal
 
 
 def convert_to_coordinate(coordinate: Coordinate) -> str:
@@ -35,7 +36,7 @@ def convert_from_coordinate(coordinate: str) -> Coordinate:
 
 
 class Game(Screen[None]):
-    BINDINGS = [("escape", "back", "Back")]
+    BINDINGS = [("escape", "back", "Back"), ("q", "try_quit", "Quit")]
 
     def __init__(
         self,
@@ -119,6 +120,22 @@ class Game(Screen[None]):
 
         yield Footer()
 
+    @property
+    def game_ended(self) -> bool:
+        return self._game.winner is not None
+
+    def action_try_quit(self) -> None:
+        if self.game_ended:
+            self.app.exit()
+            return
+
+        def callback(should_quit: bool) -> None:
+            if should_quit:
+                # TODO: Multiplayer game clean-up.
+                self.app.exit()
+
+        self.app.push_screen(SessionEndModal(), callback)
+
     def write_as_game(self, text: str) -> None:
         now = datetime.now().strftime("%H:%M")
         time = f"[cyan]{now}[/]"
@@ -195,7 +212,16 @@ class Game(Screen[None]):
         self._strategy.fire(position=position)
 
     def action_back(self) -> None:
-        self.app.switch_screen(screens.MainMenu())
+        if self.game_ended:
+            self.app.pop_screen()
+            return
+
+        def callback(should_quit: bool) -> None:
+            if should_quit:
+                # TODO: Multiplayer game clean-up.
+                self.app.pop_screen()
+
+        self.app.push_screen(SessionEndModal(), callback)
 
     @on(Ship.ShowPreview)
     def show_ship_preview(self, event: Ship.ShowPreview) -> None:
