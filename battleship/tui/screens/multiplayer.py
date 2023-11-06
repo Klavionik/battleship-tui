@@ -1,5 +1,6 @@
 from typing import Any
 
+import inject
 from textual import on, work
 from textual.app import ComposeResult
 from textual.containers import Container, VerticalScroll
@@ -7,15 +8,17 @@ from textual.events import Mount
 from textual.screen import Screen
 from textual.widgets import Button, Footer, Input, Markdown, Rule
 
-from battleship.client import get_client
+from battleship.client import Client
 from battleship.tui import resources, screens
 
 
 class Multiplayer(Screen[None]):
     BINDINGS = [("escape", "back", "Back")]
 
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
+    @inject.param("client", Client)
+    def __init__(self, *args: Any, client: Client, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
+        self._client = client
 
         with resources.get_resource("multiplayer_help.md").open() as fh:
             self.help = fh.read()
@@ -64,11 +67,9 @@ class Multiplayer(Screen[None]):
 
     @work
     async def login(self, guest: bool = False) -> None:
-        client = get_client()
-
         if guest:
-            nickname = await client.login(guest=True)
+            nickname = await self._client.login(guest=True)
         else:
-            nickname = await client.login(self._nickname, self._password)
+            nickname = await self._client.login(self._nickname, self._password)
 
         await self.app.switch_screen(screens.Lobby(nickname=nickname))

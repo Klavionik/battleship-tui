@@ -1,12 +1,13 @@
 from typing import Any
 
+import inject
 from textual import on
 from textual.app import ComposeResult
 from textual.containers import Container
 from textual.screen import ModalScreen, Screen
 from textual.widgets import Button, Footer, Label, LoadingIndicator, Markdown
 
-from battleship.client import get_client
+from battleship.client import Client
 from battleship.engine import create_game
 from battleship.engine.roster import Roster, RosterItem
 from battleship.logger import client_logger as logger
@@ -30,8 +31,10 @@ class WaitingModal(ModalScreen[bool]):
 class CreateGame(Screen[None]):
     BINDINGS = [("escape", "back", "Back")]
 
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
+    @inject.param("client", Client)
+    def __init__(self, *args: Any, client: Client, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
+        self._client = client
 
         with resources.get_resource("create_game_help.md").open() as fh:
             self.help = fh.read()
@@ -51,11 +54,10 @@ class CreateGame(Screen[None]):
 
     @on(NewGame.PlayPressed)
     async def create_session(self, event: NewGame.PlayPressed) -> None:
-        client = get_client()
-        assert client.user
-        nickname = client.user.nickname
+        assert self._client.user
+        nickname = self._client.user.nickname
         name = event.name or f"{nickname}'s game"
-        session = await client.create_session(
+        session = await self._client.create_session(
             name,
             event.roster,
             event.firing_order,
@@ -71,16 +73,16 @@ class CreateGame(Screen[None]):
             game = create_game(
                 nickname, enemy_nickname, roster, event.firing_order, event.salvo_mode
             )
-            strategy = strategies.MultiplayerStrategy(client)
+            strategy = strategies.MultiplayerStrategy(self._client)
             waiting_modal.dismiss(True)
             self.app.switch_screen(screens.Game(game=game, strategy=strategy))
 
-        client.add_listener(ServerEvent.START_GAME, on_start_game)
+        self._client.add_listener(ServerEvent.START_GAME, on_start_game)
 
         async def on_modal_dismiss(game_started: bool) -> None:
-            client.remove_listener(ServerEvent.START_GAME, on_start_game)
+            self._client.remove_listener(ServerEvent.START_GAME, on_start_game)
 
             if not game_started:
-                await client.delete_session(session.id)
+                await self._client.delete_session(session.id)
 
         await self.app.push_screen(waiting_modal, callback=on_modal_dismiss)

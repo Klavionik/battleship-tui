@@ -1,8 +1,8 @@
 import asyncio
 import json as json_
 from asyncio import Task
-from functools import cache
 from typing import Any, Callable, Collection, Coroutine, Optional
+from urllib.parse import urlparse
 
 from httpx import AsyncClient, Request, Response
 from pyee.asyncio import AsyncIOEventEmitter
@@ -11,11 +11,7 @@ from pyee.asyncio import AsyncIOEventEmitter
 from websockets.client import WebSocketClientProtocol, connect
 
 from battleship.client.auth import IDTokenAuth
-from battleship.client.credentials import (
-    Credentials,
-    CredentialsProvider,
-    FilesystemCredentialsProvider,
-)
+from battleship.client.credentials import Credentials, CredentialsProvider
 from battleship.logger import client_logger as logger
 from battleship.shared.events import (
     ClientEvent,
@@ -73,14 +69,14 @@ class Client:
 
     def __init__(
         self,
-        host: str,
-        port: int,
+        server_url: str,
         credentials_provider: CredentialsProvider,
         refresh_interval: int = 20,
         http_timeout: int = 20,
     ) -> None:
-        self._host = host
-        self._port = port
+        parsed_url = urlparse(server_url)
+        self._netloc = parsed_url.netloc
+        self._scheme = parsed_url.scheme
         self._ws: Optional[WebSocketClientProtocol] = None
         self._emitter = AsyncIOEventEmitter()
         self._events_worker: Task[None] | None = None
@@ -95,19 +91,18 @@ class Client:
         self._session.event_hooks = {"request": [log_request]}
         self.credentials_provider = credentials_provider
 
-        self.load_credentials()
-
         self._refresh_interval = refresh_interval
         self._refresh_event = RefreshEvent()
-        self._credentials_worker = self._run_credentials_worker()
+        self._credentials_worker: Task[None] | None = None
 
     @property
     def base_url(self) -> str:
-        return f"http://{self._host}:{self._port}"
+        return f"{self._scheme}://{self._netloc}"
 
     @property
     def base_url_ws(self) -> str:
-        return f"ws://{self._host}:{self._port}"
+        scheme = "wss" if self._scheme == "https" else "ws"
+        return f"{scheme}://{self._netloc}"
 
     async def connect(self) -> None:
         if self.credentials is None:
@@ -186,6 +181,8 @@ class Client:
         if self.credentials:
             self.user = User(nickname=self.credentials.nickname)
             self.auth.set_token(self.credentials.id_token)
+
+        self._run_credentials_worker()
 
     def update_credentials(self, credentials: Credentials) -> None:
         self.credentials = credentials
@@ -298,7 +295,7 @@ class Client:
 
         return await self._session.request(method, url, json=json)
 
-    def _run_credentials_worker(self) -> Task[None]:
+    def _run_credentials_worker(self) -> None:
         async def credentials_worker() -> None:
             logger.debug("Start credentials worker.")
 
@@ -320,7 +317,7 @@ class Client:
                 logger.debug("Stop credentials worker.")
                 raise
 
-        return asyncio.create_task(credentials_worker())
+        self._credentials_worker = asyncio.create_task(credentials_worker())
 
 
 async def log_request(request: Request) -> None:
@@ -330,8 +327,3 @@ async def log_request(request: Request) -> None:
         path=request.url.path,
         content=request.content.decode() if request.method in ["POST"] else None,
     )
-
-
-@cache
-def get_client(host: str = "localhost", port: int = 8000) -> Client:
-    return Client(host, port, FilesystemCredentialsProvider())

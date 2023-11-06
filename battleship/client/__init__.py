@@ -1,3 +1,12 @@
-from battleship.client.client import Client, SessionSubscription, get_client
+from battleship.client.client import Client, SessionSubscription
+from battleship.client.credentials import (
+    CredentialsProvider,
+    filesystem_credentials_provider,
+)
 
-__all__ = ["Client", "get_client", "SessionSubscription"]
+__all__ = [
+    "Client",
+    "CredentialsProvider",
+    "SessionSubscription",
+    "filesystem_credentials_provider",
+]

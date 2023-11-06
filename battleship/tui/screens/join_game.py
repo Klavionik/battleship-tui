@@ -1,6 +1,7 @@
 from string import Template
 from typing import Any
 
+import inject
 from textual import on
 from textual.app import ComposeResult
 from textual.containers import Container
@@ -9,7 +10,7 @@ from textual.events import Mount, Unmount
 from textual.screen import Screen
 from textual.widgets import Footer, Label, ListItem, ListView, Static
 
-from battleship.client import SessionSubscription, get_client
+from battleship.client import Client, SessionSubscription
 from battleship.engine import create_game
 from battleship.engine.roster import Roster, RosterItem
 from battleship.shared.events import ServerEvent
@@ -45,8 +46,10 @@ class SessionItem(ListItem):
 class JoinGame(Screen[None]):
     BINDINGS = [("escape", "back", "Back")]
 
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
+    @inject.param("client", Client)
+    def __init__(self, *args: Any, client: Client, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
+        self._client = client
         self._session_list = ListView()
         self._subscription: SessionSubscription | None = None
 
@@ -62,53 +65,49 @@ class JoinGame(Screen[None]):
 
     @on(Mount)
     async def subscribe(self) -> None:
-        client = get_client()
-
-        self._subscription = await client.sessions_subscribe()
+        self._subscription = await self._client.sessions_subscribe()
         self._subscription.on_add(self.add_session)
         self._subscription.on_remove(self.remove_session)
         self._subscription.on_start(self.remove_session)
 
-        sessions = await client.fetch_sessions()
+        sessions = await self._client.fetch_sessions()
 
         for session in sessions:
             await self.add_session(session)
 
     @on(Unmount)
     async def unsubscribe(self) -> None:
-        client = get_client()
-        await client.sessions_unsubscribe()
+        await self._client.sessions_unsubscribe()
         self._subscription = None
 
     @on(ListView.Selected)
     async def join(self, event: ListView.Selected) -> None:
         item: SessionItem = event.item  # type: ignore
         session = item.session
-        client = get_client()
 
         def on_start_game(payload: dict[str, Any]) -> None:
-            client.remove_listener(ServerEvent.START_GAME, on_start_game)
+            self._client.remove_listener(ServerEvent.START_GAME, on_start_game)
 
             enemy_nickname = payload["enemy"]
             data = payload["roster"]
             roster = Roster(name=data["name"], items=[RosterItem(*item) for item in data["items"]])
 
-            assert client.user
+            assert self._client.user
 
             game = create_game(
-                client.user.nickname,
+                self._client.user.nickname,
                 enemy_nickname,
                 roster,
                 session.firing_order,
                 session.salvo_mode,
             )
-            strategy = strategies.MultiplayerStrategy(client)
+            strategy = strategies.MultiplayerStrategy(self._client)
 
             self.app.switch_screen(screens.Game(game=game, strategy=strategy))
 
-        client.add_listener(ServerEvent.START_GAME, on_start_game)
+        self._client.add_listener(ServerEvent.START_GAME, on_start_game)
 
-        await client.join_game(session.id)
+        await self._client.join_game(session.id)
 
     async def add_session(self, session: Session) -> None:
         try:

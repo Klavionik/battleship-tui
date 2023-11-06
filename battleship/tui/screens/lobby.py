@@ -1,5 +1,6 @@
 from typing import Any
 
+import inject
 from textual import on
 from textual.app import ComposeResult
 from textual.containers import Container, VerticalScroll
@@ -7,16 +8,18 @@ from textual.events import Mount
 from textual.screen import Screen
 from textual.widgets import Footer, Label, ListItem, ListView, Markdown, Static
 
-from battleship.client import get_client
+from battleship.client import Client
 from battleship.tui import resources, screens
 
 
 class Lobby(Screen[None]):
     BINDINGS = [("escape", "back", "Back")]
 
-    def __init__(self, *args: Any, nickname: str, **kwargs: Any) -> None:
+    @inject.param("client", Client)
+    def __init__(self, *args: Any, nickname: str, client: Client, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self._nickname = nickname
+        self._client = client
 
         with resources.get_resource("lobby_help.md").open() as fh:
             self.help = fh.read()
@@ -42,14 +45,12 @@ class Lobby(Screen[None]):
 
     @on(Mount)
     async def connect_ws(self) -> None:
-        client = get_client()
-        await client.connect()
+        await self._client.connect()
 
     @on(ListView.Selected, item="#logout")
     async def logout(self) -> None:
-        client = get_client()
-        await client.disconnect()
-        await client.logout()
+        await self._client.disconnect()
+        await self._client.logout()
         await self.app.switch_screen(screens.Multiplayer())
 
     @on(ListView.Selected, item="#create_game")

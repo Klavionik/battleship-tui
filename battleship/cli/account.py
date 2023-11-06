@@ -1,9 +1,9 @@
 from typing import Annotated, Any, Generator
 
+import typer
 from httpx import Client
 from typer import Exit, Option, Typer
 
-from battleship.cli.config import get_config
 from battleship.cli.console import get_console
 
 app = Typer()
@@ -19,16 +19,17 @@ def _unpack_400_errors(errors: list[dict[str, Any]]) -> Generator[tuple[str, str
 
 @app.command()
 def signup(
+    ctx: typer.Context,
     email: Annotated[str, Option(prompt=True)],
     nickname: Annotated[str, Option(prompt=True)],
     password: Annotated[str, Option(prompt=True, confirmation_prompt=True, hide_input=True)],
 ) -> None:
-    config = get_config()
+    server_url = ctx.params["server_url"]
 
     with console.status(f"Creating user {nickname}..."):
         creds = dict(email=email, nickname=nickname, password=password)
 
-        with Client(base_url=str(config.SERVER_URL)) as client:
+        with Client(base_url=server_url) as client:
             response = client.post("/signup", json=creds)
 
         if response.status_code != 201:
