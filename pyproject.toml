@@ -9,8 +9,7 @@ readme = "README.md"
 python = "^3.11"
 websockets = "^12.0.0"
 loguru = "^0.7.0"
-pyee = "^11.0.0"
-textual = { version = "^0.41.0", optional = true }
+pyee = { version = "^11.0.0", optional = true }
 blacksheep = { version ="^1.2.18", optional = true }
 uvicorn = { version = "^0.23.2", optional = true }
 httpx = "^0.25.0"
@@ -24,11 +23,14 @@ typer = { version = "^0.9.0", optional = true }
 xdg-base-dirs = "^6.0.1"
 inject = "^5.1.0"
 redis = { version = "^5.0.1", optional = true }
+textual = { version = "^0.41.0", optional = true }
+textual-dev = { version = "^1.2.1", optional = true }
 
 
 [tool.poetry.extras]
 server = ["blacksheep", "uvicorn", "auth0-python", "pyjwt", "uvloop", "redis"]
-client = ["textual", "typer"]
+client = ["textual", "typer", "pyee"]
+dev = ["textual-dev"]
 
 [tool.poetry.scripts]
 battleship = "battleship.cli:app"
@@ -48,7 +50,6 @@ plugins = [
 mypy = "^1.5.0"
 coverage = "^7.3.0"
 watchdog = {extras = ["watchmedo"], version = "^3.0.0"}
-textual-dev = "^1.1.0"
 pytest = "^7.4.2"
 
 [build-system]
