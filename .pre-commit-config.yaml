@@ -84,3 +84,4 @@ repos:
           - --output=requirements-server.txt
           - --only=main
           - --extras=server
+          - --without-hashes
