@@ -74,3 +74,13 @@ repos:
         language: system
         types: [ python ]
         require_serial: true
+
+  - repo: https://github.com/python-poetry/poetry
+    rev: '1.5.1'
+    hooks:
+      - id: poetry-export
+        name: poetry-export-server
+        args:
+          - --output=requirements-server.txt
+          - --only=main
+          - --extras=server
