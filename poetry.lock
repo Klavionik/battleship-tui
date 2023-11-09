@@ -184,21 +184,22 @@ tests-no-zope = ["cloudpickle", "hypothesis", "mypy (>=1.1.1)", "pympler", "pyte
 
 [[package]]
 name = "auth0-python"
-version = "4.5.0"
+version = "4.6.0"
 description = ""
 optional = true
 python-versions = ">=3.7"
 files = [
-    {file = "auth0_python-4.5.0-py3-none-any.whl", hash = "sha256:63272298f9c6ba36856b9f06243860e180809f1fd27df4a75e2e88fcb1155222"},
-    {file = "auth0_python-4.5.0.tar.gz", hash = "sha256:09650e0cbc14ed38663e5e118b6208a3be41359c5e3fd672ca642258991c02be"},
+    {file = "auth0_python-4.6.0-py3-none-any.whl", hash = "sha256:74bc22d1a7f54bbd7a864976f44427a00e2fdc5f8775ce6b812b33f9357a5721"},
+    {file = "auth0_python-4.6.0.tar.gz", hash = "sha256:1c1d97fc9a3d2377f29860459cdb2aaca300ec999f769548ef82c9b1f30b45de"},
 ]
 
 [package.dependencies]
 aiohttp = ">=3.8.5,<4.0.0"
-cryptography = ">=41.0.3,<42.0.0"
+cryptography = ">=41.0.5,<42.0.0"
 pyjwt = ">=2.8.0,<3.0.0"
 pyopenssl = ">=23.2.0,<24.0.0"
 requests = ">=2.31.0,<3.0.0"
+urllib3 = ">=2.0.7,<3.0.0"
 
 [[package]]
 name = "blacksheep"
@@ -1574,6 +1575,24 @@ files = [
 ]
 
 [[package]]
+name = "redis"
+version = "5.0.1"
+description = "Python client for Redis database and key-value store"
+optional = true
+python-versions = ">=3.7"
+files = [
+    {file = "redis-5.0.1-py3-none-any.whl", hash = "sha256:ed4802971884ae19d640775ba3b03aa2e7bd5e8fb8dfaed2decce4d0fc48391f"},
+    {file = "redis-5.0.1.tar.gz", hash = "sha256:0dab495cd5753069d3bc650a0dde8a8f9edde16fc5691b689a566eda58100d0f"},
+]
+
+[package.dependencies]
+async-timeout = {version = ">=4.0.2", markers = "python_full_version <= \"3.11.2\""}
+
+[package.extras]
+hiredis = ["hiredis (>=1.0.0)"]
+ocsp = ["cryptography (>=36.0.1)", "pyopenssl (==20.0.1)", "requests (>=2.26.0)"]
+
+[[package]]
 name = "requests"
 version = "2.31.0"
 description = "Python HTTP for Humans."
@@ -2060,9 +2079,9 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 
 [extras]
 client = ["textual", "typer"]
-server = ["auth0-python", "blacksheep", "pyjwt", "uvicorn", "uvloop"]
+server = ["auth0-python", "blacksheep", "pyjwt", "redis", "uvicorn", "uvloop"]
 
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "ad298d31ab8284f3aed78451a7b9775c4f4e04d6adcf6520d21a11df13bc9ad1"
+content-hash = "fcac86793d1cdafb15cb6007ec3a47a2ef7b44b40397447bb4eca5d591947fc9"

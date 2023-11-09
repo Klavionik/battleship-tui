@@ -1,12 +1,16 @@
-from blacksheep import FromJSON, Response, Router, WebSocket, created, no_content
+import asyncio
+
+from blacksheep import FromJSON, Response, Router, WebSocket, created
 from blacksheep.server.authorization import allow_anonymous
 from guardpost.authentication import Identity
 
 from battleship.logger import server_logger as logger
 from battleship.server.auth import AuthManager
-from battleship.server.clients import Clients
+from battleship.server.clients import ClientRepository
 from battleship.server.handlers import GameHandler, SessionSubscriptionHandler
+from battleship.server.pubsub import IncomingChannel, OutgoingChannel
 from battleship.server.sessions import Sessions
+from battleship.server.websocket import Connection
 from battleship.shared.models import (
     IDToken,
     LoginCredentials,
@@ -15,7 +19,6 @@ from battleship.shared.models import (
     Session,
     SessionCreate,
     SignupCredentials,
-    User,
 )
 
 router = Router()  # type: ignore[no-untyped-call]
@@ -25,22 +28,21 @@ router = Router()  # type: ignore[no-untyped-call]
 async def ws(
     websocket: WebSocket,
     identity: Identity,
-    client_repository: Clients,
-    session_repository: Sessions,
+    client_repository: ClientRepository,
+    in_channel: IncomingChannel,
+    out_channel: OutgoingChannel,
+    subscription_handler: SessionSubscriptionHandler,
 ) -> None:
-    await websocket.accept()
-    user = User(
-        nickname=identity.claims["nickname"],
-        guest=identity.has_claim_value("battleship/role", "guest"),
-    )
-    client = client_repository.add(websocket, user)
-    handler = SessionSubscriptionHandler(client, session_repository)
-    client.add_handler(handler)
+    nickname = identity.claims["nickname"]
+    client = await client_repository.add(nickname)
+    connection = Connection(client.id, websocket, in_channel, out_channel)
 
-    logger.debug(f"Handle client {client}.")
-    await client.listen()
-    logger.debug(f"Disconnect client {client}.")
-    client_repository.remove(client.id)
+    await websocket.accept()
+    logger.debug(f"{connection} accepted.")
+    await connection.listen()
+    logger.debug(f"{connection} disconnected.")
+    subscription_handler.unsubscribe(client.id)
+    await client_repository.delete(client.id)
 
 
 @router.get("/sessions")
@@ -59,13 +61,32 @@ async def create_session(
     return session_repository.add(nickname, session.value)
 
 
+@router.post("/sessions/subscribe")
+async def subscribe_to_session_updates(
+    identity: Identity,
+    client_repository: ClientRepository,
+    subscription_handler: SessionSubscriptionHandler,
+) -> None:
+    client = await client_repository.get(identity.claims["nickname"])
+    subscription_handler.subscribe(client.id)
+
+
+@router.post("/sessions/unsubscribe")
+async def unsubscribe_from_session_updates(
+    identity: Identity,
+    client_repository: ClientRepository,
+    subscription_handler: SessionSubscriptionHandler,
+) -> None:
+    client = await client_repository.get(identity.claims["nickname"])
+    subscription_handler.unsubscribe(client.id)
+
+
 @router.delete("/sessions/{session_id}")
 async def remove_session(
     session_id: str,
     session_repository: Sessions,
-) -> Response:
+) -> None:
     session_repository.remove(session_id)
-    return no_content()
 
 
 @router.post("/sessions/{session_id}/join")
@@ -73,15 +94,17 @@ async def join_session(
     identity: Identity,
     session_id: str,
     session_repository: Sessions,
-    client_repository: Clients,
+    client_repository: ClientRepository,
+    game_handler: GameHandler,
 ) -> None:
-    nickname = identity.claims["nickname"]
+    guest_nickname = identity.claims["nickname"]
     session = session_repository.get(session_id)
-    player, enemy = client_repository.get(session.host_id), client_repository.get(nickname)
-    handler = GameHandler(player, enemy, session)
-    player.add_handler(handler)
-    enemy.add_handler(handler)
-    session_repository.start(session.id, enemy.id)
+    players = await asyncio.gather(
+        client_repository.get(session.host_id), client_repository.get(guest_nickname)
+    )
+    host, guest = players
+    session_repository.start(session.id, guest.id)
+    game_handler.start_new_game(host, guest, session)
 
 
 @allow_anonymous()

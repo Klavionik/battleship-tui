@@ -35,6 +35,17 @@ class CredentialsProvider(ABC):
         pass
 
 
+class DummyCredentialsProvider(CredentialsProvider):
+    def save(self, credentials: Credentials) -> None:
+        pass
+
+    def load(self) -> Credentials | None:
+        pass
+
+    def clear(self) -> None:
+        pass
+
+
 class FilesystemCredentialsProvider(CredentialsProvider):
     root = "battleship"
     permission = 0o600  # Read-write for user.
@@ -66,4 +77,5 @@ class FilesystemCredentialsProvider(CredentialsProvider):
         self.cache.parent.mkdir(parents=True, exist_ok=True)
 
 
+dummy_credentials_provider = DummyCredentialsProvider()
 filesystem_credentials_provider = FilesystemCredentialsProvider()

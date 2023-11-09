@@ -11,5 +11,5 @@ tasks:
       - task: coverage
       - coverage html
       - python -m webbrowser -t htmlcov/index.html
-  app:dev: poetry run textual run --dev battleship.cli
+  app:dev: poetry run textual run --dev battleship.cli --credentials-provider=battleship.client.credentials:dummy_credentials_provider
   server:dev: poetry run uvicorn --reload --factory battleship.server:create_app

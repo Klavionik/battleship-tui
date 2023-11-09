@@ -1,79 +1,112 @@
-import abc
+import asyncio
 from typing import AsyncGenerator
 
-from blacksheep import FromHeader, WebSocket, WebSocketDisconnectError
+from blacksheep import WebSocket, WebSocketDisconnectError
 
 from battleship.logger import server_logger as logger
+from battleship.server.pubsub import IncomingChannel, OutgoingChannel
 from battleship.shared.events import EventMessage
-from battleship.shared.models import User
-
-
-class ClientID(FromHeader[str]):
-    name = "X-Battleship-Client-ID"
 
 
 class WebSocketWrapper:
     def __init__(self, socket: WebSocket):
-        self.socket = socket
+        self._socket = socket
+
+    def __repr__(self) -> str:
+        return f"<WebSocket {self.client_ip}>"
+
+    @property
+    def client_ip(self) -> str:
+        return self._socket.client_ip
+
+    async def send_text(self, text: str) -> None:
+        await self._socket.send_text(text)
 
     async def __aiter__(self) -> AsyncGenerator[str, None]:
         while True:
             try:
-                yield await self.socket.receive_text()
+                text = await self._socket.receive_text()
+                logger.trace(
+                    "{ws} Message received {message}",
+                    ws=self,
+                    message=text,
+                )
+                yield text
             except WebSocketDisconnectError:
                 break
 
 
-class EventHandler(abc.ABC):
-    @abc.abstractmethod
-    async def handle(self, client: "Client", event: EventMessage) -> None:
-        pass
+class Connection:
+    def __init__(
+        self,
+        client_id: str,
+        websocket: WebSocket,
+        incoming_channel: IncomingChannel,
+        outgoing_channel: OutgoingChannel,
+    ):
+        self.client_id = client_id
+        self.websocket = WebSocketWrapper(websocket)
+        self._incoming = incoming_channel
+        self._outgoing = outgoing_channel
+        self._message_consumer = self._run_consumer()
+
+    def __repr__(self) -> str:
+        return f"<Connection {self.client_id} {self.websocket.client_ip}>"
+
+    def __del__(self) -> None:
+        logger.trace("{conn} was garbage collected.", conn=self)
+
+    async def events(self) -> AsyncGenerator[EventMessage, None]:
+        async for message in self.websocket:
+            yield EventMessage.from_raw(message)
+
+    async def listen(self) -> None:
+        async for event in self.events():
+            asyncio.create_task(self._incoming.publish(self.client_id, event))
+
+        self._message_consumer.cancel()
+        del self._message_consumer
+
+    async def send_event(self, event: EventMessage) -> None:
+        await self.websocket.send_text(event.to_json())
+
+    def _run_consumer(self) -> asyncio.Task[None]:
+        @logger.catch
+        async def consumer() -> None:
+            try:
+                async for _, event in self._outgoing.listen(self.client_id):
+                    await self.send_event(event)
+            except asyncio.CancelledError:
+                logger.debug("{conn} Stop message consumer.", conn=self)
+                raise
+
+        return asyncio.create_task(consumer())
 
 
 class Client:
     def __init__(
         self,
-        connection: WebSocket,
-        user: User,
+        nickname: str,
+        incoming_channel: IncomingChannel,
+        outgoing_channel: OutgoingChannel,
     ) -> None:
-        self._connection = WebSocketWrapper(connection)
-        self._handlers: dict[type[EventHandler], EventHandler] = {}
-        self.user = user
+        self.nickname = nickname
+        self._incoming_channel = incoming_channel
+        self._outgoing_channel = outgoing_channel
 
     def __repr__(self) -> str:
-        return f"<Client: {self.id} {self.local_address}>"
+        return f"<Client: {self.id}>"
+
+    def __del__(self) -> None:
+        logger.trace("{client} was garbage collected.", client=self)
 
     @property
     def id(self) -> str:
-        return self.user.nickname
+        return self.nickname
 
-    @property
-    def local_address(self) -> str:
-        return self._connection.socket.client_ip
-
-    async def close(self) -> None:
-        await self._connection.socket.close()
+    async def listen(self) -> AsyncGenerator[EventMessage, None]:
+        async for _, event in self._incoming_channel.listen(self.id):
+            yield event
 
     async def send_event(self, event: EventMessage) -> None:
-        await self._connection.socket.send_text(event.to_json())
-
-    async def listen(self) -> None:
-        async for event in self:
-            logger.info(event)
-            for handler in self._handlers.values():
-                await handler.handle(self, event)
-
-    def add_handler(self, handler: EventHandler) -> None:
-        handler_type = handler.__class__
-
-        if handler_type in self._handlers:
-            raise ValueError("Only 1 handler of any type is allowed.")
-
-        self._handlers[handler.__class__] = handler
-
-    def remove_handler(self, handler_type: type[EventHandler]) -> None:
-        self._handlers.pop(handler_type, None)
-
-    async def __aiter__(self) -> AsyncGenerator[EventMessage, None]:
-        async for message in self._connection:
-            yield EventMessage.from_raw(message)
+        await self._outgoing_channel.publish(self.id, event)

@@ -232,11 +232,11 @@ class Client:
             subscription.emit(action, **kwargs)
 
         self._emitter.add_listener(ServerEvent.SESSIONS_UPDATE, publish_update)
-        await self._send(dict(kind=ClientEvent.SESSIONS_SUBSCRIBE))
+        await self._request("POST", url="/sessions/subscribe")
         return subscription
 
     async def sessions_unsubscribe(self) -> None:
-        await self._send(dict(kind=ClientEvent.SESSIONS_UNSUBSCRIBE))
+        await self._request("POST", url="/sessions/unsubscribe")
 
     def add_listener(self, event: str, handler: Callable[..., Any]) -> None:
         self._emitter.add_listener(event, handler)

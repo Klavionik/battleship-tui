@@ -1,3 +1,4 @@
+from pydantic import RedisDsn
 from pydantic_settings import BaseSettings
 
 
@@ -7,6 +8,7 @@ class Config(BaseSettings):
     AUTH0_CLIENT_SECRET: str = ""
     AUTH0_REALM: str = ""
     AUTH0_ROLES: dict[str, str] = {}
+    BROKER_URL: RedisDsn
 
     @property
     def auth0_audience(self) -> str:
