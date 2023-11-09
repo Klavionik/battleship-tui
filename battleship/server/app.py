@@ -1,8 +1,11 @@
+import sys
+
 import redis.asyncio as redis
 from blacksheep import Application
 from blacksheep.server.authentication.jwt import JWTBearerAuthentication
 from blacksheep.server.authorization import Policy
 from guardpost.common import AuthenticatedRequirement
+from loguru import logger
 
 from battleship.server.auth import Auth0AuthManager, AuthManager
 from battleship.server.clients import ClientRepository, RedisClientRepository
@@ -20,6 +23,8 @@ from battleship.server.sessions import Sessions
 
 def create_app() -> Application:
     config = get_config()
+    logger.remove()
+    logger.add(sys.stderr, level="TRACE" if config.TRACE else "DEBUG")
     broker = redis.Redis.from_url(str(config.BROKER_URL))
 
     app = Application(router=router)

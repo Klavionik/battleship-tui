@@ -2,9 +2,10 @@ import asyncio
 from dataclasses import asdict
 from typing import Collection
 
+from loguru import logger
+
 from battleship.engine import create_game, domain
 from battleship.engine.roster import get_roster
-from battleship.logger import server_logger as logger
 from battleship.server.websocket import Client
 from battleship.shared.events import ClientEvent, EventMessage, ServerEvent
 from battleship.shared.models import Session, salvo_to_model

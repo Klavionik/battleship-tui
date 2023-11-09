@@ -2,8 +2,8 @@ import abc
 from typing import AsyncIterator, Callable, Iterable, TypeAlias
 
 import redis.asyncio as redis
+from loguru import logger
 
-from battleship.logger import server_logger as logger
 from battleship.shared.events import EventMessage
 
 Callback: TypeAlias = Callable[[str], None]

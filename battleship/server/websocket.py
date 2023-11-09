@@ -2,8 +2,8 @@ import asyncio
 from typing import AsyncGenerator
 
 from blacksheep import WebSocket, WebSocketDisconnectError
+from loguru import logger
 
-from battleship.logger import server_logger as logger
 from battleship.server.pubsub import IncomingChannel, OutgoingChannel
 from battleship.shared.events import EventMessage
 

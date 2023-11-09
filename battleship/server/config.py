@@ -3,11 +3,12 @@ from pydantic_settings import BaseSettings
 
 
 class Config(BaseSettings):
-    AUTH0_DOMAIN: str = ""
-    AUTH0_CLIENT_ID: str = ""
-    AUTH0_CLIENT_SECRET: str = ""
-    AUTH0_REALM: str = ""
-    AUTH0_ROLES: dict[str, str] = {}
+    TRACE: bool
+    AUTH0_DOMAIN: str
+    AUTH0_CLIENT_ID: str
+    AUTH0_CLIENT_SECRET: str
+    AUTH0_REALM: str
+    AUTH0_ROLES: dict[str, str]
     BROKER_URL: RedisDsn
 
     @property

@@ -1,4 +1,3 @@
-import sys
 from typing import Callable
 
 import loguru
@@ -18,8 +17,5 @@ loguru.logger.remove()
 loguru.logger.add(
     str(DEFAULT_CLIENT_SINK), rotation="1 MB", filter=filter_by("client"), level="DEBUG"
 )
-loguru.logger.add(sys.stderr, filter=filter_by("server"), level="DEBUG")
-
 
 client_logger = loguru.logger.bind(client=True)
-server_logger = loguru.logger.bind(server=True)

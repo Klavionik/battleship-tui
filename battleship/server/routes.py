@@ -3,8 +3,8 @@ import asyncio
 from blacksheep import FromJSON, Response, Router, WebSocket, created
 from blacksheep.server.authorization import allow_anonymous
 from guardpost.authentication import Identity
+from loguru import logger
 
-from battleship.logger import server_logger as logger
 from battleship.server.auth import AuthManager
 from battleship.server.clients import ClientRepository
 from battleship.server.handlers import GameHandler, SessionSubscriptionHandler

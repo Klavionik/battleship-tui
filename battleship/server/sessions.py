@@ -2,7 +2,8 @@ import asyncio
 from asyncio import Task
 from typing import Callable, Coroutine, TypeAlias
 
-from battleship.logger import server_logger as logger
+from loguru import logger
+
 from battleship.shared.models import (
     Action,
     Session,

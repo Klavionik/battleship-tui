@@ -1,0 +1,4 @@
+# Ignore everything, except things that the server really needs.
+**/*
+!/battleship
+!requirements-server.txt

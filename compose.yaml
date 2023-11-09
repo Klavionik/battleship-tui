@@ -1,0 +1,19 @@
+services:
+  backend:
+    build: .
+    environment:
+      TRACE: $TRACE
+      AUTH0_DOMAIN: $AUTH0_DOMAIN
+      AUTH0_CLIENT_ID: $AUTH0_CLIENT_ID
+      AUTH0_CLIENT_SECRET: $AUTH0_CLIENT_SECRET
+      AUTH0_REALM: $AUTH0_REALM
+      AUTH0_ROLES: $AUTH0_ROLES
+      BROKER_URL: $BROKER_URL
+    command: ["uvicorn", "--host", "0.0.0.0", "--reload", "--factory", "battleship.server:create_app"]
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./battleship:/app/battleship
+
+  broker:
+    image: redis:7.2.3-alpine
