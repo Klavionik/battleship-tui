@@ -1,6 +1,7 @@
 import asyncio
-import functools
 from typing import Any
+
+from loguru import logger
 
 from battleship.server.game import Game
 from battleship.server.pubsub import IncomingChannel, OutgoingChannel
@@ -19,8 +20,13 @@ class GameHandler:
     def start_new_game(self, host: Client, guest: Client, session: Session) -> None:
         game = Game(host, guest, session)
         task = asyncio.create_task(game.play())
-        done_callback = functools.partial(self._games.pop, session.id)
-        task.add_done_callback(done_callback)
+
+        @logger.catch
+        def cleanup(_: asyncio.Future[None]) -> None:
+            self._games.pop(session.id, None)
+            logger.trace("Game {session_id} is cleaned up.", session_id=session.id)
+
+        task.add_done_callback(cleanup)
         self._games[session.id] = task
 
     def stop_game(self, session_id: str) -> None:
