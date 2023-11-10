@@ -18,7 +18,7 @@ from battleship.server.pubsub import (
     OutgoingRedisChannel,
 )
 from battleship.server.routes import router
-from battleship.server.sessions import Sessions
+from battleship.server.sessions import RedisSessionRepository, SessionRepository
 
 
 def create_app() -> Application:
@@ -31,7 +31,7 @@ def create_app() -> Application:
     app.services.add_instance(config, Config)
     app.services.add_instance(broker, redis.Redis)
     app.services.add_singleton(AuthManager, Auth0AuthManager)
-    app.services.add_singleton(Sessions)
+    app.services.add_singleton(SessionRepository, RedisSessionRepository)
     app.services.add_singleton(ClientRepository, RedisClientRepository)
     app.services.add_singleton(IncomingChannel, IncomingRedisChannel)
     app.services.add_singleton(OutgoingChannel, OutgoingRedisChannel)

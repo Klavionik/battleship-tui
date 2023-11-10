@@ -5,7 +5,7 @@ from loguru import logger
 
 from battleship.server.game import Game
 from battleship.server.pubsub import IncomingChannel, OutgoingChannel
-from battleship.server.sessions import Listener, Sessions
+from battleship.server.sessions import Listener, SessionRepository
 from battleship.server.websocket import Client
 from battleship.shared.events import EventMessage, ServerEvent
 from battleship.shared.models import Action, Session
@@ -34,7 +34,7 @@ class GameHandler:
 
 
 class SessionSubscriptionHandler:
-    def __init__(self, out_channel: OutgoingChannel, session_repository: Sessions):
+    def __init__(self, out_channel: OutgoingChannel, session_repository: SessionRepository):
         self._out = out_channel
         self._sessions = session_repository
 
@@ -43,7 +43,7 @@ class SessionSubscriptionHandler:
             payload: dict[str, Any] = dict(action=action)
 
             if action == Action.ADD:
-                payload["session"] = self._sessions.get(session_id)
+                payload["session"] = await self._sessions.get(session_id)
 
             if action in [Action.REMOVE, Action.START]:
                 payload["session_id"] = session_id

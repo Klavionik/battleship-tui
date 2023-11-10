@@ -9,7 +9,7 @@ from battleship.server.auth import AuthManager
 from battleship.server.clients import ClientRepository
 from battleship.server.handlers import GameHandler, SessionSubscriptionHandler
 from battleship.server.pubsub import IncomingChannel, OutgoingChannel
-from battleship.server.sessions import Sessions
+from battleship.server.sessions import SessionRepository
 from battleship.server.websocket import Connection
 from battleship.shared.models import (
     IDToken,
@@ -46,8 +46,8 @@ async def ws(
 
 
 @router.get("/sessions")
-async def list_sessions(session_repository: Sessions) -> list[Session]:
-    sessions = session_repository.list()
+async def list_sessions(session_repository: SessionRepository) -> list[Session]:
+    sessions = await session_repository.list()
     return [s for s in sessions if not s.started]
 
 
@@ -55,10 +55,10 @@ async def list_sessions(session_repository: Sessions) -> list[Session]:
 async def create_session(
     identity: Identity,
     session: FromJSON[SessionCreate],
-    session_repository: Sessions,
+    session_repository: SessionRepository,
 ) -> Session:
     nickname = identity.claims["nickname"]
-    return session_repository.add(nickname, session.value)
+    return await session_repository.add(nickname, session.value)
 
 
 @router.post("/sessions/subscribe")
@@ -84,26 +84,26 @@ async def unsubscribe_from_session_updates(
 @router.delete("/sessions/{session_id}")
 async def remove_session(
     session_id: str,
-    session_repository: Sessions,
+    session_repository: SessionRepository,
 ) -> None:
-    session_repository.remove(session_id)
+    await session_repository.delete(session_id)
 
 
 @router.post("/sessions/{session_id}/join")
 async def join_session(
     identity: Identity,
     session_id: str,
-    session_repository: Sessions,
+    session_repository: SessionRepository,
     client_repository: ClientRepository,
     game_handler: GameHandler,
 ) -> None:
     guest_nickname = identity.claims["nickname"]
-    session = session_repository.get(session_id)
+    session = await session_repository.get(session_id)
     players = await asyncio.gather(
         client_repository.get(session.host_id), client_repository.get(guest_nickname)
     )
     host, guest = players
-    session_repository.start(session.id, guest.id)
+    await session_repository.update(session.id, guest_id=guest.id, started=True)
     game_handler.start_new_game(host, guest, session)
 
 
