@@ -14,6 +14,18 @@ services:
       - "8000:8000"
     volumes:
       - ./battleship:/app/battleship
+    depends_on:
+      broker:
+        condition: service_healthy
+    healthcheck:
+      test: curl localhost:8000/healthz || exit 1
+      timeout: 2s
+      interval: 3s
+
 
   broker:
     image: redis:7.2.3-alpine
+    healthcheck:
+      test: redis-cli ping | grep PONG
+      interval: 2s
+      timeout: 3s

@@ -1,6 +1,6 @@
 import asyncio
 
-from blacksheep import FromJSON, Response, Router, WebSocket, created
+from blacksheep import FromJSON, Response, Router, WebSocket, created, ok
 from blacksheep.server.authorization import allow_anonymous
 from guardpost.authentication import Identity
 from loguru import logger
@@ -134,3 +134,9 @@ async def login(credentials: LoginCredentials, auth_manager: AuthManager) -> Log
 @router.post("/refresh")
 async def refresh_id_token(refresh_token: RefreshToken, auth_manager: AuthManager) -> IDToken:
     return await auth_manager.refresh_id_token(refresh_token.refresh_token)
+
+
+@allow_anonymous()
+@router.get("/healthz")
+async def health() -> Response:
+    return ok("OK")
