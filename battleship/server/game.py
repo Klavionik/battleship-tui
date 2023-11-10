@@ -1,6 +1,6 @@
 import asyncio
 from dataclasses import asdict
-from typing import Collection
+from typing import Collection, Literal
 
 from loguru import logger
 
@@ -43,9 +43,7 @@ class Game:
         self.game.register_hook(domain.Hook.NEXT_MOVE, self.send_awaiting_move)
         self.game.register_hook(domain.Hook.GAME_ENDED, self.send_winner)
 
-        self._host_consumer = self._run_consumer(host)
-        self._guest_consumer = self._run_consumer(guest)
-
+        self._consumers = [self._run_consumer(self.host), self._run_consumer(self.guest)]
         self._stop_event = asyncio.Event()
 
     def __repr__(self) -> str:
@@ -63,10 +61,13 @@ class Game:
         return asyncio.create_task(consumer())
 
     def stop(self) -> None:
-        self._host_consumer.cancel()
-        self._guest_consumer.cancel()
-        del self._host_consumer
-        del self._guest_consumer
+        while True:
+            try:
+                consumer = self._consumers.pop()
+                consumer.cancel()
+            except IndexError:
+                break
+
         self._stop_event.set()
 
     def broadcast(self, event: EventMessage) -> None:
@@ -107,6 +108,19 @@ class Game:
         event = EventMessage(kind=ServerEvent.SHIP_SPAWNED, payload=payload)
         asyncio.create_task(self.clients[player.name].send_event(event))
 
+    def send_game_cancelled(
+        self,
+        reason: Literal["quit", "disconnect"],
+        by_client_id: str | None = None,
+    ) -> None:
+        event = EventMessage(kind=ServerEvent.GAME_CANCELLED, payload=dict(reason=reason))
+
+        if by_client_id is None:
+            self.broadcast(event)
+        else:
+            client = self.guest if self.host.id == by_client_id else self.host
+            asyncio.create_task(client.send_event(event))
+
     def announce_game_start(self) -> None:
         asyncio.create_task(
             self.host.send_event(
@@ -131,8 +145,8 @@ class Game:
         try:
             await self._stop_event.wait()
         except asyncio.CancelledError:
-            # TODO: Game cancelled cleanup.
-            pass
+            self.send_game_cancelled(reason="disconnect")
+            raise
 
     @logger.catch
     def handle(self, client_id: str, event: EventMessage) -> None:
@@ -147,3 +161,6 @@ class Game:
                 salvo = self.game.fire(position)
                 self.send_salvo(salvo)
                 self.game.turn(salvo)
+            case EventMessage(kind=ClientEvent.CANCEL_GAME):
+                self.send_game_cancelled(reason="quit", by_client_id=client_id)
+                self.stop()

@@ -11,6 +11,7 @@ class ClientEvent(StrEnum):
     SESSIONS_UNSUBSCRIBE = auto()
     SPAWN_SHIP = auto()
     FIRE = auto()
+    CANCEL_GAME = auto()
 
 
 class ServerEvent(StrEnum):
@@ -22,6 +23,7 @@ class ServerEvent(StrEnum):
     AWAITING_MOVE = auto()
     SALVO = auto()
     GAME_ENDED = auto()
+    GAME_CANCELLED = auto()
 
 
 Event: TypeAlias = ServerEvent | ClientEvent

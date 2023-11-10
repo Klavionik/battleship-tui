@@ -24,8 +24,15 @@ class GameStrategy(abc.ABC):
     def fire(self, position: Collection[str]) -> None:
         pass
 
+    @abc.abstractmethod
+    def cancel(self) -> None:
+        pass
+
     def subscribe(self, event: str, handler: Callable[..., Any]) -> None:
         self._ee.add_listener(event, handler)
+
+    def unsubscribe(self) -> None:
+        self._ee.remove_all_listeners()
 
     def emit_ship_spawned(self, player: str, ship_id: str, position: Collection[str]) -> None:
         self._ee.emit("ship_spawned", player=player, ship_id=ship_id, position=position)
@@ -53,12 +60,16 @@ class MultiplayerStrategy(GameStrategy):
         client.add_listener(ServerEvent.AWAITING_MOVE, self._on_awaiting_move)
         client.add_listener(ServerEvent.SALVO, self._on_salvo)
         client.add_listener(ServerEvent.GAME_ENDED, self._on_game_ended)
+        client.add_listener(ServerEvent.GAME_CANCELLED, self._on_game_cancelled)
 
     def spawn_ship(self, ship_id: str, position: Collection[str]) -> None:
         create_task(self._client.spawn_ship(ship_id, position))
 
     def fire(self, position: Collection[str]) -> None:
         create_task(self._client.fire(position))
+
+    def cancel(self) -> None:
+        create_task(self._client.cancel_game())
 
     def _on_ship_spawned(self, payload: dict[str, Any]) -> None:
         player = payload["player"]
@@ -82,6 +93,10 @@ class MultiplayerStrategy(GameStrategy):
     def _on_game_ended(self, payload: dict[str, Any]) -> None:
         winner = payload["winner"]
         self.emit_game_ended(winner)
+
+    def _on_game_cancelled(self, payload: dict[str, Any]) -> None:
+        reason = payload["reason"]
+        self._ee.emit("game_cancelled", reason=reason)
 
 
 class SingleplayerStrategy(GameStrategy):
@@ -138,6 +153,9 @@ class SingleplayerStrategy(GameStrategy):
             self._target_caller.provide_feedback(salvo.shots)
 
         self._game.turn(salvo)
+
+    def cancel(self) -> None:
+        pass
 
     def _call_bot_target(self) -> Collection[str]:
         if self._game.salvo_mode:

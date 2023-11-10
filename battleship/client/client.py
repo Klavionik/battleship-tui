@@ -255,6 +255,9 @@ class Client:
         payload = dict(position=position)
         await self._send(dict(kind=ClientEvent.FIRE, payload=payload))
 
+    async def cancel_game(self) -> None:
+        await self._send(dict(kind=ClientEvent.CANCEL_GAME))
+
     def _run_events_worker(self) -> Task[None]:
         async def events_worker() -> None:
             if self._ws is None:

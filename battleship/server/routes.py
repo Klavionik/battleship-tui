@@ -32,6 +32,8 @@ async def ws(
     in_channel: IncomingChannel,
     out_channel: OutgoingChannel,
     subscription_handler: SessionSubscriptionHandler,
+    session_repository: SessionRepository,
+    game_handler: GameHandler,
 ) -> None:
     nickname = identity.claims["nickname"]
     client = await client_repository.add(nickname)
@@ -42,6 +44,15 @@ async def ws(
     await connection.listen()
     logger.debug(f"{connection} disconnected.")
     subscription_handler.unsubscribe(client.id)
+
+    current_session = await session_repository.get_for_client(client.id)
+
+    if current_session:
+        if current_session.started:
+            game_handler.cancel_game(current_session.id)
+
+        await session_repository.delete(current_session.id)
+
     await client_repository.delete(client.id)
 
 

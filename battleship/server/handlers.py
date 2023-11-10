@@ -12,7 +12,13 @@ from battleship.shared.models import Action, Session
 
 
 class GameHandler:
-    def __init__(self, in_channel: IncomingChannel, out_channel: OutgoingChannel):
+    def __init__(
+        self,
+        sessions: SessionRepository,
+        in_channel: IncomingChannel,
+        out_channel: OutgoingChannel,
+    ):
+        self._sessions = sessions
         self._in = in_channel
         self._out = out_channel
         self._games: dict[str, asyncio.Task[None]] = {}
@@ -24,12 +30,13 @@ class GameHandler:
         @logger.catch
         def cleanup(_: asyncio.Future[None]) -> None:
             self._games.pop(session.id, None)
+            asyncio.create_task(self._sessions.delete(session.id))
             logger.trace("Game {session_id} is cleaned up.", session_id=session.id)
 
         task.add_done_callback(cleanup)
         self._games[session.id] = task
 
-    def stop_game(self, session_id: str) -> None:
+    def cancel_game(self, session_id: str) -> None:
         self._games[session_id].cancel()
 
 

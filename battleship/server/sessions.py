@@ -46,6 +46,13 @@ class SessionRepository(abc.ABC):
     async def update(self, session_id: str, **kwargs: Any) -> Session:
         pass
 
+    async def get_for_client(self, client_id: str) -> Session | None:
+        try:
+            [session] = [s for s in await self.list() if client_id in (s.host_id, s.guest_id)]
+            return session
+        except ValueError:
+            return None
+
     def subscribe(self, callback_id: str, callback: Listener) -> None:
         self._listeners[callback_id] = callback
 
@@ -131,5 +138,6 @@ class RedisSessionRepository(SessionRepository):
     async def update(self, session_id: str, **kwargs: Any) -> Session:
         session = await self.get(session_id)
         updated_session = Session.from_dict({**session.to_dict(), **kwargs})
+        await self._client.set(session.id, updated_session.to_json())
         self._notify_listeners(session_id, Action.START)
         return updated_session

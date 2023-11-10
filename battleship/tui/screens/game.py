@@ -1,6 +1,6 @@
 from datetime import datetime
 from string import Template
-from typing import Any, Iterable
+from typing import Any, Iterable, Literal
 
 from textual import on
 from textual.app import DEFAULT_COLORS, ComposeResult
@@ -33,6 +33,9 @@ def convert_to_coordinate(coordinate: Coordinate) -> str:
 def convert_from_coordinate(coordinate: str) -> Coordinate:
     column, row = domain.parse_coordinate(coordinate)
     return Coordinate(row - 1, ord(column) - 1 - 64)
+
+
+CANCEL_MSG = {"quit": "%s has quit the game", "disconnect": "%s disconnected from the server"}
 
 
 class Game(Screen[None]):
@@ -108,6 +111,7 @@ class Game(Screen[None]):
         self._strategy.subscribe("awaiting_move", self.on_awaiting_move)
         self._strategy.subscribe("salvo", self.on_salvo)
         self._strategy.subscribe("game_ended", self.on_game_ended)
+        self._strategy.subscribe("game_cancelled", self.on_game_cancelled)
 
     def compose(self) -> ComposeResult:
         with Grid(id="content"):
@@ -131,7 +135,7 @@ class Game(Screen[None]):
 
         def callback(should_quit: bool) -> None:
             if should_quit:
-                # TODO: Multiplayer game clean-up.
+                self._strategy.cancel()
                 self.app.exit()
 
         self.app.push_screen(SessionEndModal(), callback)
@@ -204,6 +208,13 @@ class Game(Screen[None]):
 
         text = PHASE_VICTORY if self._game.player_a.name == winner else PHASE_DEFEAT
         self.query_one(Announcement).update_phase(text)
+        self._strategy.unsubscribe()
+
+    def on_game_cancelled(self, reason: Literal["quit", "disconnect"]) -> None:
+        msg = CANCEL_MSG[reason] % self._enemy_name
+        self.app.pop_screen()
+        self.app.notify(msg, title="Game cancelled", severity="warning")
+        self._strategy.unsubscribe()
 
     @on(Board.CellShot)
     def fire(self, event: Board.CellShot) -> None:
@@ -218,7 +229,8 @@ class Game(Screen[None]):
 
         def callback(should_quit: bool) -> None:
             if should_quit:
-                # TODO: Multiplayer game clean-up.
+                self._strategy.cancel()
+                self._strategy.unsubscribe()
                 self.app.pop_screen()
 
         self.app.push_screen(SessionEndModal(), callback)
