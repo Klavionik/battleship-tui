@@ -1,13 +1,16 @@
 from typing import Annotated
 
 import typer
+from xdg_base_dirs import xdg_data_home
 
 from battleship import tui
-from battleship.cli import account, di, play
+from battleship.cli import account, di, logging, play
 
 app = typer.Typer(name="Battleship TUI")
 app.add_typer(account.app, name="account")
 app.add_typer(play.app, name="play")
+
+DEFAULT_LOG_SINK = xdg_data_home() / "battleship" / "client.log"
 
 
 @app.callback(invoke_without_command=True)
@@ -24,6 +27,7 @@ def main(
         ),
     ] = "https://battleship.klavionik.dev",
 ) -> None:
+    logging.configure_logger(str(DEFAULT_LOG_SINK))
     config = tui.Config(server_url=server_url, credentials_provider=credentials_provider)
     di.configure_injection(config)
 

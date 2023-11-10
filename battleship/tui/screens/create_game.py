@@ -1,6 +1,7 @@
 from typing import Any
 
 import inject
+from loguru import logger
 from textual import on
 from textual.app import ComposeResult
 from textual.containers import Container
@@ -10,7 +11,6 @@ from textual.widgets import Footer, Markdown
 from battleship.client import Client
 from battleship.engine import create_game
 from battleship.engine.roster import Roster, RosterItem
-from battleship.logger import client_logger as logger
 from battleship.shared.events import ServerEvent
 from battleship.tui import resources, screens, strategies
 from battleship.tui.widgets.modals import WaitingModal

@@ -5,6 +5,7 @@ from typing import Any, Callable, Collection, Coroutine, Optional
 from urllib.parse import urlparse
 
 from httpx import AsyncClient, Request, Response
+from loguru import logger
 from pyee.asyncio import AsyncIOEventEmitter
 
 # noinspection PyProtectedMember
@@ -12,7 +13,6 @@ from websockets.client import WebSocketClientProtocol, connect
 
 from battleship.client.auth import IDTokenAuth
 from battleship.client.credentials import Credentials, CredentialsProvider
-from battleship.logger import client_logger as logger
 from battleship.shared.events import (
     ClientEvent,
     EventMessage,
