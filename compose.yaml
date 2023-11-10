@@ -25,6 +25,8 @@ services:
 
   broker:
     image: redis:7.2.3-alpine
+    ports:
+      - "6379:6379"
     healthcheck:
       test: redis-cli ping | grep PONG
       interval: 2s
