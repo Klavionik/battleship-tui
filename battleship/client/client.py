@@ -1,9 +1,10 @@
 import asyncio
 import json as json_
 from asyncio import Task
-from typing import Any, Callable, Collection, Coroutine, Optional
+from typing import Any, AsyncIterator, Callable, Collection, Coroutine, Optional
 from urllib.parse import urlparse
 
+import websockets
 from httpx import AsyncClient, Request, Response
 from loguru import logger
 from pyee.asyncio import AsyncIOEventEmitter
@@ -27,6 +28,10 @@ from battleship.shared.models import (
     SessionID,
     User,
 )
+
+
+class WebSocketConnectionTimeout(Exception):
+    pass
 
 
 class RefreshEvent:
@@ -73,11 +78,14 @@ class Client:
         credentials_provider: CredentialsProvider,
         refresh_interval: int = 20,
         http_timeout: int = 20,
+        ws_timeout: int = 30,
     ) -> None:
         parsed_url = urlparse(server_url)
         self._netloc = parsed_url.netloc
         self._scheme = parsed_url.scheme
         self._ws: Optional[WebSocketClientProtocol] = None
+        self._ws_connected = asyncio.Event()
+        self._ws_timeout = ws_timeout
         self._emitter = AsyncIOEventEmitter()
         self._events_worker: Task[None] | None = None
         self.user: User | None = None
@@ -109,21 +117,13 @@ class Client:
             raise RuntimeError("Must log in before trying to establish a WS connection.")
 
         await self._refresh_event.wait()
-
-        self._ws = await connect(
-            self.base_url_ws + "/ws",
-            extra_headers={"Authorization": f"Bearer {self.credentials.id_token}"},
-        )
         self._events_worker = self._run_events_worker()
+        await self._ws_connected.wait()
 
     async def disconnect(self) -> None:
         if self._events_worker:
             logger.debug("Disconnect: cancel events worker.")
             self._events_worker.cancel()
-
-        if self._ws:
-            logger.debug("Disconnect: close WS connection.")
-            await self._ws.close()
 
     async def logout(self) -> None:
         self.user = None
@@ -258,23 +258,48 @@ class Client:
     async def cancel_game(self) -> None:
         await self._send(dict(kind=ClientEvent.CANCEL_GAME))
 
+    async def _connect_with_retry(self) -> AsyncIterator[WebSocketClientProtocol]:
+        assert self.credentials
+
+        try:
+            async with asyncio.timeout(self._ws_timeout) as timeout:
+                async for connection in connect(
+                    self.base_url_ws + "/ws",
+                    extra_headers={"Authorization": f"Bearer {self.credentials.id_token}"},
+                ):
+                    logger.debug("Acquired new WebSocket connection.")
+                    timeout.reschedule(None)
+                    yield connection
+                    logger.warning("Server closed the WebSocket connection, acquire a new one.")
+                    timeout.reschedule(asyncio.get_running_loop().time() + self._ws_timeout)
+        except TimeoutError:
+            logger.warning("Cannot establish WebSocket connection.")
+            raise WebSocketConnectionTimeout("Cannot establish WebSocket connection.")
+
     def _run_events_worker(self) -> Task[None]:
         async def events_worker() -> None:
-            if self._ws is None:
-                raise RuntimeError("Cannot receive messages, no connection.")
-
             logger.debug("Run events worker.")
+            async for connection in self._connect_with_retry():
+                self._ws = connection
+                self._ws_connected.set()
 
-            try:
-                async for message in self._ws:
-                    event = EventMessage.from_raw(message)
-                    logger.debug("Received WebSocket event: {event}.", event=event)
-                    self._emitter.emit(event.kind, event.payload)
-            except asyncio.CancelledError:
-                logger.debug("Stop events worker.")
-                raise
+                try:
+                    async for message in connection:
+                        event = EventMessage.from_raw(message)
+                        logger.debug("Received WebSocket event: {event}.", event=event)
+                        self._emitter.emit(event.kind, event.payload)
+                except websockets.ConnectionClosed:
+                    continue
 
-        return asyncio.create_task(events_worker())
+        def cleanup(_: Task[None]) -> None:
+            self._ws = None
+            self._events_worker = None
+            self._ws_connected.clear()
+            logger.debug("WebSocket connection closed and cleaned up.")
+
+        task = asyncio.create_task(events_worker())
+        task.add_done_callback(cleanup)
+        return task
 
     async def _send(self, msg: EventMessageData) -> None:
         if self._ws is None:
