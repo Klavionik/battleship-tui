@@ -87,7 +87,7 @@ class Client:
         self._ws_connected = asyncio.Event()
         self._ws_timeout = ws_timeout
         self._emitter = AsyncIOEventEmitter()
-        self._events_worker: Task[None] | None = None
+        self._events_worker_task: Task[None] | None = None
         self.user: User | None = None
         self.credentials: Credentials | None = None
         self.auth = IDTokenAuth()
@@ -117,13 +117,13 @@ class Client:
             raise RuntimeError("Must log in before trying to establish a WS connection.")
 
         await self._refresh_event.wait()
-        self._events_worker = self._run_events_worker()
+        self._events_worker_task = self._run_events_worker()
         await self._ws_connected.wait()
 
     async def disconnect(self) -> None:
-        if self._events_worker:
+        if self._events_worker_task:
             logger.debug("Disconnect: cancel events worker.")
-            self._events_worker.cancel()
+            self._events_worker_task.cancel()
 
     async def logout(self) -> None:
         self.user = None
@@ -267,37 +267,42 @@ class Client:
                     self.base_url_ws + "/ws",
                     extra_headers={"Authorization": f"Bearer {self.credentials.id_token}"},
                 ):
-                    logger.debug("Acquired new WebSocket connection.")
                     timeout.reschedule(None)
                     yield connection
-                    logger.warning("Server closed the WebSocket connection, acquire a new one.")
                     timeout.reschedule(asyncio.get_running_loop().time() + self._ws_timeout)
         except TimeoutError:
             logger.warning("Cannot establish WebSocket connection.")
             raise WebSocketConnectionTimeout("Cannot establish WebSocket connection.")
 
+    async def _events_worker(self) -> None:
+        logger.debug("Run events worker.")
+
+        async for connection in self._connect_with_retry():
+            logger.debug("Acquired new WebSocket connection.")
+            self._ws = connection
+            self._ws_connected.set()
+
+            try:
+                async for message in connection:
+                    event = EventMessage.from_raw(message)
+                    logger.debug("Received WebSocket event: {event}.", event=event)
+                    self._emitter.emit(event.kind, event.payload)
+            except websockets.ConnectionClosed:
+                self._cleanup_ws()
+                logger.warning("Server closed the WebSocket connection, acquire a new one.")
+                continue
+
+    def _cleanup_ws(self) -> None:
+        logger.debug("WebSocket connection cleanup.")
+        self._ws = None
+        self._events_worker_task = None
+        self._ws_connected.clear()
+
     def _run_events_worker(self) -> Task[None]:
-        async def events_worker() -> None:
-            logger.debug("Run events worker.")
-            async for connection in self._connect_with_retry():
-                self._ws = connection
-                self._ws_connected.set()
-
-                try:
-                    async for message in connection:
-                        event = EventMessage.from_raw(message)
-                        logger.debug("Received WebSocket event: {event}.", event=event)
-                        self._emitter.emit(event.kind, event.payload)
-                except websockets.ConnectionClosed:
-                    continue
-
         def cleanup(_: Task[None]) -> None:
-            self._ws = None
-            self._events_worker = None
-            self._ws_connected.clear()
-            logger.debug("WebSocket connection closed and cleaned up.")
+            self._cleanup_ws()
 
-        task = asyncio.create_task(events_worker())
+        task = asyncio.create_task(self._events_worker())
         task.add_done_callback(cleanup)
         return task
 
