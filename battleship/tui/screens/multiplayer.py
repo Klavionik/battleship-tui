@@ -8,7 +8,7 @@ from textual.events import Mount
 from textual.screen import Screen
 from textual.widgets import Button, Footer, Input, Markdown, Rule
 
-from battleship.client import Client
+from battleship.client import Client, RequestFailed
 from battleship.tui import resources, screens
 
 
@@ -57,19 +57,28 @@ class Multiplayer(Screen[None]):
 
     @on(Button.Pressed, "#connect-guest")
     async def connect_as_guest(self) -> None:
-        self.loading = True  # noqa
         self.login(guest=True)
 
     @on(Button.Pressed, "#connect-user")
     async def connect_as_user(self) -> None:
-        self.loading = True  # noqa
         self.login()
 
     @work
     async def login(self, guest: bool = False) -> None:
-        if guest:
-            nickname = await self._client.login(guest=True)
-        else:
-            nickname = await self._client.login(self._nickname, self._password)
+        self.loading = True  # noqa
 
-        await self.app.switch_screen(screens.Lobby(nickname=nickname))
+        try:
+            if guest:
+                nickname = await self._client.login(guest=True)
+            else:
+                nickname = await self._client.login(self._nickname, self._password)
+        except RequestFailed:
+            self.loading = False  # noqa
+            self.notify(
+                "Cannot send the request, check your internet connection and try later.",
+                title="Request failed",
+                severity="error",
+                timeout=5,
+            )
+        else:
+            await self.app.switch_screen(screens.Lobby(nickname=nickname))

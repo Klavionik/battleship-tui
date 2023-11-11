@@ -4,6 +4,7 @@ from asyncio import Task
 from typing import Any, AsyncIterator, Callable, Collection, Coroutine, Optional
 from urllib.parse import urlparse
 
+import httpx
 import websockets
 from httpx import AsyncClient, Request, Response
 from loguru import logger
@@ -30,7 +31,15 @@ from battleship.shared.models import (
 )
 
 
-class WebSocketConnectionTimeout(Exception):
+class ClientError(Exception):
+    pass
+
+
+class WebSocketConnectionTimeout(ClientError):
+    pass
+
+
+class RequestFailed(ClientError):
     pass
 
 
@@ -326,7 +335,11 @@ class Client:
         if ensure_not_refreshing:
             await self._refresh_event.wait()
 
-        return await self._session.request(method, url, json=json)
+        try:
+            return await self._session.request(method, url, json=json)
+        except httpx.TransportError as exc:
+            logger.error("HTTP transport error occured: {exc}", exc=repr(exc))
+            raise RequestFailed
 
     def _run_credentials_worker(self) -> None:
         async def credentials_worker() -> None:
