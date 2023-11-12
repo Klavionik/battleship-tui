@@ -10,7 +10,7 @@ from textual.screen import Screen
 from textual.validation import Length
 from textual.widgets import Button, Footer, Input, Markdown, Rule
 
-from battleship.client import Client, RequestFailed
+from battleship.client import Client, RequestFailed, Unauthorized
 from battleship.tui import resources, screens
 
 
@@ -103,12 +103,20 @@ class Multiplayer(Screen[None]):
                 password = self.query_one("#password", Input).value
                 await self._client.login(nickname, password)
         except RequestFailed:
-            self.loading = False  # noqa
             self.notify(
                 "Cannot send the request, check your internet connection and try later.",
                 title="Request failed",
                 severity="error",
                 timeout=5,
             )
+        except Unauthorized:
+            self.notify(
+                "Incorrect nickname or password.",
+                title="Unauthorized",
+                severity="error",
+                timeout=5,
+            )
         else:
             await self.app.switch_screen(screens.Lobby(nickname=nickname))
+        finally:
+            self.loading = False  # noqa

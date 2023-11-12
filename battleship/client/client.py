@@ -36,6 +36,10 @@ class RequestFailed(ClientError):
     pass
 
 
+class Unauthorized(ClientError):
+    pass
+
+
 class RefreshEvent:
     def __init__(self) -> None:
         self._event = asyncio.Event()
@@ -336,10 +340,19 @@ class Client:
             await self._refresh_event.wait()
 
         try:
-            return await self._session.request(method, url, json=json)
+            response = await self._session.request(method, url, json=json)
+            response.raise_for_status()
         except httpx.TransportError as exc:
             logger.error("HTTP transport error occured: {exc}", exc=repr(exc))
             raise RequestFailed
+        except httpx.HTTPStatusError as exc:
+            match exc.response.status_code:
+                case 401:
+                    raise Unauthorized("Wrong nickname or password.")
+                case _:
+                    raise ClientError(f"API error: {exc}.")
+        else:
+            return response
 
     def _run_credentials_worker(self) -> None:
         async def credentials_worker() -> None:

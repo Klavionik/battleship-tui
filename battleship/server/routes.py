@@ -1,11 +1,11 @@
 import asyncio
 
-from blacksheep import FromJSON, Response, Router, WebSocket, created, ok
+from blacksheep import FromJSON, Response, Router, WebSocket, created, ok, unauthorized
 from blacksheep.server.authorization import allow_anonymous
 from guardpost.authentication import Identity
 from loguru import logger
 
-from battleship.server.auth import AuthManager
+from battleship.server.auth import AuthManager, WrongCredentials
 from battleship.server.clients import ClientRepository
 from battleship.server.handlers import GameHandler, SessionSubscriptionHandler
 from battleship.server.pubsub import IncomingChannel, OutgoingChannel
@@ -137,8 +137,11 @@ async def signup(credentials: SignupCredentials, auth_manager: AuthManager) -> R
 
 @allow_anonymous()
 @router.post("/login")
-async def login(credentials: LoginCredentials, auth_manager: AuthManager) -> LoginData:
-    return await auth_manager.login(credentials.nickname, credentials.password)
+async def login(credentials: LoginCredentials, auth_manager: AuthManager) -> LoginData | Response:
+    try:
+        return await auth_manager.login(credentials.nickname, credentials.password)
+    except WrongCredentials:
+        return unauthorized()
 
 
 @allow_anonymous()

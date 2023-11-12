@@ -7,9 +7,10 @@ from secrets import token_urlsafe
 from string import ascii_letters, digits
 from typing import Any, TypeAlias, cast
 
+import auth0  # type: ignore[import-untyped]
 import jwt
-from auth0.authentication import Database, GetToken  # type: ignore[import]
-from auth0.management import Auth0 as _Auth0  # type: ignore[import]
+from auth0.authentication import Database, GetToken  # type: ignore[import-untyped]
+from auth0.management import Auth0 as _Auth0  # type: ignore[import-untyped]
 
 from battleship.server.config import Config
 from battleship.shared.models import IDToken, LoginData
@@ -21,6 +22,14 @@ class UserRole(enum.StrEnum):
 
 
 JSONPayload: TypeAlias = dict[str, Any]
+
+
+class AuthError(Exception):
+    pass
+
+
+class WrongCredentials(AuthError):
+    pass
 
 
 class AuthManager(ABC):
@@ -64,7 +73,11 @@ class Auth0AuthManager(AuthManager):
         )
 
     async def login(self, nickname: str, password: str) -> LoginData:
-        tokens = await self.api.login(nickname, password)
+        try:
+            tokens = await self.api.login(nickname, password)
+        except auth0.Auth0Error as exc:
+            raise WrongCredentials(str(exc))
+
         id_token = tokens["id_token"]
         payload = _read_token(id_token)
 

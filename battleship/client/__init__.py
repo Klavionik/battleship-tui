@@ -1,4 +1,9 @@
-from battleship.client.client import Client, RequestFailed, SessionSubscription
+from battleship.client.client import (
+    Client,
+    RequestFailed,
+    SessionSubscription,
+    Unauthorized,
+)
 from battleship.client.credentials import (
     CredentialsProvider,
     filesystem_credentials_provider,
@@ -10,4 +15,5 @@ __all__ = [
     "SessionSubscription",
     "filesystem_credentials_provider",
     "RequestFailed",
+    "Unauthorized",
 ]
