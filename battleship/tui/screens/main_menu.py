@@ -31,17 +31,16 @@ class MainMenu(Screen[None]):
 
         yield Footer()
 
-    @on(ListView.Selected)
-    def select_screen(self, event: ListView.Selected) -> None:
+    @on(ListView.Selected, item="#singleplayer")
+    def run_singleplayer(self) -> None:
+        self.app.switch_screen(screens.Singleplayer())
+
+    @on(ListView.Selected, item="#multiplayer")
+    def run_multiplayer(self) -> None:
         client: Client = inject.instance(Client)
+        client.load_credentials()
 
-        match event.item.id:
-            case "singleplayer":
-                self.app.switch_screen(screens.Singleplayer())
-            case "multiplayer":
-                client.load_credentials()
-
-                if not client.user:
-                    self.app.switch_screen(screens.Multiplayer())
-                else:
-                    self.app.switch_screen(screens.Lobby(nickname=client.user.nickname))
+        if not client.user:
+            self.app.switch_screen(screens.Multiplayer())
+        else:
+            self.app.switch_screen(screens.Lobby(nickname=client.user.nickname))
