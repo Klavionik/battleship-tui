@@ -27,6 +27,9 @@ def main(
         ),
     ] = "https://battleship.klavionik.dev",
 ) -> None:
+    ctx.ensure_object(dict)
+    ctx.obj["server_url"] = server_url
+
     logging.configure_logger(str(DEFAULT_LOG_SINK))
     config = tui.Config(server_url=server_url, credentials_provider=credentials_provider)
     di.configure_injection(config)

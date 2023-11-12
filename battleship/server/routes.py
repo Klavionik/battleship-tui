@@ -1,11 +1,20 @@
 import asyncio
 
-from blacksheep import FromJSON, Response, Router, WebSocket, created, ok, unauthorized
+from blacksheep import (
+    FromJSON,
+    Response,
+    Router,
+    WebSocket,
+    bad_request,
+    created,
+    ok,
+    unauthorized,
+)
 from blacksheep.server.authorization import allow_anonymous
 from guardpost.authentication import Identity
 from loguru import logger
 
-from battleship.server.auth import AuthManager, WrongCredentials
+from battleship.server.auth import AuthManager, InvalidSignup, WrongCredentials
 from battleship.server.clients import ClientRepository
 from battleship.server.handlers import GameHandler, SessionSubscriptionHandler
 from battleship.server.pubsub import IncomingChannel, OutgoingChannel
@@ -127,11 +136,14 @@ async def login_guest_user(auth_manager: AuthManager) -> LoginData:
 @allow_anonymous()
 @router.post("/signup")
 async def signup(credentials: SignupCredentials, auth_manager: AuthManager) -> Response:
-    await auth_manager.signup(
-        credentials.email,
-        credentials.password,
-        credentials.nickname,
-    )
+    try:
+        await auth_manager.signup(
+            credentials.email,
+            credentials.password,
+            credentials.nickname,
+        )
+    except InvalidSignup:
+        return bad_request()
     return created()
 
 

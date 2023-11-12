@@ -24,7 +24,7 @@ def signup(
     nickname: Annotated[str, Option(prompt=True)],
     password: Annotated[str, Option(prompt=True, confirmation_prompt=True, hide_input=True)],
 ) -> None:
-    server_url = ctx.params["server_url"]
+    server_url = ctx.obj["server_url"]
 
     with console.status(f"Creating user {nickname}..."):
         creds = dict(email=email, nickname=nickname, password=password)
@@ -36,10 +36,13 @@ def signup(
             console.error(f"Cannot create this user. Error code {response.status_code}.")
 
             if response.status_code == 400:
-                errors = response.json()
-
-                for fields, msg in _unpack_400_errors(errors):
-                    console.print(f"Fields: [accent]{fields}[/]. Reason: [accent]{msg}[/]")
+                try:
+                    errors = response.json()
+                except Exception:
+                    pass
+                else:
+                    for fields, msg in _unpack_400_errors(errors):
+                        console.print(f"Fields: [accent]{fields}[/]. Reason: [accent]{msg}[/]")
 
             raise Exit(code=1)
 

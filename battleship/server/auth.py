@@ -11,6 +11,7 @@ import auth0  # type: ignore[import-untyped]
 import jwt
 from auth0.authentication import Database, GetToken  # type: ignore[import-untyped]
 from auth0.management import Auth0 as _Auth0  # type: ignore[import-untyped]
+from loguru import logger
 
 from battleship.server.config import Config
 from battleship.shared.models import IDToken, LoginData
@@ -29,6 +30,10 @@ class AuthError(Exception):
 
 
 class WrongCredentials(AuthError):
+    pass
+
+
+class InvalidSignup(AuthError):
     pass
 
 
@@ -89,8 +94,12 @@ class Auth0AuthManager(AuthManager):
         )
 
     async def signup(self, email: str, password: str, nickname: str) -> None:
-        data = await self.api.signup(email, nickname, password)
-        await self.assign_role(data["_id"], UserRole.USER)
+        try:
+            data = await self.api.signup(email, nickname, password)
+            await self.assign_role(data["_id"], UserRole.USER)
+        except auth0.Auth0Error as exc:
+            logger.error(f"Error during signup: {exc.error_code=} {exc.message=}")
+            raise InvalidSignup("Cannot create such account.")
 
     async def refresh_id_token(self, refresh_token: str) -> IDToken:
         data = await self.api.refresh_token(refresh_token)
