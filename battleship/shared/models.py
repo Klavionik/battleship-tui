@@ -47,11 +47,6 @@ class Session(SessionCreate):
     guest_id: str = ""
 
 
-class User(BaseModel):
-    nickname: str
-    guest: bool | None = None
-
-
 class RefreshToken(BaseModel):
     refresh_token: str
 

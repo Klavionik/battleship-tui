@@ -40,7 +40,7 @@ class MainMenu(Screen[None]):
         client: Client = inject.instance(Client)
         client.load_credentials()
 
-        if not client.user:
-            self.app.switch_screen(screens.Multiplayer())
+        if client.logged_in:
+            self.app.switch_screen(screens.Lobby(nickname=client.nickname))
         else:
-            self.app.switch_screen(screens.Lobby(nickname=client.user.nickname))
+            self.app.switch_screen(screens.Multiplayer())

@@ -4,7 +4,7 @@ import inject
 from textual import on
 from textual.app import ComposeResult
 from textual.containers import Container, VerticalScroll
-from textual.events import Mount
+from textual.events import Mount, Unmount
 from textual.screen import Screen
 from textual.widgets import Footer, Label, ListItem, ListView, Markdown, Static
 
@@ -47,11 +47,15 @@ class Lobby(Screen[None]):
     async def connect_ws(self) -> None:
         await self._client.connect()
 
+    @on(Unmount)
+    async def disconnect_ws(self) -> None:
+        await self._client.disconnect()
+
     @on(ListView.Selected, item="#logout")
     async def logout(self) -> None:
         await self._client.disconnect()
         await self._client.logout()
-        await self.app.switch_screen(screens.Multiplayer())
+        self.action_back()
 
     @on(ListView.Selected, item="#create_game")
     def create_game(self) -> None:

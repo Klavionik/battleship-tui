@@ -92,10 +92,8 @@ class JoinGame(Screen[None]):
             data = payload["roster"]
             roster = Roster(name=data["name"], items=[RosterItem(*item) for item in data["items"]])
 
-            assert self._client.user
-
             game = create_game(
-                self._client.user.nickname,
+                self._client.nickname,
                 enemy_nickname,
                 roster,
                 session.firing_order,

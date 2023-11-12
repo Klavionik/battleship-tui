@@ -43,8 +43,7 @@ class CreateGame(Screen[None]):
 
     @on(NewGame.PlayPressed)
     async def create_session(self, event: NewGame.PlayPressed) -> None:
-        assert self._client.user
-        nickname = self._client.user.nickname
+        nickname = self._client.nickname
         name = event.name or f"{nickname}'s game"
         session = await self._client.create_session(
             name,

@@ -21,14 +21,7 @@ from battleship.shared.events import (
     EventMessageData,
     ServerEvent,
 )
-from battleship.shared.models import (
-    Action,
-    IDToken,
-    LoginData,
-    Session,
-    SessionID,
-    User,
-)
+from battleship.shared.models import Action, IDToken, LoginData, Session, SessionID
 
 
 class ClientError(Exception):
@@ -97,7 +90,6 @@ class Client:
         self._ws_timeout = ws_timeout
         self._emitter = AsyncIOEventEmitter()
         self._events_worker_task: Task[None] | None = None
-        self.user: User | None = None
         self.credentials: Credentials | None = None
         self.auth = IDTokenAuth()
         self._session = AsyncClient(
@@ -121,6 +113,17 @@ class Client:
         scheme = "wss" if self._scheme == "https" else "ws"
         return f"{scheme}://{self._netloc}"
 
+    @property
+    def logged_in(self) -> bool:
+        return self.credentials is not None
+
+    @property
+    def nickname(self) -> str:
+        if self.credentials is None:
+            raise RuntimeError("Credentials are missing, did you log in?")
+
+        return self.credentials.nickname
+
     async def connect(self) -> None:
         if self.credentials is None:
             raise RuntimeError("Must log in before trying to establish a WS connection.")
@@ -135,7 +138,6 @@ class Client:
             self._events_worker_task.cancel()
 
     async def logout(self) -> None:
-        self.user = None
         self.auth.clear_token()
         self.clear_credentials()
 
@@ -161,12 +163,11 @@ class Client:
                 expires_at=login_data.expires_at,
             )
         )
-        self.user = User(nickname=login_data.nickname)
         self.update_credentials(credentials)
-        return self.user.nickname
+        return credentials.nickname
 
     async def refresh_id_token(self, refresh_token: str) -> None:
-        assert self.user
+        assert self.credentials
 
         payload = dict(refresh_token=refresh_token)
         response = await self._request(
@@ -175,7 +176,7 @@ class Client:
         id_token = IDToken.from_dict(response.json())
         credentials = Credentials.from_dict(
             dict(
-                nickname=self.user.nickname,
+                nickname=self.credentials.nickname,
                 id_token=id_token.id_token,
                 refresh_token=refresh_token,
                 expires_at=id_token.expires_at,
@@ -188,7 +189,6 @@ class Client:
         logger.debug("Credentials loaded: {creds}.", creds=self.credentials)
 
         if self.credentials:
-            self.user = User(nickname=self.credentials.nickname)
             self.auth.set_token(self.credentials.id_token)
 
         self._run_credentials_worker()
