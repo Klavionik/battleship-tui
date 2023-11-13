@@ -4,7 +4,7 @@ import inject
 from textual import on
 from textual.app import ComposeResult
 from textual.containers import Container, VerticalScroll
-from textual.events import Unmount
+from textual.events import Mount, Unmount
 from textual.screen import Screen
 from textual.widgets import Footer, Label, ListItem, ListView, Markdown, Static
 
@@ -42,6 +42,10 @@ class Lobby(Screen[None]):
 
     def action_back(self) -> None:
         self.app.switch_screen(screens.MainMenu())
+
+    @on(Mount)
+    def focus_menu(self) -> None:
+        self.query_one(ListView).focus()
 
     @on(Unmount)
     async def disconnect_ws(self) -> None:
