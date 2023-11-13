@@ -78,6 +78,8 @@ Game Announcement #phase {
 }
 
 Fleet {
+  overflow-y: auto;
+  scrollbar-size-vertical: 1;
   padding: 1 0;
   border: wide $accent;
 }
