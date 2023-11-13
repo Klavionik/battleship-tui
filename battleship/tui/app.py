@@ -83,6 +83,11 @@ class BattleshipApp(App[None]):
         self._client.add_listener(ClientEvent.CONNECTION_ESTABLISHED, on_connection_restored)
         self._client.add_listener(ClientEvent.CONNECTION_IMPOSSIBLE, on_connection_impossible)
 
+        # Not a very clean way of dismissing this waiting modal, probably.
+        # If we don't do this, we end up with 1) double overlay 2) player
+        # thinking that his session is still about to start (if connection restore).
+        if hasattr(self, "_create_game_waiting_modal"):
+            self._create_game_waiting_modal.dismiss(False)
         self.push_screen(modal)
 
 

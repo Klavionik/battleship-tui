@@ -52,6 +52,7 @@ class CreateGame(Screen[None]):
             event.salvo_mode,
         )
         waiting_modal = WaitingModal()
+        self.app._create_game_waiting_modal = waiting_modal  # type: ignore[attr-defined]
 
         @logger.catch
         def on_start_game(payload: dict[str, Any]) -> None:
@@ -68,9 +69,13 @@ class CreateGame(Screen[None]):
         self._client.add_listener(ServerEvent.START_GAME, on_start_game)
 
         async def on_modal_dismiss(game_started: bool) -> None:
+            del self.app._create_game_waiting_modal  # type: ignore[attr-defined]
             self._client.remove_listener(ServerEvent.START_GAME, on_start_game)
 
             if not game_started:
-                await self._client.delete_session(session.id)
+                try:
+                    await self._client.delete_session(session.id)
+                except Exception as exc:
+                    logger.warning(f"Could not delete created session {session.id}. Error: {exc}")
 
         await self.app.push_screen(waiting_modal, callback=on_modal_dismiss)
