@@ -1,5 +1,6 @@
 from battleship.client.client import (
     Client,
+    ClientError,
     ConnectionImpossible,
     RequestFailed,
     SessionSubscription,
@@ -18,4 +19,5 @@ __all__ = [
     "RequestFailed",
     "Unauthorized",
     "ConnectionImpossible",
+    "ClientError",
 ]

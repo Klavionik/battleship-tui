@@ -10,7 +10,7 @@ from textual.events import Mount, Unmount
 from textual.screen import Screen
 from textual.widgets import Footer, Label, ListItem, ListView, Static
 
-from battleship.client import Client, SessionSubscription
+from battleship.client import Client, ClientError, SessionSubscription
 from battleship.engine import create_game
 from battleship.engine.roster import Roster, RosterItem
 from battleship.shared.events import ServerEvent
@@ -77,7 +77,11 @@ class JoinGame(Screen[None]):
 
     @on(Unmount)
     async def unsubscribe(self) -> None:
-        await self._client.sessions_unsubscribe()
+        try:
+            await self._client.sessions_unsubscribe()
+        except ClientError:
+            pass
+
         self._subscription = None
 
     @on(ListView.Selected)
