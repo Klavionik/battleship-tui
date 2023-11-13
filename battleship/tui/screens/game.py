@@ -135,7 +135,7 @@ class Game(Screen[None]):
 
         def callback(should_quit: bool) -> None:
             if should_quit:
-                self._strategy.cancel()
+                self.cancel_game()
                 self.app.exit()
 
         self.app.push_screen(SessionEndModal(), callback)
@@ -229,11 +229,14 @@ class Game(Screen[None]):
 
         def callback(should_quit: bool) -> None:
             if should_quit:
-                self._strategy.cancel()
-                self._strategy.unsubscribe()
+                self.cancel_game()
                 self.app.pop_screen()
 
         self.app.push_screen(SessionEndModal(), callback)
+
+    def cancel_game(self) -> None:
+        self._strategy.cancel()
+        self._strategy.unsubscribe()
 
     @on(Ship.ShowPreview)
     def show_ship_preview(self, event: Ship.ShowPreview) -> None:

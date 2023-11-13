@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, cast
 
 import inject
 from loguru import logger
@@ -49,6 +49,17 @@ class BattleshipApp(App[None]):
         logger.warning("Connection lost, trying to re-establish.")
         modal = modals.ConnectionLostModal()
 
+        def cancel_active_game() -> None:
+            if isinstance(self.screen, screens.Game):
+                game_screen = cast(screens.Game, self.pop_screen())
+                game_screen.cancel_game()
+                self.notify(
+                    "Game cannot be continued.",
+                    title="Connection lost",
+                    severity="error",
+                    timeout=5,
+                )
+
         def restore_listeners() -> None:
             self._client.remove_listener(ClientEvent.CONNECTION_ESTABLISHED, on_connection_restored)
             self._client.remove_listener(
@@ -60,10 +71,12 @@ class BattleshipApp(App[None]):
             logger.debug("Connection restored.")
             modal.dismiss()
             restore_listeners()
+            cancel_active_game()
 
         async def on_connection_impossible() -> None:
             modal.dismiss()
             restore_listeners()
+            cancel_active_game()
 
             logger.warning("Unable to restore connection, return to the main menu.")
 
