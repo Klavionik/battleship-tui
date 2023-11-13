@@ -58,7 +58,7 @@ class Multiplayer(Screen[None]):
 
     @on(Mount)
     async def on_mount(self) -> None:
-        self.loading = True
+        self.loading = True  # noqa
 
         try:
             await self._client.load_credentials()
@@ -73,7 +73,7 @@ class Multiplayer(Screen[None]):
         if self._client.logged_in:
             self.connect()
         else:
-            self.loading = False
+            self.loading = False  # noqa
             self.query_one("#nickname", Input).focus()
 
     @work
@@ -81,7 +81,7 @@ class Multiplayer(Screen[None]):
         try:
             await self._client.connect()
         except ConnectionImpossible:
-            self.loading = False
+            self.loading = False  # noqa
 
             if return_to_main_menu:
                 await self.app.switch_screen(screens.MainMenu())
@@ -140,6 +140,7 @@ class Multiplayer(Screen[None]):
                 password = self.query_one("#password", Input).value
                 await self._client.login(nickname, password)
         except RequestFailed:
+            self.loading = False  # noqa
             self.notify(
                 "Cannot send the request, check your internet connection and try later.",
                 title="Request failed",
