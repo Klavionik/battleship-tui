@@ -1,6 +1,7 @@
 from typing import Any
 
 import inject
+from loguru import logger
 from textual import on, work
 from textual.app import ComposeResult
 from textual.containers import Container, VerticalScroll
@@ -10,7 +11,8 @@ from textual.screen import Screen
 from textual.validation import Length
 from textual.widgets import Button, Footer, Input, Markdown, Rule
 
-from battleship.client import Client, RequestFailed, Unauthorized
+from battleship.client import Client, ConnectionImpossible, RequestFailed, Unauthorized
+from battleship.client.client import LoginRequired
 from battleship.tui import resources, screens
 
 
@@ -55,8 +57,43 @@ class Multiplayer(Screen[None]):
         self.app.switch_screen(screens.MainMenu())
 
     @on(Mount)
-    def on_mount(self) -> None:
-        self.query_one("#nickname", Input).focus()
+    async def on_mount(self) -> None:
+        self.loading = True
+
+        try:
+            await self._client.load_credentials()
+        except LoginRequired as exc:
+            logger.warning(f"Cannot load credentials. {exc}")
+            self.notify(
+                "Cannot load saved credentials. Please, log in again.",
+                title="Login required",
+                timeout=5,
+            )
+
+        if self._client.logged_in:
+            self.connect()
+        else:
+            self.loading = False
+            self.query_one("#nickname", Input).focus()
+
+    @work
+    async def connect(self, return_to_main_menu: bool = True) -> None:
+        try:
+            await self._client.connect()
+        except ConnectionImpossible:
+            self.loading = False
+
+            if return_to_main_menu:
+                await self.app.switch_screen(screens.MainMenu())
+
+            self.notify(
+                "Cannot connect to the server. Please, try again later.",
+                title="No connection",
+                severity="warning",
+                timeout=5,
+            )
+        else:
+            await self.app.switch_screen(screens.Lobby(nickname=self._client.nickname))
 
     def compute_is_input_valid(self) -> bool:
         return self.is_password_valid and self.is_nickname_valid
@@ -97,7 +134,7 @@ class Multiplayer(Screen[None]):
 
         try:
             if guest:
-                nickname = await self._client.login(guest=True)
+                await self._client.login(guest=True)
             else:
                 nickname = self.query_one("#nickname", Input).value
                 password = self.query_one("#password", Input).value
@@ -117,6 +154,4 @@ class Multiplayer(Screen[None]):
                 timeout=5,
             )
         else:
-            await self.app.switch_screen(screens.Lobby(nickname=nickname))
-        finally:
-            self.loading = False  # noqa
+            self.connect(return_to_main_menu=False)

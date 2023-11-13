@@ -1,11 +1,9 @@
-import inject
 from textual import on
 from textual.app import ComposeResult
 from textual.containers import Container
 from textual.screen import Screen
 from textual.widgets import Footer, Label, ListItem, ListView, Markdown
 
-from battleship.client import Client
 from battleship.tui import screens
 
 WELCOME_TEXT = """
@@ -37,10 +35,4 @@ class MainMenu(Screen[None]):
 
     @on(ListView.Selected, item="#multiplayer")
     def run_multiplayer(self) -> None:
-        client: Client = inject.instance(Client)
-        client.load_credentials()
-
-        if client.logged_in:
-            self.app.switch_screen(screens.Lobby(nickname=client.nickname))
-        else:
-            self.app.switch_screen(screens.Multiplayer())
+        self.app.switch_screen(screens.Multiplayer())

@@ -1,5 +1,6 @@
 from battleship.client.client import (
     Client,
+    ConnectionImpossible,
     RequestFailed,
     SessionSubscription,
     Unauthorized,
@@ -16,4 +17,5 @@ __all__ = [
     "filesystem_credentials_provider",
     "RequestFailed",
     "Unauthorized",
+    "ConnectionImpossible",
 ]

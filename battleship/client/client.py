@@ -40,6 +40,14 @@ class Unauthorized(ClientError):
     pass
 
 
+class LoginRequired(ClientError):
+    pass
+
+
+class ConnectionImpossible(ClientError):
+    pass
+
+
 class RefreshEvent:
     def __init__(self) -> None:
         self._event = asyncio.Event()
@@ -106,6 +114,7 @@ class Client:
 
         self._refresh_interval = refresh_interval
         self._refresh_event = RefreshEvent()
+        self._refresh_event.done()  # TODO: Replace with asyncio.Event?
         self._credentials_worker: Task[None] | None = None
 
     @property
@@ -132,20 +141,25 @@ class Client:
         if self.credentials is None:
             raise RuntimeError("Must log in before trying to establish a WS connection.")
 
-        await self._refresh_event.wait()
+        self._run_credentials_worker()
         self._events_worker_task = self._run_events_worker()
 
-        async with asyncio.timeout(self._ws_timeout):
-            await self._ws_connected.wait()
+        try:
+            async with asyncio.timeout(self._ws_timeout):
+                await self._ws_connected.wait()
+        except TimeoutError:
+            raise ConnectionImpossible("Connection attempt timed out.")
 
     async def disconnect(self) -> None:
         if self._events_worker_task:
             logger.debug("Disconnect: cancel events worker.")
             self._events_worker_task.cancel()
 
+        self._stop_credentials_worker()
+
     async def logout(self) -> None:
         self.auth.clear_token()
-        self.clear_credentials()
+        self.reset_credentials()
 
     async def login(self, nickname: str = "", password: str = "", *, guest: bool = False) -> str:
         if not guest and not (nickname and password):
@@ -172,7 +186,7 @@ class Client:
         self.update_credentials(credentials)
         return credentials.nickname
 
-    async def refresh_id_token(self, refresh_token: str) -> None:
+    async def refresh_id_token(self, refresh_token: str) -> Credentials:
         assert self.credentials
 
         payload = dict(refresh_token=refresh_token)
@@ -188,25 +202,37 @@ class Client:
                 expires_at=id_token.expires_at,
             )
         )
-        self.update_credentials(credentials)
+        return credentials
 
-    def load_credentials(self) -> None:
-        self.credentials = self.credentials_provider.load()
-        logger.debug("Credentials loaded: {creds}.", creds=self.credentials)
+    async def load_credentials(self) -> None:
+        credentials = self.credentials_provider.load()
+        logger.debug("Credentials loaded: {creds}.", creds=credentials)
 
-        if self.credentials:
-            self.auth.set_token(self.credentials.id_token)
+        if not credentials:
+            return
 
-        self._run_credentials_worker()
+        if credentials.is_expired():
+            try:
+                credentials = await self.refresh_id_token(credentials.refresh_token)
+            except Exception as exc:
+                self.credentials_provider.clear()
+                raise LoginRequired from exc
 
-    def update_credentials(self, credentials: Credentials) -> None:
+            self.update_credentials(credentials)
+
+        self.update_credentials(credentials, save=False)
+
+    def update_credentials(self, credentials: Credentials, save: bool = True) -> None:
         self.credentials = credentials
-        self.credentials_provider.save(credentials)
         self.auth.set_token(credentials.id_token)
 
-    def clear_credentials(self) -> None:
+        if save:
+            self.credentials_provider.save(credentials)
+
+    def reset_credentials(self) -> None:
         self.credentials = None
         self.credentials_provider.clear()
+        self._stop_credentials_worker()
 
     async def create_session(
         self,
@@ -272,6 +298,10 @@ class Client:
 
     async def cancel_game(self) -> None:
         await self._send(dict(kind=ClientEvent.CANCEL_GAME))
+
+    def _stop_credentials_worker(self) -> None:
+        if self._credentials_worker:
+            self._credentials_worker.cancel()
 
     async def _connect_with_retry(self) -> AsyncIterator[WebSocketClientProtocol]:
         assert self.credentials
@@ -341,6 +371,7 @@ class Client:
         ensure_not_refreshing: bool = True,
     ) -> Response:
         if ensure_not_refreshing:
+            logger.debug("Ensure token refresh is not in process. Wait for event.")
             await self._refresh_event.wait()
 
         try:
@@ -368,11 +399,6 @@ class Client:
                         self._refresh_event.refreshing()
                         logger.debug("Credentials expired, refresh.")
                         await self.refresh_id_token(self.credentials.refresh_token)
-                        self._refresh_event.done()
-                    else:
-                        # Refresh event is unset on client initialization to ensure
-                        # we have a chance to refresh id token in case it expired
-                        # before making any requests or trying to establish a WS connection.
                         self._refresh_event.done()
 
                     await asyncio.sleep(self._refresh_interval)

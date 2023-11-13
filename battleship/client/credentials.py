@@ -66,7 +66,11 @@ class FilesystemCredentialsProvider(CredentialsProvider):
             return None
 
         with self.cache.open() as cache:
-            credentials = Credentials.from_raw(cache.read())
+            try:
+                credentials = Credentials.from_raw(cache.read())
+            except Exception:  # noqa
+                self.clear()
+                return None
 
         return credentials
 
