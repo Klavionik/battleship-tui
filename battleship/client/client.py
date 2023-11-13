@@ -398,7 +398,10 @@ class Client:
                     if self.credentials and self.credentials.is_expired():
                         self._refresh_event.refreshing()
                         logger.debug("Credentials expired, refresh.")
-                        await self.refresh_id_token(self.credentials.refresh_token)
+                        fresh_credentials = await self.refresh_id_token(
+                            self.credentials.refresh_token
+                        )
+                        self.update_credentials(fresh_credentials)
                         self._refresh_event.done()
 
                     await asyncio.sleep(self._refresh_interval)
