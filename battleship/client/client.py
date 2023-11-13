@@ -134,7 +134,9 @@ class Client:
 
         await self._refresh_event.wait()
         self._events_worker_task = self._run_events_worker()
-        await self._ws_connected.wait()
+
+        async with asyncio.timeout(self._ws_timeout):
+            await self._ws_connected.wait()
 
     async def disconnect(self) -> None:
         if self._events_worker_task:
@@ -285,13 +287,14 @@ class Client:
                     timeout.reschedule(asyncio.get_running_loop().time() + self._ws_timeout)
         except TimeoutError:
             logger.warning("Cannot establish WebSocket connection.")
-            raise WebSocketConnectionTimeout("Cannot establish WebSocket connection.")
+            self._emitter.emit(ClientEvent.CONNECTION_IMPOSSIBLE)
 
     async def _events_worker(self) -> None:
         logger.debug("Run events worker.")
 
         async for connection in self._connect_with_retry():
             logger.debug("Acquired new WebSocket connection.")
+            self._emitter.emit(ClientEvent.CONNECTION_ESTABLISHED)
             self._ws = connection
             self._ws_connected.set()
 
@@ -301,19 +304,20 @@ class Client:
                     logger.debug("Received WebSocket event: {event}.", event=event)
                     self._emitter.emit(event.kind, event.payload)
             except websockets.ConnectionClosed:
-                self._cleanup_ws()
+                self._cleanup_ws_connection()
                 logger.warning("Server closed the WebSocket connection, acquire a new one.")
+                self._emitter.emit(ClientEvent.CONNECTION_LOST)
                 continue
 
-    def _cleanup_ws(self) -> None:
+    def _cleanup_ws_connection(self) -> None:
         logger.debug("WebSocket connection cleanup.")
         self._ws = None
-        self._events_worker_task = None
         self._ws_connected.clear()
 
     def _run_events_worker(self) -> Task[None]:
         def cleanup(_: Task[None]) -> None:
-            self._cleanup_ws()
+            self._cleanup_ws_connection()
+            self._events_worker_task = None
 
         task = asyncio.create_task(self._events_worker())
         task.add_done_callback(cleanup)

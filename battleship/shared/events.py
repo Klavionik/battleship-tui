@@ -12,6 +12,9 @@ class ClientEvent(StrEnum):
     SPAWN_SHIP = auto()
     FIRE = auto()
     CANCEL_GAME = auto()
+    CONNECTION_LOST = auto()
+    CONNECTION_ESTABLISHED = auto()
+    CONNECTION_IMPOSSIBLE = auto()
 
 
 class ServerEvent(StrEnum):

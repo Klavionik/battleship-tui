@@ -40,3 +40,11 @@ class SessionEndModal(ModalScreen[bool]):
     @on(Button.Pressed, "#no")
     def stay(self) -> None:
         self.dismiss(False)
+
+
+class ConnectionLostModal(ModalScreen[None]):
+    def compose(self) -> ComposeResult:
+        with Container(id="dialog"):
+            yield Label("Connection to the server is lost.")
+            yield Label("Trying to reconnect...")
+            yield LoadingIndicator()
