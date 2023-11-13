@@ -49,6 +49,10 @@ class NewGame(Widget):
         yield Checkbox("Salvo mode", name="salvo_mode", id="salvo_mode")
         yield Button("Play", variant="success")
 
+    @on(Input.Submitted)
+    def play(self) -> None:
+        self.post_play_pressed()
+
     @on(Input.Changed)
     def update_name(self, event: Input.Changed) -> None:
         self.game_name = event.value
@@ -69,11 +73,14 @@ class NewGame(Widget):
     @on(Button.Pressed)
     def emit_play_pressed(self) -> None:
         with self.prevent(Button.Pressed):
-            self.post_message(
-                self.PlayPressed(
-                    self.game_name,
-                    self.roster,
-                    self.firing_order,
-                    self.salvo_mode,
-                )
+            self.post_play_pressed()
+
+    def post_play_pressed(self) -> None:
+        self.post_message(
+            self.PlayPressed(
+                self.game_name,
+                self.roster,
+                self.firing_order,
+                self.salvo_mode,
             )
+        )
