@@ -43,7 +43,9 @@ class Game:
         self.game.register_hook(domain.Hook.NEXT_MOVE, self.send_awaiting_move)
         self.game.register_hook(domain.Hook.GAME_ENDED, self.send_winner)
 
+        self._event_queue: asyncio.Queue[EventMessage] = asyncio.Queue()
         self._consumers = [self._run_consumer(self.host), self._run_consumer(self.guest)]
+        self._broadcaster = self._run_broadcaster()
         self._stop_event = asyncio.Event()
 
     def __repr__(self) -> str:
@@ -51,6 +53,19 @@ class Game:
 
     def __del__(self) -> None:
         logger.trace("{game} was garbage collected.", game=self)
+
+    def _run_broadcaster(self) -> asyncio.Task[None]:
+        @logger.catch
+        async def broadcaster() -> None:
+            while True:
+                event = await self._event_queue.get()
+
+                for client in self.clients.values():
+                    await client.send_event(event)
+
+                self._event_queue.task_done()
+
+        return asyncio.create_task(broadcaster())
 
     def _run_consumer(self, client: Client) -> asyncio.Task[None]:
         @logger.catch
@@ -61,18 +76,10 @@ class Game:
         return asyncio.create_task(consumer())
 
     def stop(self) -> None:
-        while True:
-            try:
-                consumer = self._consumers.pop()
-                consumer.cancel()
-            except IndexError:
-                break
-
         self._stop_event.set()
 
     def broadcast(self, event: EventMessage) -> None:
-        for client in self.clients.values():
-            asyncio.create_task(client.send_event(event))
+        self._event_queue.put_nowait(event)
 
     def send_awaiting_move(self, game: domain.Game) -> None:
         payload = dict(actor=game.current_player.name, subject=game.player_under_attack.name)
@@ -150,6 +157,21 @@ class Game:
         except asyncio.CancelledError:
             self.send_game_cancelled(reason="disconnect")
             raise
+        finally:
+            await self.cleanup()
+
+    async def cleanup(self) -> None:
+        while True:
+            try:
+                consumer = self._consumers.pop()
+                consumer.cancel()
+            except IndexError:
+                break
+
+        await self._event_queue.join()
+        self._broadcaster.cancel()
+        del self._broadcaster
+        self.game.clear_hooks()
 
     def update_summary_shots(self, salvo: domain.Salvo) -> None:
         client = self.clients[salvo.subject.name]

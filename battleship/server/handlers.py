@@ -29,7 +29,7 @@ class GameHandler:
         task = asyncio.create_task(game.play())
 
         @logger.catch
-        def cleanup(_: asyncio.Future[None]) -> None:
+        def cleanup(_: asyncio.Task[None]) -> None:
             self._games.pop(session.id, None)
             asyncio.create_task(self._sessions.delete(session.id))
             logger.trace("Game {session_id} is cleaned up.", session_id=session.id)

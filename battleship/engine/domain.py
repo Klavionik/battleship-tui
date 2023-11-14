@@ -305,6 +305,9 @@ class Game:
 
         self._hooks[name] = hook
 
+    def clear_hooks(self) -> None:
+        self._hooks.clear()
+
     def is_fleet_ready(self, player: Player) -> bool:
         return {ship.id for ship in player.ships} == {item.id for item in self.roster}
 
