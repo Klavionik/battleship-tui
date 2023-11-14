@@ -133,10 +133,10 @@ def salvo_to_model(salvo: domain.Salvo) -> Salvo:
 
 
 class GameSummary(BaseModel):
-    duration: int = -1
+    duration: int = 0
     shots: dict[str, int] = {}
-    ships_left: int = -1
-    hp_left: int = -1
+    ships_left: int = 0
+    hp_left: int = 0
     winner: str | None = None
 
     def add_shot(self, user_id: str) -> None:
