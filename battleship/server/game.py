@@ -102,9 +102,12 @@ class Game:
 
     def send_winner(self, game: domain.Game) -> None:
         assert game.winner
-        event = EventMessage(kind=ServerEvent.GAME_ENDED, payload=dict(winner=game.winner.name))
-        self.broadcast(event)
         self.finalize_summary(game)
+        event = EventMessage(
+            kind=ServerEvent.GAME_ENDED,
+            payload=dict(winner=game.winner.name, summary=self.summary.to_json()),
+        )
+        self.broadcast(event)
         self.stop()
 
     def send_ship_spawned(
@@ -174,7 +177,7 @@ class Game:
         self.game.clear_hooks()
 
     def update_summary_shots(self, salvo: domain.Salvo) -> None:
-        client = self.clients[salvo.subject.name]
+        client = self.clients[salvo.actor.name]
 
         for _ in salvo:
             self.summary.add_shot(client.user_id)

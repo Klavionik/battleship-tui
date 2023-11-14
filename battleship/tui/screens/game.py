@@ -23,7 +23,7 @@ from battleship.tui.widgets.announcement import (
 from battleship.tui.widgets.battle_log import BattleLog
 from battleship.tui.widgets.board import Board, CellFactory
 from battleship.tui.widgets.fleet import Fleet, Ship
-from battleship.tui.widgets.modals import SessionEndModal
+from battleship.tui.widgets.modals import GameSummaryModal, SessionEndModal
 
 
 def convert_to_coordinate(coordinate: Coordinate) -> str:
@@ -103,8 +103,8 @@ class Game(Screen[None]):
             self.enemy_board.min_targets = len(game.roster)
 
         self.battle_log = BattleLog()
-
         self.announcement = Announcement(rules=self._format_rules(RULES_TEMPLATE))
+        self.summary: models.GameSummary | None = None
 
         self._strategy.subscribe("fleet_ready", self.on_fleet_ready)
         self._strategy.subscribe("ship_spawned", self.on_ship_spawned)
@@ -145,6 +145,15 @@ class Game(Screen[None]):
         time = f"[cyan]{now}[/]"
         prefix = "[yellow][Game][/]:"
         self.battle_log.write(f"{time} {prefix} {text}")
+
+    def action_show_summary(self) -> None:
+        if self.summary is not None:
+            self.app.push_screen(
+                GameSummaryModal(
+                    player_name=self._player_name,
+                    summary=self.summary,
+                )
+            )
 
     @on(Board.ShipPlaced)
     def spawn_ship(self, event: Board.ShipPlaced) -> None:
@@ -200,7 +209,9 @@ class Game(Screen[None]):
         if self._game.salvo_mode:
             self.board_map[salvo.actor.name].min_targets = salvo.ships_left
 
-    def on_game_ended(self, winner: str) -> None:
+    def on_game_ended(self, winner: str, summary: models.GameSummary) -> None:
+        self.summary = summary
+
         for board in self.board_map.values():
             board.mode = Board.Mode.DISPLAY
 

@@ -1,5 +1,6 @@
 import abc
 from asyncio import create_task
+from time import time
 from typing import Any, Callable, Collection
 
 from pyee.asyncio import AsyncIOEventEmitter
@@ -46,8 +47,8 @@ class GameStrategy(abc.ABC):
     def emit_salvo(self, salvo: models.Salvo) -> None:
         self._ee.emit("salvo", salvo=salvo)
 
-    def emit_game_ended(self, winner: str) -> None:
-        self._ee.emit("game_ended", winner=winner)
+    def emit_game_ended(self, winner: str, summary: models.GameSummary) -> None:
+        self._ee.emit("game_ended", winner=winner, summary=summary)
 
 
 class MultiplayerStrategy(GameStrategy):
@@ -92,7 +93,12 @@ class MultiplayerStrategy(GameStrategy):
 
     def _on_game_ended(self, payload: dict[str, Any]) -> None:
         winner = payload["winner"]
-        self.emit_game_ended(winner)
+        summary = models.GameSummary.from_raw(payload["summary"])
+        # Replace player's user ID with player's nickname,
+        # so that later we could distinguish player's result
+        # from enemy's without knowing enemy's user ID.
+        summary.shots[self._client.nickname] = summary.shots.pop(self._client.user_id)
+        self.emit_game_ended(winner, summary)
 
     def _on_game_cancelled(self, payload: dict[str, Any]) -> None:
         reason = payload["reason"]
@@ -107,6 +113,8 @@ class SingleplayerStrategy(GameStrategy):
         self._bot_player = game.player_b
         self._target_caller = ai.TargetCaller(self._human_player.board)
         self._autoplacer = ai.Autoplacer(self._bot_player.board, self._game.roster)
+        self._start = time()
+        self._summary = models.GameSummary()
 
         self._spawn_bot_fleet()
 
@@ -126,7 +134,8 @@ class SingleplayerStrategy(GameStrategy):
 
     def _game_ended_hook(self, game: domain.Game) -> None:
         assert game.winner
-        self.emit_game_ended(game.winner.name)
+        self.finalize_summary(game)
+        self.emit_game_ended(game.winner.name, self._summary)
 
     def _ship_added_hook(
         self,
@@ -147,6 +156,7 @@ class SingleplayerStrategy(GameStrategy):
 
     def fire(self, position: Collection[str]) -> None:
         salvo = self._game.fire(position)
+        self.update_summary_shots(salvo)
         self.emit_salvo(models.salvo_to_model(salvo))
 
         if salvo.actor is self._bot_player:
@@ -156,6 +166,21 @@ class SingleplayerStrategy(GameStrategy):
 
     def cancel(self) -> None:
         pass
+
+    def update_summary_shots(self, salvo: domain.Salvo) -> None:
+        for _ in salvo:
+            self._summary.add_shot(salvo.actor.name)
+
+    def finalize_summary(self, game: domain.Game) -> None:
+        assert game.winner
+        assert self._start
+
+        self._summary.winner = game.winner.name
+        self._summary.duration = int(time() - self._start)
+        self._summary.ships_left = game.winner.ships_alive
+
+        for ship in game.winner.ships:
+            self._summary.hp_left += ship.hp
 
     def _call_bot_target(self) -> Collection[str]:
         if self._game.salvo_mode:

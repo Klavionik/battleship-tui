@@ -34,7 +34,7 @@ PHASE_VICTORY = """
 
 Congratulations, Admiral! Your excellent commandship led your fleet to a well-deserved victory.
 
-[@click=screen.back()]Back[/]  [@click=statistics()]Statistics[/]
+[@click=screen.back()]Back[/]  [@click=screen.show_summary()]Summary[/]
 """
 
 PHASE_DEFEAT = """
@@ -42,7 +42,7 @@ PHASE_DEFEAT = """
 
 You may have lost this battle... Still, you haven't lost the war!
 
-[@click=screen.back()]Back[/]  [@click=statistics()]Statistics[/]
+[@click=screen.back()]Back[/]  [@click=screen.show_summary()]Summary[/]
 """
 
 

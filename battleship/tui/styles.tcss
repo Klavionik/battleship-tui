@@ -195,3 +195,17 @@ ModalScreen Button {
   width: 1fr;
   margin: 0 1;
 }
+
+GameSummaryModal #dialog {
+  layout: vertical;
+  width: 50%;
+  height: 40%;
+}
+
+GameSummaryModal Label {
+  margin-bottom: 1;
+}
+
+GameSummaryModal DataTable {
+  margin-bottom: 1;
+}
