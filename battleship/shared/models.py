@@ -57,6 +57,7 @@ class IDToken(BaseModel):
 
 
 class LoginData(BaseModel):
+    user_id: str
     nickname: str
     id_token: str
     refresh_token: str
@@ -129,6 +130,17 @@ def salvo_to_model(salvo: domain.Salvo) -> Salvo:
         subject=serialize_player(salvo.subject),
         shots=[serialize_shot(shot) for shot in salvo],
     )
+
+
+class GameSummary(BaseModel):
+    duration: int = -1
+    shots: dict[str, int] = {}
+    ships_left: int = -1
+    hp_left: int = -1
+    winner: str | None = None
+
+    def add_shot(self, user_id: str) -> None:
+        self.shots[user_id] = self.shots.get(user_id, 0) + 1
 
 
 def make_session_id() -> SessionID:

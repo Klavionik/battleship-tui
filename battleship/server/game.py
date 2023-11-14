@@ -1,5 +1,6 @@
 import asyncio
 from dataclasses import asdict
+from time import time
 from typing import Collection, Literal
 
 from loguru import logger
@@ -8,7 +9,7 @@ from battleship.engine import create_game, domain
 from battleship.engine.roster import get_roster
 from battleship.server.websocket import Client
 from battleship.shared.events import ClientEvent, EventMessage, ServerEvent
-from battleship.shared.models import Session, salvo_to_model
+from battleship.shared.models import GameSummary, Session, salvo_to_model
 
 
 class Game:
@@ -29,10 +30,9 @@ class Game:
             firing_order=session.firing_order,
             salvo_mode=session.salvo_mode,
         )
-        self.clients: dict[str, Client] = {
-            self.game.player_a.name: self.host,
-            self.game.player_b.name: self.guest,
-        }
+        self.summary = GameSummary()
+        self.started: float | None = None
+        self.clients: dict[str, Client] = {host.nickname: host, guest.nickname: guest}
         self.players: dict[str, domain.Player] = {
             self.game.player_a.name: self.game.player_a,
             self.game.player_b.name: self.game.player_b,
@@ -56,7 +56,7 @@ class Game:
         @logger.catch
         async def consumer() -> None:
             async for event in client.listen():
-                self.handle(client.id, event)
+                self.handle(client.nickname, event)
 
         return asyncio.create_task(consumer())
 
@@ -91,11 +91,13 @@ class Game:
         model = salvo_to_model(salvo)
         event = EventMessage(kind=ServerEvent.SALVO, payload=dict(salvo=model.to_json()))
         self.broadcast(event)
+        self.update_summary_shots(salvo)
 
     def send_winner(self, game: domain.Game) -> None:
         assert game.winner
         event = EventMessage(kind=ServerEvent.GAME_ENDED, payload=dict(winner=game.winner.name))
         self.broadcast(event)
+        self.finalize_summary(game)
         self.stop()
 
     def send_ship_spawned(
@@ -111,14 +113,14 @@ class Game:
     def send_game_cancelled(
         self,
         reason: Literal["quit", "disconnect"],
-        by_client_id: str | None = None,
+        by_player: str | None = None,
     ) -> None:
         event = EventMessage(kind=ServerEvent.GAME_CANCELLED, payload=dict(reason=reason))
 
-        if by_client_id is None:
+        if by_player is None:
             self.broadcast(event)
         else:
-            client = self.guest if self.host.id == by_client_id else self.host
+            client = self.guest if self.host.nickname == by_player else self.host
             asyncio.create_task(client.send_event(event))
 
     def announce_game_start(self) -> None:
@@ -141,6 +143,7 @@ class Game:
 
     async def play(self) -> None:
         self.announce_game_start()
+        self.started = time()
 
         try:
             await self._stop_event.wait()
@@ -148,13 +151,32 @@ class Game:
             self.send_game_cancelled(reason="disconnect")
             raise
 
+    def update_summary_shots(self, salvo: domain.Salvo) -> None:
+        client = self.clients[salvo.subject.name]
+
+        for _ in salvo:
+            self.summary.add_shot(client.user_id)
+
+    def finalize_summary(self, game: domain.Game) -> None:
+        winner = game.winner
+
+        assert winner
+        assert self.started
+
+        self.summary.winner = self.clients[winner.name].user_id
+        self.summary.duration = int(time() - self.started)
+        self.summary.ships_left = winner.ships_alive
+
+        for ship in winner.ships:
+            self.summary.hp_left += ship.hp
+
     @logger.catch
-    def handle(self, client_id: str, event: EventMessage) -> None:
+    def handle(self, client_nickname: str, event: EventMessage) -> None:
         match event:
             case EventMessage(kind=ClientEvent.SPAWN_SHIP):
                 ship_id: str = event.payload["ship_id"]
                 position: Collection[str] = event.payload["position"]
-                player = self.players[client_id]
+                player = self.players[client_nickname]
                 self.game.add_ship(player, position, ship_id)
             case EventMessage(kind=ClientEvent.FIRE):
                 position = event.payload["position"]
@@ -162,5 +184,5 @@ class Game:
                 self.send_salvo(salvo)
                 self.game.turn(salvo)
             case EventMessage(kind=ClientEvent.CANCEL_GAME):
-                self.send_game_cancelled(reason="quit", by_client_id=client_id)
+                self.send_game_cancelled(reason="quit", by_player=client_nickname)
                 self.stop()

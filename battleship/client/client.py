@@ -137,6 +137,13 @@ class Client:
 
         return self.credentials.nickname
 
+    @property
+    def user_id(self) -> str:
+        if self.credentials is None:
+            raise RuntimeError("Credentials are missing, did you log in?")
+
+        return self.credentials.user_id
+
     async def connect(self) -> None:
         if self.credentials is None:
             raise RuntimeError("Must log in before trying to establish a WS connection.")
@@ -177,6 +184,7 @@ class Client:
         login_data = LoginData(**data)
         credentials = Credentials.from_dict(
             dict(
+                user_id=login_data.user_id,
                 nickname=login_data.nickname,
                 id_token=login_data.id_token,
                 refresh_token=login_data.refresh_token,

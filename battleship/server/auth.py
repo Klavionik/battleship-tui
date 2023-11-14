@@ -71,6 +71,7 @@ class Auth0AuthManager(AuthManager):
         id_token = tokens["id_token"]
         payload = _read_token(id_token)
         return LoginData(
+            user_id=payload["sub"],
             id_token=tokens["id_token"],
             refresh_token=tokens["refresh_token"],
             nickname=nickname,
@@ -87,6 +88,7 @@ class Auth0AuthManager(AuthManager):
         payload = _read_token(id_token)
 
         return LoginData(
+            user_id=payload["sub"],
             id_token=tokens["id_token"],
             refresh_token=tokens["refresh_token"],
             nickname=payload["nickname"],

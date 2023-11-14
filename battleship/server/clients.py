@@ -16,7 +16,7 @@ class ClientRepository(abc.ABC):
         self._out_channel = outgoing_channel
 
     @abc.abstractmethod
-    async def add(self, nickname: str) -> Client:
+    async def add(self, client_id: str, nickname: str) -> Client:
         pass
 
     @abc.abstractmethod
@@ -39,8 +39,8 @@ class InMemoryClientRepository(ClientRepository):
         super().__init__(incoming_channel, outgoing_channel)
         self._clients: dict[str, Client] = {}
 
-    async def add(self, nickname: str) -> Client:
-        client = Client(nickname, self._in_channel, self._out_channel)
+    async def add(self, user_id: str, nickname: str) -> Client:
+        client = Client(user_id, nickname, self._in_channel, self._out_channel)
         self._clients[client.id] = client
         return client
 
@@ -69,17 +69,20 @@ class RedisClientRepository(ClientRepository):
         super().__init__(incoming_channel, outgoing_channel)
         self._client = client
 
-    async def add(self, nickname: str) -> Client:
-        client = Client(nickname, self._in_channel, self._out_channel)
-        await self._client.sadd(self.key, nickname)  # type: ignore[misc]
+    def get_key(self, client_id: str) -> str:
+        return f"{self.key}:{client_id}"
+
+    async def add(self, client_id: str, nickname: str) -> Client:
+        client = Client(client_id, nickname, self._in_channel, self._out_channel)
+        await self._client.set(self.get_key(client_id), nickname)
         return client
 
     async def get(self, client_id: str) -> Client:
-        is_connected = await self._client.sismember(self.key, client_id)  # type: ignore[misc]
+        nickname = await self._client.get(self.get_key(client_id))
 
-        if not is_connected:
+        if nickname is None:
             raise ClientNotFound(f"Client {client_id} not found.")
-        return Client(client_id, self._in_channel, self._out_channel)
+        return Client(client_id, nickname.decode(), self._in_channel, self._out_channel)
 
     async def list(self) -> list[Client]:
         return list(await self._client.smembers(self.key))  # type: ignore[misc]

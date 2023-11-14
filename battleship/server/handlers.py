@@ -24,6 +24,7 @@ class GameHandler:
         self._games: dict[str, asyncio.Task[None]] = {}
 
     def start_new_game(self, host: Client, guest: Client, session: Session) -> None:
+        logger.debug(f"Start new game {host.nickname} vs. {guest.nickname}.")
         game = Game(host, guest, session)
         task = asyncio.create_task(game.play())
 

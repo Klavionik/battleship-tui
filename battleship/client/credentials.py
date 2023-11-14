@@ -10,6 +10,7 @@ DEFAULT_LEEWAY_SECONDS = 30
 
 
 class Credentials(BaseModel):
+    user_id: str
     nickname: str
     id_token: str
     refresh_token: str = ""

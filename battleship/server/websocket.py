@@ -39,19 +39,21 @@ class WebSocketWrapper:
 class Connection:
     def __init__(
         self,
-        client_id: str,
+        connection_id: str,
+        nickname: str,
         websocket: WebSocket,
         incoming_channel: IncomingChannel,
         outgoing_channel: OutgoingChannel,
     ):
-        self.client_id = client_id
+        self.connection_id = connection_id
+        self.nickname = nickname
         self.websocket = WebSocketWrapper(websocket)
         self._incoming = incoming_channel
         self._outgoing = outgoing_channel
         self._message_consumer = self._run_consumer()
 
     def __repr__(self) -> str:
-        return f"<Connection {self.client_id} {self.websocket.client_ip}>"
+        return f"<Connection {self.nickname} {self.websocket.client_ip}>"
 
     def __del__(self) -> None:
         logger.trace("{conn} was garbage collected.", conn=self)
@@ -62,7 +64,7 @@ class Connection:
 
     async def listen(self) -> None:
         async for event in self.events():
-            asyncio.create_task(self._incoming.publish(self.client_id, event))
+            asyncio.create_task(self._incoming.publish(self.connection_id, event))
 
         self._message_consumer.cancel()
         del self._message_consumer
@@ -74,7 +76,7 @@ class Connection:
         @logger.catch
         async def consumer() -> None:
             try:
-                async for _, event in self._outgoing.listen(self.client_id):
+                async for _, event in self._outgoing.listen(self.connection_id):
                     await self.send_event(event)
             except asyncio.CancelledError:
                 logger.debug("{conn} Stop message consumer.", conn=self)
@@ -86,23 +88,25 @@ class Connection:
 class Client:
     def __init__(
         self,
+        user_id: str,
         nickname: str,
         incoming_channel: IncomingChannel,
         outgoing_channel: OutgoingChannel,
     ) -> None:
+        self.user_id = user_id
         self.nickname = nickname
         self._incoming_channel = incoming_channel
         self._outgoing_channel = outgoing_channel
 
     def __repr__(self) -> str:
-        return f"<Client: {self.id}>"
+        return f"<Client: {self.nickname}>"
 
     def __del__(self) -> None:
         logger.trace("{client} was garbage collected.", client=self)
 
     @property
     def id(self) -> str:
-        return self.nickname
+        return self.user_id
 
     async def listen(self) -> AsyncGenerator[EventMessage, None]:
         async for _, event in self._incoming_channel.listen(self.id):

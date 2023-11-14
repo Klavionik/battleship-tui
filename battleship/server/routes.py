@@ -44,9 +44,10 @@ async def ws(
     session_repository: SessionRepository,
     game_handler: GameHandler,
 ) -> None:
+    user_id = identity.claims["sub"]
     nickname = identity.claims["nickname"]
-    client = await client_repository.add(nickname)
-    connection = Connection(client.id, websocket, in_channel, out_channel)
+    client = await client_repository.add(user_id, nickname)
+    connection = Connection(user_id, nickname, websocket, in_channel, out_channel)
 
     await websocket.accept()
     logger.debug(f"{connection} accepted.")
@@ -77,8 +78,8 @@ async def create_session(
     session: FromJSON[SessionCreate],
     session_repository: SessionRepository,
 ) -> Session:
-    nickname = identity.claims["nickname"]
-    return await session_repository.add(nickname, session.value)
+    user_id = identity.claims["sub"]
+    return await session_repository.add(user_id, session.value)
 
 
 @router.post("/sessions/subscribe")
@@ -87,7 +88,7 @@ async def subscribe_to_session_updates(
     client_repository: ClientRepository,
     subscription_handler: SessionSubscriptionHandler,
 ) -> None:
-    client = await client_repository.get(identity.claims["nickname"])
+    client = await client_repository.get(identity.claims["sub"])
     subscription_handler.subscribe(client.id)
 
 
@@ -97,7 +98,7 @@ async def unsubscribe_from_session_updates(
     client_repository: ClientRepository,
     subscription_handler: SessionSubscriptionHandler,
 ) -> None:
-    client = await client_repository.get(identity.claims["nickname"])
+    client = await client_repository.get(identity.claims["sub"])
     subscription_handler.unsubscribe(client.id)
 
 
@@ -117,10 +118,10 @@ async def join_session(
     client_repository: ClientRepository,
     game_handler: GameHandler,
 ) -> None:
-    guest_nickname = identity.claims["nickname"]
+    guest_id = identity.claims["sub"]
     session = await session_repository.get(session_id)
     players = await asyncio.gather(
-        client_repository.get(session.host_id), client_repository.get(guest_nickname)
+        client_repository.get(session.host_id), client_repository.get(guest_id)
     )
     host, guest = players
     await session_repository.update(session.id, guest_id=guest.id, started=True)
