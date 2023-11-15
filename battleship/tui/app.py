@@ -7,7 +7,7 @@ from textual.app import App
 from textual.events import Mount, Unmount
 from textual.screen import Screen
 
-from battleship.client import Client
+from battleship.client import Client, ConnectionImpossible
 from battleship.engine import domain
 from battleship.shared.events import ClientEvent
 from battleship.tui import screens, strategies
@@ -45,10 +45,7 @@ class BattleshipApp(App[None]):
     async def disconnect(self) -> None:
         await self._client.disconnect()
 
-    def _handle_connection_lost(self) -> None:
-        logger.warning("Connection lost, trying to re-establish.")
-        modal = modals.ConnectionLostModal()
-
+    async def _handle_connection_lost(self) -> None:
         def cancel_active_game() -> None:
             if isinstance(self.screen, screens.Game):
                 game_screen = cast(screens.Game, self.pop_screen())
@@ -60,22 +57,24 @@ class BattleshipApp(App[None]):
                     timeout=5,
                 )
 
-        def restore_listeners() -> None:
-            self._client.remove_listener(ClientEvent.CONNECTION_ESTABLISHED, on_connection_restored)
-            self._client.remove_listener(
-                ClientEvent.CONNECTION_IMPOSSIBLE,
-                on_connection_impossible,
-            )
+        logger.warning("Connection lost, trying to re-establish.")
+        modal = modals.ConnectionLostModal()
 
-        def on_connection_restored() -> None:
+        # Not a very clean way of dismissing this waiting modal, probably.
+        # If we don't do this, we end up with 1) double overlay 2) player
+        # thinking that his session is still about to start (if connection restore).
+        if hasattr(self, "_create_game_waiting_modal"):
+            self._create_game_waiting_modal.dismiss(False)
+
+        await self.push_screen(modal)
+
+        try:
+            await self._client.await_connection()
             logger.debug("Connection restored.")
             modal.dismiss()
-            restore_listeners()
             cancel_active_game()
-
-        async def on_connection_impossible() -> None:
+        except ConnectionImpossible:
             modal.dismiss()
-            restore_listeners()
             cancel_active_game()
 
             logger.warning("Unable to restore connection, return to the main menu.")
@@ -92,16 +91,6 @@ class BattleshipApp(App[None]):
                 severity="warning",
                 timeout=5,
             )
-
-        self._client.add_listener(ClientEvent.CONNECTION_ESTABLISHED, on_connection_restored)
-        self._client.add_listener(ClientEvent.CONNECTION_IMPOSSIBLE, on_connection_impossible)
-
-        # Not a very clean way of dismissing this waiting modal, probably.
-        # If we don't do this, we end up with 1) double overlay 2) player
-        # thinking that his session is still about to start (if connection restore).
-        if hasattr(self, "_create_game_waiting_modal"):
-            self._create_game_waiting_modal.dismiss(False)
-        self.push_screen(modal)
 
 
 def run(app: BattleshipApp | None = None) -> None:

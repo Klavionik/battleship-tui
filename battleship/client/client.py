@@ -152,8 +152,11 @@ class Client:
         return self.credentials.user_id
 
     async def await_connection(self) -> None:
-        async with asyncio.timeout(self._ws_timeout):
-            await self._ws_connected.wait()
+        try:
+            async with asyncio.timeout(self._ws_timeout):
+                await self._ws_connected.wait()
+        except TimeoutError:
+            raise ConnectionImpossible
 
     async def connect(self) -> None:
         if self.credentials is None:
