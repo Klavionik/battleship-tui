@@ -7,6 +7,7 @@ from blacksheep import (
     WebSocket,
     bad_request,
     created,
+    forbidden,
     ok,
     unauthorized,
 )
@@ -19,6 +20,7 @@ from battleship.server.clients import ClientRepository
 from battleship.server.handlers import GameHandler, SessionSubscriptionHandler
 from battleship.server.pubsub import IncomingChannel, OutgoingChannel
 from battleship.server.sessions import SessionRepository
+from battleship.server.statistics import StatisticsRepository
 from battleship.server.websocket import Connection
 from battleship.shared.models import (
     IDToken,
@@ -167,3 +169,16 @@ async def refresh_id_token(refresh_token: RefreshToken, auth_manager: AuthManage
 @router.get("/healthz")
 async def health() -> Response:
     return ok("OK")
+
+
+@router.get("/statistics/{player}")
+async def get_player_statistics(
+    identity: Identity, player: str, statistics_repository: StatisticsRepository
+) -> Response:
+    nickname = identity["nickname"]
+
+    if nickname != player:
+        return forbidden()
+
+    statistics = await statistics_repository.get(identity["sub"])
+    return ok(statistics.to_dict())

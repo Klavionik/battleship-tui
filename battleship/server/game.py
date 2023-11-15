@@ -151,12 +151,13 @@ class Game:
             )
         )
 
-    async def play(self) -> None:
+    async def play(self) -> GameSummary:
         self.announce_game_start()
         self.start = time()
 
         try:
             await self._stop_event.wait()
+            return self.summary
         except asyncio.CancelledError:
             self.send_game_cancelled(reason="disconnect")
             raise

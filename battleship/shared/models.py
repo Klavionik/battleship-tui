@@ -3,7 +3,7 @@ import secrets
 from typing import Any, TypeAlias, TypeVar
 
 from pydantic import BaseModel as _BaseModel
-from pydantic import EmailStr, Field
+from pydantic import EmailStr, Field, computed_field
 
 from battleship.engine import domain
 
@@ -141,10 +141,10 @@ class GameSummary(BaseModel):
     winner: str | None = None
 
     def add_shot(self, user_id: str, hit: bool = True) -> None:
-        self.shots[user_id] = self.shots.get(user_id, 0) + 1
+        self.shots[user_id] = self.get_shots(user_id) + 1
 
         if hit:
-            self.hits[user_id] = self.hits.get(user_id, 0) + 1
+            self.hits[user_id] = self.get_hits(user_id) + 1
 
     def accuracy(self, player: str) -> float:
         shots = self.get_shots(player)
@@ -152,11 +152,14 @@ class GameSummary(BaseModel):
         if not shots:
             return 0
 
-        hits = self.hits.get(player, 0)
-        return round(hits / shots * 100, 1)
+        hits = self.get_hits(player)
+        return round(hits / shots, 1)
 
     def get_shots(self, player: str) -> int:
         return self.shots.get(player, 0)
+
+    def get_hits(self, player: str) -> int:
+        return self.hits.get(player, 0)
 
     def update_shots(self, salvo: domain.Salvo) -> None:
         for shot in salvo:
@@ -170,6 +173,51 @@ class GameSummary(BaseModel):
         for ship in winner.ships:
             if not ship.destroyed:
                 self.hp_left += ship.hp
+
+
+class PlayerStatistics(BaseModel):
+    user_id: str
+    games_played: int = 0
+    games_won: int = 0
+    shots: int = 0
+    hits: int = 0
+    total_duration: int = 0
+    quickest_win_shots: int = 0
+    quickest_win_duration: int = 0
+
+    @computed_field
+    def accuracy(self) -> float:
+        if not self.shots:
+            return 0
+        return round(self.hits / self.shots, 1)
+
+    @computed_field
+    def avg_duration(self) -> int:
+        if not self.games_played:
+            return 0
+        return round(self.total_duration / self.games_played)
+
+    @computed_field
+    def win_ratio(self) -> float:
+        if not self.games_played:
+            return 0
+        return round(self.games_won / self.games_played, 1)
+
+    def update_from_summary(self, summary: GameSummary) -> None:
+        self.games_played += 1
+
+        if summary.winner == self.user_id:
+            self.games_won += 1
+
+            if summary.duration < self.quickest_win_duration:
+                self.quickest_win_duration = summary.duration
+
+            if summary.get_hits(self.user_id) < self.quickest_win_shots:
+                self.quickest_win_shots = summary.duration
+
+        self.shots += summary.get_shots(self.user_id)
+        self.hits += summary.get_hits(self.user_id)
+        self.total_duration += summary.duration
 
 
 def make_session_id() -> SessionID:

@@ -85,7 +85,7 @@ class GameSummaryModal(ModalScreen[None]):
     def _format_accuracy(self) -> str:
         player_accuracy = self._summary.accuracy(self._player)
         enemy_accuracy = self._summary.accuracy(self._enemy)
-        return f"{player_accuracy}% (you), {enemy_accuracy}% (enemy)"
+        return f"{player_accuracy * 100}% (you), {enemy_accuracy * 100}% (enemy)"
 
     def _format_shots(self) -> str:
         player_shots = self._summary.get_shots(self._player)
