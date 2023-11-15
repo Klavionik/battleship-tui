@@ -2,6 +2,7 @@ from typing import Any
 
 from textual import on
 from textual.app import ComposeResult
+from textual.events import Mount
 from textual.message import Message
 from textual.widget import Widget
 from textual.widgets import Button, Checkbox, Input, RadioButton, RadioSet
@@ -48,6 +49,11 @@ class NewGame(Widget):
 
         yield Checkbox("Salvo mode", name="salvo_mode", id="salvo_mode")
         yield Button("Play", variant="success")
+
+    @on(Mount)
+    def focus_name(self) -> None:
+        if self._with_name:
+            self.query_one(Input).focus()
 
     @on(Input.Submitted)
     def play(self) -> None:
