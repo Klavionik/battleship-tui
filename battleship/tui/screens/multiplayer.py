@@ -148,6 +148,7 @@ class Multiplayer(Screen[None]):
                 timeout=5,
             )
         except Unauthorized:
+            self.loading = False  # noqa
             self.notify(
                 "Incorrect nickname or password.",
                 title="Unauthorized",
