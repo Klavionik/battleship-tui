@@ -31,7 +31,7 @@ class Game:
             salvo_mode=session.salvo_mode,
         )
         self.summary = GameSummary()
-        self.started: float | None = None
+        self.start: float = 0
         self.clients: dict[str, Client] = {host.nickname: host, guest.nickname: guest}
         self.players: dict[str, domain.Player] = {
             self.game.player_a.name: self.game.player_a,
@@ -98,11 +98,11 @@ class Game:
         model = salvo_to_model(salvo)
         event = EventMessage(kind=ServerEvent.SALVO, payload=dict(salvo=model.to_json()))
         self.broadcast(event)
-        self.update_summary_shots(salvo)
 
     def send_winner(self, game: domain.Game) -> None:
         assert game.winner
-        self.finalize_summary(game)
+        self.summary.finalize(game.winner, start=self.start, end=time())
+
         event = EventMessage(
             kind=ServerEvent.GAME_ENDED,
             payload=dict(winner=game.winner.name, summary=self.summary.to_json()),
@@ -153,7 +153,7 @@ class Game:
 
     async def play(self) -> None:
         self.announce_game_start()
-        self.started = time()
+        self.start = time()
 
         try:
             await self._stop_event.wait()
@@ -176,25 +176,6 @@ class Game:
         del self._broadcaster
         self.game.clear_hooks()
 
-    def update_summary_shots(self, salvo: domain.Salvo) -> None:
-        client = self.clients[salvo.actor.name]
-
-        for _ in salvo:
-            self.summary.add_shot(client.user_id)
-
-    def finalize_summary(self, game: domain.Game) -> None:
-        winner = game.winner
-
-        assert winner
-        assert self.started
-
-        self.summary.winner = self.clients[winner.name].user_id
-        self.summary.duration = int(time() - self.started)
-        self.summary.ships_left = winner.ships_alive
-
-        for ship in winner.ships:
-            self.summary.hp_left += ship.hp
-
     @logger.catch
     def handle(self, client_nickname: str, event: EventMessage) -> None:
         match event:
@@ -206,6 +187,7 @@ class Game:
             case EventMessage(kind=ClientEvent.FIRE):
                 position = event.payload["position"]
                 salvo = self.game.fire(position)
+                self.summary.update_shots(salvo)
                 self.send_salvo(salvo)
                 self.game.turn(salvo)
             case EventMessage(kind=ClientEvent.CANCEL_GAME):

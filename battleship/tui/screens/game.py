@@ -150,7 +150,8 @@ class Game(Screen[None]):
         if self.summary is not None:
             self.app.push_screen(
                 GameSummaryModal(
-                    player_name=self._player_name,
+                    player=self._player_name,
+                    enemy=self._enemy_name,
                     summary=self.summary,
                 )
             )

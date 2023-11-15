@@ -94,10 +94,6 @@ class MultiplayerStrategy(GameStrategy):
     def _on_game_ended(self, payload: dict[str, Any]) -> None:
         winner = payload["winner"]
         summary = models.GameSummary.from_raw(payload["summary"])
-        # Replace player's user ID with player's nickname,
-        # so that later we could distinguish player's result
-        # from enemy's without knowing enemy's user ID.
-        summary.shots[self._client.nickname] = summary.shots.pop(self._client.user_id)
         self.emit_game_ended(winner, summary)
 
     def _on_game_cancelled(self, payload: dict[str, Any]) -> None:
@@ -134,7 +130,7 @@ class SingleplayerStrategy(GameStrategy):
 
     def _game_ended_hook(self, game: domain.Game) -> None:
         assert game.winner
-        self.finalize_summary(game)
+        self._summary.finalize(game.winner, start=self._start, end=time())
         self.emit_game_ended(game.winner.name, self._summary)
 
     def _ship_added_hook(
@@ -156,7 +152,7 @@ class SingleplayerStrategy(GameStrategy):
 
     def fire(self, position: Collection[str]) -> None:
         salvo = self._game.fire(position)
-        self.update_summary_shots(salvo)
+        self._summary.update_shots(salvo)
         self.emit_salvo(models.salvo_to_model(salvo))
 
         if salvo.actor is self._bot_player:
@@ -166,21 +162,6 @@ class SingleplayerStrategy(GameStrategy):
 
     def cancel(self) -> None:
         pass
-
-    def update_summary_shots(self, salvo: domain.Salvo) -> None:
-        for _ in salvo:
-            self._summary.add_shot(salvo.actor.name)
-
-    def finalize_summary(self, game: domain.Game) -> None:
-        assert game.winner
-        assert self._start
-
-        self._summary.winner = game.winner.name
-        self._summary.duration = int(time() - self._start)
-        self._summary.ships_left = game.winner.ships_alive
-
-        for ship in game.winner.ships:
-            self._summary.hp_left += ship.hp
 
     def _call_bot_target(self) -> Collection[str]:
         if self._game.salvo_mode:

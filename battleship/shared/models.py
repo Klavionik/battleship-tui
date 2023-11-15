@@ -135,12 +135,41 @@ def salvo_to_model(salvo: domain.Salvo) -> Salvo:
 class GameSummary(BaseModel):
     duration: int = 0
     shots: dict[str, int] = {}
+    hits: dict[str, int] = {}
     ships_left: int = 0
     hp_left: int = 0
     winner: str | None = None
 
-    def add_shot(self, user_id: str) -> None:
+    def add_shot(self, user_id: str, hit: bool = True) -> None:
         self.shots[user_id] = self.shots.get(user_id, 0) + 1
+
+        if hit:
+            self.hits[user_id] = self.hits.get(user_id, 0) + 1
+
+    def accuracy(self, player: str) -> float:
+        shots = self.get_shots(player)
+
+        if not shots:
+            return 0
+
+        hits = self.hits.get(player, 0)
+        return round(hits / shots * 100, 1)
+
+    def get_shots(self, player: str) -> int:
+        return self.shots.get(player, 0)
+
+    def update_shots(self, salvo: domain.Salvo) -> None:
+        for shot in salvo:
+            self.add_shot(salvo.actor.name, hit=shot.hit)
+
+    def finalize(self, winner: domain.Player, start: float, end: float) -> None:
+        self.winner = winner.name
+        self.duration = int(end - start)
+        self.ships_left = winner.ships_alive
+
+        for ship in winner.ships:
+            if not ship.destroyed:
+                self.hp_left += ship.hp
 
 
 def make_session_id() -> SessionID:
