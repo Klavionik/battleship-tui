@@ -9,7 +9,6 @@ from textual.screen import Screen
 from textual.widgets import Footer, Markdown
 
 from battleship.client import Client
-from battleship.engine import create_game
 from battleship.engine.roster import Roster, RosterItem
 from battleship.shared.events import ServerEvent
 from battleship.tui import resources, screens, strategies
@@ -59,12 +58,16 @@ class CreateGame(Screen[None]):
             enemy_nickname = payload["enemy"]
             data = payload["roster"]
             roster = Roster(name=data["name"], items=[RosterItem(*item) for item in data["items"]])
-            game = create_game(
-                nickname, enemy_nickname, roster, event.firing_order, event.salvo_mode
+            strategy = strategies.MultiplayerStrategy(
+                self._client.nickname,
+                enemy_nickname,
+                roster,
+                event.firing_order,
+                event.salvo_mode,
+                self._client,
             )
-            strategy = strategies.MultiplayerStrategy(self._client)
             waiting_modal.dismiss(True)
-            self.app.push_screen(screens.Game(game=game, strategy=strategy))
+            self.app.push_screen(screens.Game(strategy=strategy))
 
         self._client.add_listener(ServerEvent.START_GAME, on_start_game)
 

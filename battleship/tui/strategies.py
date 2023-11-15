@@ -6,7 +6,7 @@ from typing import Any, Callable, Collection
 from pyee.asyncio import AsyncIOEventEmitter
 
 from battleship.client import Client
-from battleship.engine import ai, domain
+from battleship.engine import Roster, ai, domain
 from battleship.shared import models
 from battleship.shared.events import ServerEvent
 
@@ -16,6 +16,36 @@ __all__ = ["GameStrategy", "SingleplayerStrategy", "MultiplayerStrategy"]
 class GameStrategy(abc.ABC):
     def __init__(self) -> None:
         self._ee = AsyncIOEventEmitter()
+
+    @property
+    @abc.abstractmethod
+    def player(self) -> str:
+        pass
+
+    @property
+    @abc.abstractmethod
+    def enemy(self) -> str:
+        pass
+
+    @property
+    @abc.abstractmethod
+    def roster(self) -> Roster:
+        pass
+
+    @property
+    @abc.abstractmethod
+    def firing_order(self) -> str:
+        pass
+
+    @property
+    @abc.abstractmethod
+    def salvo_mode(self) -> bool:
+        pass
+
+    @property
+    @abc.abstractmethod
+    def winner(self) -> str | None:
+        pass
 
     @abc.abstractmethod
     def spawn_ship(self, ship_id: str, position: Collection[str]) -> None:
@@ -52,8 +82,22 @@ class GameStrategy(abc.ABC):
 
 
 class MultiplayerStrategy(GameStrategy):
-    def __init__(self, client: Client):
+    def __init__(
+        self,
+        player: str,
+        enemy: str,
+        roster: Roster,
+        firing_order: str,
+        salvo_mode: bool,
+        client: Client,
+    ):
         super().__init__()
+        self._player = player
+        self._enemy = enemy
+        self._roster = roster
+        self._firing_order = firing_order
+        self._salvo_mode = salvo_mode
+        self._winner = None
         self._client = client
 
         client.add_listener(ServerEvent.SHIP_SPAWNED, self._on_ship_spawned)
@@ -62,6 +106,30 @@ class MultiplayerStrategy(GameStrategy):
         client.add_listener(ServerEvent.SALVO, self._on_salvo)
         client.add_listener(ServerEvent.GAME_ENDED, self._on_game_ended)
         client.add_listener(ServerEvent.GAME_CANCELLED, self._on_game_cancelled)
+
+    @property
+    def player(self) -> str:
+        return self._player
+
+    @property
+    def enemy(self) -> str:
+        return self._enemy
+
+    @property
+    def roster(self) -> Roster:
+        return self._roster
+
+    @property
+    def firing_order(self) -> str:
+        return self._firing_order
+
+    @property
+    def salvo_mode(self) -> bool:
+        return self._salvo_mode
+
+    @property
+    def winner(self) -> str | None:
+        return self._winner
 
     def spawn_ship(self, ship_id: str, position: Collection[str]) -> None:
         create_task(self._client.spawn_ship(ship_id, position))
@@ -93,6 +161,7 @@ class MultiplayerStrategy(GameStrategy):
 
     def _on_game_ended(self, payload: dict[str, Any]) -> None:
         winner = payload["winner"]
+        self._winner = winner
         summary = models.GameSummary.from_raw(payload["summary"])
         self.emit_game_ended(winner, summary)
 
@@ -118,6 +187,31 @@ class SingleplayerStrategy(GameStrategy):
         game.register_hook(domain.Hook.FLEET_READY, self._fleet_ready_hook)
         game.register_hook(domain.Hook.NEXT_MOVE, self._next_move_hook)
         game.register_hook(domain.Hook.GAME_ENDED, self._game_ended_hook)
+
+    @property
+    def player(self) -> str:
+        return self._human_player.name
+
+    @property
+    def enemy(self) -> str:
+        return self._bot_player.name
+
+    @property
+    def roster(self) -> Roster:
+        return self._game.roster
+
+    @property
+    def firing_order(self) -> str:
+        return self._game.firing_order
+
+    @property
+    def salvo_mode(self) -> bool:
+        return self._game.salvo_mode
+
+    @property
+    def winner(self) -> str | None:
+        if self._game.winner:
+            return self._game.winner.name
 
     def _next_move_hook(self, game: domain.Game) -> None:
         self.emit_awaiting_move(

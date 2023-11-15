@@ -33,7 +33,7 @@ class BattleshipApp(App[None]):
     @classmethod
     def singleplayer(cls, game: domain.Game) -> "BattleshipApp":
         strategy = strategies.SingleplayerStrategy(game)
-        game_screen = screens.Game(game=game, strategy=strategy)
+        game_screen = screens.Game(strategy=strategy)
         instance: BattleshipApp = cls(mount_screen=game_screen)
         return instance
 

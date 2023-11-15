@@ -11,7 +11,6 @@ from textual.screen import Screen
 from textual.widgets import Footer, Label, ListItem, ListView, Static
 
 from battleship.client import Client, ClientError, SessionSubscription
-from battleship.engine import create_game
 from battleship.engine.roster import Roster, RosterItem
 from battleship.shared.events import ServerEvent
 from battleship.shared.models import Session, SessionID
@@ -96,16 +95,16 @@ class JoinGame(Screen[None]):
             data = payload["roster"]
             roster = Roster(name=data["name"], items=[RosterItem(*item) for item in data["items"]])
 
-            game = create_game(
+            strategy = strategies.MultiplayerStrategy(
                 self._client.nickname,
                 enemy_nickname,
                 roster,
                 session.firing_order,
                 session.salvo_mode,
+                self._client,
             )
-            strategy = strategies.MultiplayerStrategy(self._client)
 
-            self.app.push_screen(screens.Game(game=game, strategy=strategy))
+            self.app.push_screen(screens.Game(strategy=strategy))
 
         self._client.add_listener(ServerEvent.START_GAME, on_start_game)
 

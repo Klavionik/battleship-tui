@@ -44,6 +44,4 @@ class Singleplayer(Screen[None]):
             firing_order=event.firing_order,
             salvo_mode=event.salvo_mode,
         )
-        self.app.push_screen(
-            screens.Game(game=game, strategy=strategies.SingleplayerStrategy(game))
-        )
+        self.app.push_screen(screens.Game(strategy=strategies.SingleplayerStrategy(game)))

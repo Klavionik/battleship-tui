@@ -41,48 +41,41 @@ CANCEL_MSG = {"quit": "%s has quit the game", "disconnect": "%s disconnected fro
 class Game(Screen[None]):
     BINDINGS = [("escape", "back", "Back"), ("q", "try_quit", "Quit")]
 
-    def __init__(
-        self,
-        *args: Any,
-        game: domain.Game,
-        strategy: strategies.GameStrategy,
-        **kwargs: Any,
-    ):
+    def __init__(self, *args: Any, strategy: strategies.GameStrategy, **kwargs: Any):
         super().__init__(*args, **kwargs)
-        self._game = game
         self._strategy = strategy
 
         dark_theme = DEFAULT_COLORS.get("dark")
         assert dark_theme
         colors = dark_theme.generate()
 
-        self._player_name = game.player_a.name
-        self._enemy_name = game.player_b.name
+        self._player_name = strategy.player
+        self._enemy_name = strategy.enemy
 
         player_cell_factory = CellFactory(ship_bg=colors["success-darken-1"])
         enemy_cell_factory = CellFactory(ship_bg=colors["accent-darken-1"])
 
         self.player_board = Board(
-            player_name=game.player_a.name,
+            player_name=strategy.player,
             size=domain.DEFAULT_BOARD_SIZE,
             cell_factory=player_cell_factory,
             classes="player",
         )
         self.enemy_board = Board(
-            player_name=game.player_b.name,
+            player_name=strategy.enemy,
             size=domain.DEFAULT_BOARD_SIZE,
             cell_factory=enemy_cell_factory,
             classes="enemy",
         )
 
         self.player_fleet = Fleet(
-            roster=game.roster,
+            roster=strategy.roster,
             cell_factory=player_cell_factory,
             classes="player",
         )
         self.player_fleet.border_title = "Your fleet"
         self.enemy_fleet = Fleet(
-            roster=game.roster,
+            roster=strategy.roster,
             cell_factory=enemy_cell_factory,
             allow_placing=False,
             classes="enemy",
@@ -99,8 +92,8 @@ class Game(Screen[None]):
         }
         self.players_ready = 0
 
-        if game.salvo_mode:
-            self.enemy_board.min_targets = len(game.roster)
+        if strategy.salvo_mode:
+            self.enemy_board.min_targets = len(strategy.roster)
 
         self.battle_log = BattleLog()
         self.announcement = Announcement(rules=self._format_rules(RULES_TEMPLATE))
@@ -126,7 +119,7 @@ class Game(Screen[None]):
 
     @property
     def game_ended(self) -> bool:
-        return self._game.winner is not None
+        return self._strategy.winner is not None
 
     def action_try_quit(self) -> None:
         if self.game_ended:
@@ -167,7 +160,7 @@ class Game(Screen[None]):
         self.players_ready += 1
 
         if self.players_ready == 2:
-            text = PHASE_BATTLE_SALVO if self._game.salvo_mode else PHASE_BATTLE
+            text = PHASE_BATTLE_SALVO if self._strategy.salvo_mode else PHASE_BATTLE
             self.query_one(Announcement).update_phase(text)
 
     def on_awaiting_move(self, actor: str, subject: str) -> None:
@@ -207,7 +200,7 @@ class Game(Screen[None]):
 
             self.write_as_game(f"{salvo.actor.name} attacks {shot.coordinate}. {result}")
 
-        if self._game.salvo_mode:
+        if self._strategy.salvo_mode:
             self.board_map[salvo.actor.name].min_targets = salvo.ships_left
 
     def on_game_ended(self, winner: str, summary: models.GameSummary) -> None:
@@ -218,7 +211,7 @@ class Game(Screen[None]):
 
         self.write_as_game(f"{winner} has won!")
 
-        text = PHASE_VICTORY if self._game.player_a.name == winner else PHASE_DEFEAT
+        text = PHASE_VICTORY if self._player_name == winner else PHASE_DEFEAT
         self.query_one(Announcement).update_phase(text)
         self._strategy.unsubscribe()
 
@@ -253,14 +246,14 @@ class Game(Screen[None]):
     @on(Ship.ShowPreview)
     def show_ship_preview(self, event: Ship.ShowPreview) -> None:
         self.player_board.mode = Board.Mode.ARRANGE
-        roster_item = self._game.roster[event.ship_key]
+        roster_item = self._strategy.roster[event.ship_key]
         self.player_board.show_ship_preview(ship_id=roster_item.id, ship_hp=roster_item.hp)
 
     def _format_rules(self, template: str) -> str:
-        salvo_mode = "Yes" if self._game.salvo_mode else "No"
-        firing_order = self._game.firing_order.replace("_", " ").capitalize()
+        salvo_mode = "Yes" if self._strategy.salvo_mode else "No"
+        firing_order = self._strategy.firing_order.replace("_", " ").capitalize()
         return Template(template).substitute(
             salvo_mode=salvo_mode,
             firing_order=firing_order,
-            roster=self._game.roster.name.capitalize(),
+            roster=self._strategy.roster.name.capitalize(),
         )
