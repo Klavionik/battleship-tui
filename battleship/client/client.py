@@ -151,6 +151,10 @@ class Client:
 
         return self.credentials.user_id
 
+    async def await_connection(self) -> None:
+        async with asyncio.timeout(self._ws_timeout):
+            await self._ws_connected.wait()
+
     async def connect(self) -> None:
         if self.credentials is None:
             raise RuntimeError("Must log in before trying to establish a WS connection.")
@@ -159,8 +163,7 @@ class Client:
         self._events_worker_task = self._run_events_worker()
 
         try:
-            async with asyncio.timeout(self._ws_timeout):
-                await self._ws_connected.wait()
+            await self.await_connection()
         except TimeoutError:
             raise ConnectionImpossible("Connection attempt timed out.")
 

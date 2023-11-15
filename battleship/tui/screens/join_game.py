@@ -1,6 +1,7 @@
 from typing import Any
 
 import inject
+from loguru import logger
 from textual import on
 from textual.app import ComposeResult
 from textual.containers import Container
@@ -11,7 +12,7 @@ from textual.widgets import Footer, Label, ListItem, ListView, Static
 
 from battleship.client import Client, ClientError, SessionSubscription
 from battleship.engine.roster import Roster, RosterItem
-from battleship.shared.events import ServerEvent
+from battleship.shared.events import ClientEvent, ServerEvent
 from battleship.shared.models import Session, SessionID
 from battleship.tui import screens, strategies
 from battleship.tui.format import format_session
@@ -53,24 +54,42 @@ class JoinGame(Screen[None]):
 
     @on(Mount)
     async def subscribe(self) -> None:
-        self._subscription = await self._client.sessions_subscribe()
-        self._subscription.on_add(self.add_session)
-        self._subscription.on_remove(self.remove_session)
-        self._subscription.on_start(self.remove_session)
+        await self.subscribe_to_updates()
+        await self.fetch_sessions()
+        self._client.add_listener(ClientEvent.CONNECTION_LOST, self.resubscribe)
 
+    @on(Unmount)
+    async def unsubscribe(self) -> None:
+        await self.unsubscribe_from_updates()
+
+    async def resubscribe(self) -> None:
+        logger.warning("Resubscribe")
+        await self._client.await_connection()
+        await self._session_list.query(SessionItem).remove()
+        await self.subscribe_to_updates()
+        await self.fetch_sessions()
+        logger.warning("Resubscribe success")
+
+    async def fetch_sessions(self) -> None:
         sessions = await self._client.fetch_sessions()
 
         for session in sessions:
             await self.add_session(session)
 
-    @on(Unmount)
-    async def unsubscribe(self) -> None:
+    async def subscribe_to_updates(self) -> None:
+        self._subscription = await self._client.sessions_subscribe()
+        self._subscription.on_add(self.add_session)
+        self._subscription.on_remove(self.remove_session)
+        self._subscription.on_start(self.remove_session)
+
+    async def unsubscribe_from_updates(self) -> None:
         try:
             await self._client.sessions_unsubscribe()
         except ClientError:
             pass
 
         self._subscription = None
+        self._client.remove_listener(ClientEvent.CONNECTION_LOST, self.resubscribe)
 
     @on(ListView.Selected)
     async def join(self, event: ListView.Selected) -> None:
