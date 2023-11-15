@@ -8,7 +8,7 @@ from textual.events import Mount, Unmount
 from textual.screen import Screen
 from textual.widgets import Footer, Label, ListItem, ListView, Markdown, Static
 
-from battleship.client import Client
+from battleship.client import Client, ClientError
 from battleship.tui import resources, screens
 
 
@@ -35,7 +35,7 @@ class Lobby(Screen[None]):
                 with ListView():
                     yield ListItem(Label("🎯 Create game"), id="create_game")
                     yield ListItem(Label("🔍 Join game"), id="join_game")
-                    yield ListItem(Label("📜 Statistics"))
+                    yield ListItem(Label("📜 Statistics"), id="stats")
                     yield ListItem(Label("👋 Logout"), id="logout")
 
         yield Footer()
@@ -64,3 +64,17 @@ class Lobby(Screen[None]):
     @on(ListView.Selected, item="#join_game")
     async def join_game(self) -> None:
         await self.app.push_screen(screens.JoinGame())
+
+    @on(ListView.Selected, item="#stats")
+    async def show_statistics(self) -> None:
+        self.loading = True  # noqa
+
+        try:
+            statistics = await self._client.fetch_statistics()
+            await self.app.push_screen(screens.Statistics(data=statistics))
+        except ClientError:
+            self.notify(
+                "Cannot load statistics", title="Loading error", severity="error", timeout=5
+            )
+        finally:
+            self.loading = False  # noqa

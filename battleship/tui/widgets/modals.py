@@ -8,6 +8,7 @@ from textual.screen import ModalScreen
 from textual.widgets import Button, DataTable, Label, LoadingIndicator
 
 from battleship.shared import models
+from battleship.tui.format import format_duration
 
 
 class WaitingModal(ModalScreen[bool]):
@@ -75,7 +76,7 @@ class GameSummaryModal(ModalScreen[None]):
     def _make_table(self) -> DataTable[str]:
         table: DataTable[str] = DataTable()
         table.add_columns("")
-        table.add_row(self._format_duration(), label="Duration")
+        table.add_row(format_duration(self._summary.duration), label="Duration")
         table.add_row(self._format_shots(), label="Shots")
         table.add_row(self._format_accuracy(), label="Accuracy")
         table.add_row(str(self._summary.ships_left), label="Ships left")
@@ -91,14 +92,6 @@ class GameSummaryModal(ModalScreen[None]):
         player_shots = self._summary.get_shots(self._player)
         enemy_shots = self._summary.get_shots(self._enemy)
         return f"{player_shots} (you), {enemy_shots} (enemy)"
-
-    def _format_duration(self) -> str:
-        minutes = self._summary.duration // 60
-        seconds = self._summary.duration % 60
-
-        if minutes > 0:
-            return f"{minutes} min {seconds} s"
-        return f"{seconds} s"
 
     @on(Button.Pressed)
     def close(self) -> None:

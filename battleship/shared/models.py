@@ -185,19 +185,22 @@ class PlayerStatistics(BaseModel):
     quickest_win_shots: int = 0
     quickest_win_duration: int = 0
 
-    @computed_field
+    @computed_field  # type: ignore[misc]
+    @property
     def accuracy(self) -> float:
         if not self.shots:
             return 0
         return round(self.hits / self.shots, 1)
 
-    @computed_field
+    @computed_field  # type: ignore[misc]
+    @property
     def avg_duration(self) -> int:
         if not self.games_played:
             return 0
         return round(self.total_duration / self.games_played)
 
-    @computed_field
+    @computed_field  # type: ignore[misc]
+    @property
     def win_ratio(self) -> float:
         if not self.games_played:
             return 0

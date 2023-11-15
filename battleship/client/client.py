@@ -21,7 +21,14 @@ from battleship.shared.events import (
     EventMessageData,
     ServerEvent,
 )
-from battleship.shared.models import Action, IDToken, LoginData, Session, SessionID
+from battleship.shared.models import (
+    Action,
+    IDToken,
+    LoginData,
+    PlayerStatistics,
+    Session,
+    SessionID,
+)
 
 
 class ClientError(Exception):
@@ -264,6 +271,10 @@ class Client:
     async def fetch_sessions(self) -> list[Session]:
         response = await self._request("GET", "/sessions")
         return [Session(**data) for data in response.json()]
+
+    async def fetch_statistics(self) -> PlayerStatistics:
+        response = await self._request("GET", f"/statistics/{self.nickname}")
+        return PlayerStatistics(**response.json())
 
     async def sessions_subscribe(self) -> SessionSubscription:
         subscription = SessionSubscription()
