@@ -1,4 +1,3 @@
-from string import Template
 from typing import Any
 
 import inject
@@ -15,17 +14,7 @@ from battleship.engine.roster import Roster, RosterItem
 from battleship.shared.events import ServerEvent
 from battleship.shared.models import Session, SessionID
 from battleship.tui import screens, strategies
-
-
-def format_session(template: str, session: Session) -> str:
-    salvo_mode = "Yes" if session.salvo_mode else "No"
-    firing_order = session.firing_order.replace("_", " ").capitalize()
-    return Template(template).substitute(
-        name=session.name,
-        salvo_mode=salvo_mode,
-        firing_order=firing_order,
-        roster=session.roster.capitalize(),
-    )
+from battleship.tui.format import format_session
 
 
 class SessionItem(ListItem):
