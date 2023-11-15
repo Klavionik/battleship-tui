@@ -44,8 +44,11 @@ class Game:
         self.game.register_hook(domain.Hook.GAME_ENDED, self.send_winner)
 
         self._event_queue: asyncio.Queue[EventMessage] = asyncio.Queue()
-        self._consumers = [self._run_consumer(self.host), self._run_consumer(self.guest)]
-        self._broadcaster = self._run_broadcaster()
+        self._background_tasks = [
+            self._run_consumer(self.host),
+            self._run_consumer(self.guest),
+            self._run_broadcaster(),
+        ]
         self._stop_event = asyncio.Event()
 
     def __repr__(self) -> str:
@@ -165,16 +168,15 @@ class Game:
             await self.cleanup()
 
     async def cleanup(self) -> None:
+        await self._event_queue.join()
+
         while True:
             try:
-                consumer = self._consumers.pop()
-                consumer.cancel()
+                task = self._background_tasks.pop()
+                task.cancel()
             except IndexError:
                 break
 
-        await self._event_queue.join()
-        self._broadcaster.cancel()
-        del self._broadcaster
         self.game.clear_hooks()
 
     @logger.catch
