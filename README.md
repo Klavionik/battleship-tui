@@ -7,10 +7,10 @@ customize game options and appearance, keep track of your achievements, and more
 * Singleplayer mode  
 * Multiplayer mode (via Internet)
 * Customizable game rules
+* Game statistics
 
 ## Planned features
 * Customizable UI 
-* Statistics and achievements
 * Ranking system
 
 ## Requirements
