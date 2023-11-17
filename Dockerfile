@@ -1,6 +1,5 @@
 FROM python:3.11.6-slim-bullseye
 ENV PYTHONUNBUFFERED=1
-ARG POETRY_VERSION=1.5.1
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y curl
