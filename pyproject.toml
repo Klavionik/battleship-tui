@@ -1,9 +1,28 @@
 [tool.poetry]
-name = "battleship"
+name = "battleship-tui"
 version = "0.1.0"
 description = "Battleship TUI is an implementation of the popular paper-and-pen Battleship game for your terminal."
 authors = ["Roman Vlasenko <klavionik@gmail.com>"]
 readme = "README.md"
+homepage = "https://github.com/Klavionik/battleship-tui"
+license = "GPL-2.0-or-later"
+keywords = ["battleship", "game", "tui"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Console",
+  "Intended Audience :: End Users/Desktop",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Other Audience",
+  "Operating System :: POSIX :: Linux",
+  "Operating System :: MacOS",
+  "Operating System :: Microsoft :: Windows :: Windows 10",
+  "Operating System :: Microsoft :: Windows :: Windows 11",
+  "Topic :: Games/Entertainment :: Board Games",
+  "Typing :: Typed",
+]
+packages = [
+  { include = "battleship" }
+]
 
 [tool.poetry.dependencies]
 python = "^3.11"
