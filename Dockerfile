@@ -2,7 +2,8 @@ FROM python:3.11.6-slim-bullseye
 ENV PYTHONUNBUFFERED=1
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y curl
+# GCC is required to build Blacksheep wheels on ARM arch.
+RUN apt-get update && apt-get install -y curl gcc
 COPY requirements-server.txt ./
 RUN pip install -r requirements-server.txt
 COPY . .
