@@ -1,0 +1,27 @@
+name: Build server image
+run-name: Build version ${{ github.ref_name }}
+
+on:
+  push:
+    tags:
+      - "*"
+
+env:
+  S3_BUCKET: battleship-tui-build-cache
+
+jobs:
+  build:
+    name: Build server
+    runs-on: [self-hosted, arm64]
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: Klavionik/gh-actions/build-image@main
+        name: Build
+        with:
+          context: .
+          service: server
+          cache-bucket: ${{ env.S3_BUCKET }}
+          cache-access-key: ${{ secrets.S3_ACCESS_KEY }}
+          cache-secret-key: ${{ secrets.S3_SECRET_KEY }}
