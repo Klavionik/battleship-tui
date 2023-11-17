@@ -156,7 +156,7 @@ class Game(Screen[None]):
         self._strategy.spawn_ship(ship_id=event.ship.id, position=position)
 
     def on_fleet_ready(self, player: str) -> None:
-        self.write_as_game(f"{player}'s fleet is ready")
+        self.write_as_game(f":ship: {player}'s fleet is ready")
         self.players_ready += 1
 
         if self.players_ready == 2:
@@ -169,7 +169,7 @@ class Game(Screen[None]):
         if (subject_board := self.board_map[subject]) != self.player_board:
             subject_board.mode = Board.Mode.TARGET
 
-        self.write_as_game(f"{actor}'s turn. Fire at will!")
+        self.write_as_game(f":man: {actor}'s turn. Fire at will!")
 
     def on_ship_spawned(self, player: str, ship_id: str, position: Iterable[str]) -> None:
         self.board_map[player].paint_ship([convert_from_coordinate(p) for p in position])
@@ -184,21 +184,21 @@ class Game(Screen[None]):
 
             if shot.miss:
                 board.paint_miss(coor)
-                result = "Miss"
+                result = ":water_wave:"
             else:
                 assert shot.ship, "Shot was a hit, but no ship"
 
                 if shot.ship.destroyed:
-                    status = "sunk"
+                    status = ":cross_mark:"
                     board.paint_destroyed(map(convert_from_coordinate, shot.ship.cells))
                 else:
-                    status = "hit"
+                    status = ":fire:"
                     board.paint_damage(coor)
 
                 fleet.damage(shot.ship.id)
-                result = f"{shot.ship.type.title()} {status}"
+                result = f"{status} [b]{shot.ship.type.title()}[/]"
 
-            self.write_as_game(f"{salvo.actor.name} attacks {shot.coordinate}. {result}")
+            self.write_as_game(f":dart: {salvo.actor.name} ↠ {shot.coordinate}. {result}")
 
         if self._strategy.salvo_mode:
             self.board_map[salvo.actor.name].min_targets = salvo.ships_left
@@ -209,7 +209,7 @@ class Game(Screen[None]):
         for board in self.board_map.values():
             board.mode = Board.Mode.DISPLAY
 
-        self.write_as_game(f"{winner} has won!")
+        self.write_as_game(f":party_popper: [b]{winner}[/] has won!")
 
         text = PHASE_VICTORY if self._player_name == winner else PHASE_DEFEAT
         self.query_one(Announcement).update_phase(text)
