@@ -1,6 +1,9 @@
 services:
   backend:
-    build: .
+    build:
+      dockerfile: .
+      args:
+        VERSION: $VERSION
     environment:
       TRACE: $TRACE
       AUTH0_DOMAIN: $AUTH0_DOMAIN

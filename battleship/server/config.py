@@ -10,6 +10,7 @@ class Config(BaseSettings):
     AUTH0_REALM: str
     AUTH0_ROLES: dict[str, str]
     BROKER_URL: RedisDsn
+    SERVER_VERSION: str
 
     @property
     def auth0_audience(self) -> str:

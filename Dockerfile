@@ -1,5 +1,7 @@
 FROM python:3.11.6-slim-bullseye
 ENV PYTHONUNBUFFERED=1
+ARG VERSION
+ENV VERSION=$VERSION
 WORKDIR /app
 
 # GCC is required to build Blacksheep wheels on ARM arch.
