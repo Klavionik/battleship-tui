@@ -20,7 +20,7 @@ from battleship.server.clients import ClientRepository
 from battleship.server.handlers import GameHandler, SessionSubscriptionHandler
 from battleship.server.pubsub import IncomingChannel, OutgoingChannel
 from battleship.server.sessions import SessionRepository
-from battleship.server.statistics import StatisticsRepository
+from battleship.server.statistics import StatisticsNotFound, StatisticsRepository
 from battleship.server.websocket import Connection
 from battleship.shared.models import (
     IDToken,
@@ -180,5 +180,11 @@ async def get_player_statistics(
     if nickname != player:
         return forbidden()
 
-    statistics = await statistics_repository.get(identity["sub"])
+    user_id = identity["sub"]
+
+    try:
+        statistics = await statistics_repository.get(user_id)
+    except StatisticsNotFound:
+        statistics = await statistics_repository.create(user_id)
+
     return ok(statistics.to_dict())

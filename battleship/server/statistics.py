@@ -14,6 +14,10 @@ class StatisticsNotFound(Exception):
 
 class StatisticsRepository(abc.ABC):
     @abc.abstractmethod
+    async def create(self, user_id: str) -> PlayerStatistics:
+        pass
+
+    @abc.abstractmethod
     async def get(self, user_id: str) -> PlayerStatistics:
         pass
 
@@ -30,6 +34,11 @@ class RedisStatisticsRepository(StatisticsRepository):
 
     def get_key(self, user_id: str) -> str:
         return f"{self.key}:{user_id}"
+
+    async def create(self, user_id: str) -> PlayerStatistics:
+        statistics = PlayerStatistics(user_id=user_id)
+        await self._client.set(self.get_key(user_id), statistics.to_json())
+        return statistics
 
     async def get(self, user_id: str) -> PlayerStatistics:
         data = await self._client.get(self.get_key(user_id))
