@@ -23,7 +23,7 @@ jobs:
           context: .
           service: server
           build-args: |
-            SERVER_VERSION=${{ github.ref_name }}
+            VERSION=${{ github.ref_name }}
           cache-bucket: ${{ env.S3_BUCKET }}
           cache-access-key: ${{ secrets.S3_ACCESS_KEY }}
           cache-secret-key: ${{ secrets.S3_SECRET_KEY }}
