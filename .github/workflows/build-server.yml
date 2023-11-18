@@ -1,5 +1,5 @@
 name: Build server image
-run-name: Build version ${{ github.ref_name }}
+run-name: Build ${{ github.ref_name }}
 
 on:
   push:
