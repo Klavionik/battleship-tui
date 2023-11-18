@@ -4,7 +4,7 @@ run-name: Build version ${{ github.ref_name }}
 on:
   push:
     tags:
-      - "*"
+      - "server/*"
 
 env:
   S3_BUCKET: battleship-tui-build-cache
