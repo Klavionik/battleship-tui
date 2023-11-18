@@ -24,6 +24,8 @@ jobs:
           service: server
           build-args: |
             VERSION=${{ github.ref_name }}
+          tags: |
+            type=match,pattern=server/(.*),group=1
           cache-bucket: ${{ env.S3_BUCKET }}
           cache-access-key: ${{ secrets.S3_ACCESS_KEY }}
           cache-secret-key: ${{ secrets.S3_SECRET_KEY }}
