@@ -199,7 +199,7 @@ ModalScreen Button {
 GameSummaryModal #dialog {
   layout: vertical;
   width: 50%;
-  height: 40%;
+  height: 16;
 }
 
 GameSummaryModal Label {
