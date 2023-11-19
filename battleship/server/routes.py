@@ -48,7 +48,8 @@ async def ws(
 ) -> None:
     user_id = identity.claims["sub"]
     nickname = identity.claims["nickname"]
-    client = await client_repository.add(user_id, nickname)
+    guest = identity.has_claim_value("battleship/role", "guest")
+    client = await client_repository.add(user_id, nickname, guest)
     connection = Connection(user_id, nickname, websocket, in_channel, out_channel)
 
     await websocket.accept()

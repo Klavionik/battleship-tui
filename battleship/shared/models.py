@@ -223,5 +223,11 @@ class PlayerStatistics(BaseModel):
         self.total_duration += summary.duration
 
 
+class Client(BaseModel):
+    id: str
+    nickname: str
+    guest: bool
+
+
 def make_session_id() -> SessionID:
     return f"session_{secrets.token_urlsafe(8)}"

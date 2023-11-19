@@ -1,9 +1,11 @@
 import abc
+import asyncio
 
 import redis.asyncio as redis
 
 from battleship.server.pubsub import IncomingChannel, OutgoingChannel
 from battleship.server.websocket import Client
+from battleship.shared.models import Client as ClientModel
 
 
 class ClientNotFound(Exception):
@@ -16,7 +18,7 @@ class ClientRepository(abc.ABC):
         self._out_channel = outgoing_channel
 
     @abc.abstractmethod
-    async def add(self, client_id: str, nickname: str) -> Client:
+    async def add(self, client_id: str, nickname: str, guest: bool) -> Client:
         pass
 
     @abc.abstractmethod
@@ -43,8 +45,8 @@ class InMemoryClientRepository(ClientRepository):
         super().__init__(incoming_channel, outgoing_channel)
         self._clients: dict[str, Client] = {}
 
-    async def add(self, user_id: str, nickname: str) -> Client:
-        client = Client(user_id, nickname, self._in_channel, self._out_channel)
+    async def add(self, user_id: str, nickname: str, guest: bool) -> Client:
+        client = Client(user_id, nickname, guest, self._in_channel, self._out_channel)
         self._clients[client.id] = client
         return client
 
@@ -75,7 +77,8 @@ class InMemoryClientRepository(ClientRepository):
 
 class RedisClientRepository(ClientRepository):
     key = "clients"
-    pattern = key + ":*"
+    namespace = key + ":"
+    pattern = namespace + "*"
 
     def __init__(
         self,
@@ -87,27 +90,41 @@ class RedisClientRepository(ClientRepository):
         self._client = client
 
     def get_key(self, client_id: str) -> str:
-        return f"{self.key}:{client_id}"
+        return f"{self.namespace}{client_id}"
 
-    async def add(self, client_id: str, nickname: str) -> Client:
-        client = Client(client_id, nickname, self._in_channel, self._out_channel)
-        await self._client.set(self.get_key(client_id), nickname)
+    def get_client_id(self, key: str | bytes) -> str:
+        if isinstance(key, bytes):
+            key = key.decode()
+
+        return key.removeprefix(self.namespace)
+
+    async def add(self, client_id: str, nickname: str, guest: bool) -> Client:
+        client = Client(client_id, nickname, guest, self._in_channel, self._out_channel)
+        await self._save(client)
         return client
 
     async def get(self, client_id: str) -> Client:
-        nickname = await self._client.get(self.get_key(client_id))
+        data = await self._client.get(self.get_key(client_id))
 
-        if nickname is None:
+        if data is None:
             raise ClientNotFound(f"Client {client_id} not found.")
-        return Client(client_id, nickname.decode(), self._in_channel, self._out_channel)
+
+        model = ClientModel.from_raw(data)
+        return Client(model.id, model.nickname, model.guest, self._in_channel, self._out_channel)
 
     async def list(self) -> list[Client]:
-        return list(await self._client.smembers(self.key))  # type: ignore[misc]
+        keys = await self._client.keys(self.pattern)
+        get_futures = [self.get(self.get_client_id(key)) for key in keys]
+        return await asyncio.gather(*get_futures)
 
     async def delete(self, client_id: str) -> bool:
-        return bool(await self._client.srem(self.key, client_id))  # type: ignore[misc]
+        return bool(await self._client.delete(self.get_key(client_id)))
 
     async def clear(self) -> int:
         keys: list[str] = await self._client.keys(self.pattern)
         count: int = await self._client.delete(*keys)
         return count
+
+    async def _save(self, client: Client) -> bool:
+        model = ClientModel(id=client.id, nickname=client.nickname, guest=client.guest)
+        return bool(await self._client.set(self.get_key(client.id), model.to_json()))
