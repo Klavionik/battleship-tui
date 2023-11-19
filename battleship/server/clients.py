@@ -31,6 +31,10 @@ class ClientRepository(abc.ABC):
     async def delete(self, client_id: str) -> bool:
         pass
 
+    @abc.abstractmethod
+    async def clear(self) -> int:
+        pass
+
 
 class InMemoryClientRepository(ClientRepository):
     def __init__(
@@ -56,9 +60,22 @@ class InMemoryClientRepository(ClientRepository):
     async def delete(self, client_id: str) -> bool:
         return self._clients.pop(client_id, None) is not None
 
+    async def clear(self) -> int:
+        client_count = 0
+
+        while True:
+            try:
+                self._clients.popitem()
+                client_count += 1
+            except KeyError:
+                break
+
+        return client_count
+
 
 class RedisClientRepository(ClientRepository):
     key = "clients"
+    pattern = key + ":*"
 
     def __init__(
         self,
@@ -89,3 +106,8 @@ class RedisClientRepository(ClientRepository):
 
     async def delete(self, client_id: str) -> bool:
         return bool(await self._client.srem(self.key, client_id))  # type: ignore[misc]
+
+    async def clear(self) -> int:
+        keys: list[str] = await self._client.keys(self.pattern)
+        count: int = await self._client.delete(*keys)
+        return count

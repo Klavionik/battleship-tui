@@ -22,6 +22,27 @@ from battleship.server.sessions import RedisSessionRepository, SessionRepository
 from battleship.server.statistics import RedisStatisticsRepository, StatisticsRepository
 
 
+async def cleanup_clients(app: Application) -> None:
+    client_repository = app.service_provider.get(ClientRepository)
+
+    try:
+        count = await client_repository.clear()
+        logger.debug("Cleaned up {count} clients.", count=count)
+    except Exception as exc:
+        logger.exception(exc)
+        raise
+
+
+async def teardown_redis(app: Application) -> None:
+    client = app.service_provider.get(redis.Redis)
+
+    try:
+        await client.aclose()
+    except redis.RedisError:
+        logger.exception("Cannot close Redis connection.")
+        raise
+
+
 def create_app() -> Application:
     config = get_config()
     logger.remove()
@@ -51,4 +72,7 @@ def create_app() -> Application:
     app.use_authorization().with_default_policy(
         Policy("authenticated", AuthenticatedRequirement()),
     )
+
+    app.on_stop += cleanup_clients
+    app.on_stop += teardown_redis
     return app
