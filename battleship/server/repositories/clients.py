@@ -40,6 +40,10 @@ class ClientRepository(Observable, abc.ABC):
     async def clear(self) -> int:
         pass
 
+    @abc.abstractmethod
+    async def count(self) -> int:
+        pass
+
 
 class InMemoryClientRepository(ClientRepository):
     def __init__(
@@ -78,6 +82,9 @@ class InMemoryClientRepository(ClientRepository):
                 break
 
         return client_count
+
+    async def count(self) -> int:
+        return len(self._clients)
 
 
 class RedisClientRepository(ClientRepository):
@@ -135,6 +142,10 @@ class RedisClientRepository(ClientRepository):
             count: int = await self._client.delete(*keys)
             return count
         return 0
+
+    async def count(self) -> int:
+        keys = await self._client.keys(self.pattern)
+        return len(keys)
 
     async def _save(self, client: Client) -> bool:
         model = ClientModel(id=client.id, nickname=client.nickname, guest=client.guest)

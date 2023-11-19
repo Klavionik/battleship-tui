@@ -134,6 +134,11 @@ async def join_session(
     game_handler.start_new_game(host, guest, session)
 
 
+@router.get("/clients/online")
+async def get_players_online(client_repository: ClientRepository) -> int:
+    return await client_repository.count()
+
+
 @allow_anonymous()
 @router.post("/login/guest")
 async def login_guest_user(auth_manager: AuthManager) -> LoginData:
