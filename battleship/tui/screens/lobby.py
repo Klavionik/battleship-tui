@@ -6,10 +6,11 @@ from textual.app import ComposeResult
 from textual.containers import Container, VerticalScroll
 from textual.events import Mount, Unmount
 from textual.screen import Screen
-from textual.widgets import Footer, Label, ListItem, ListView, Markdown, Static
+from textual.widgets import Footer, Label, ListItem, ListView, Markdown
 
 from battleship.client import Client, ClientError
 from battleship.tui import resources, screens
+from battleship.tui.widgets import LobbyHeader
 
 
 class Lobby(Screen[None]):
@@ -30,7 +31,7 @@ class Lobby(Screen[None]):
                 yield Markdown(self.help, classes="screen-help")
 
             with Container(classes="screen-content"):
-                yield Static(f"👤{self._nickname}", id="username")
+                yield LobbyHeader(nickname=self._nickname)
 
                 with ListView():
                     yield ListItem(Label("🎯 Create game"), id="create_game")

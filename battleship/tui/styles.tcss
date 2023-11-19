@@ -112,7 +112,8 @@ Lobby ListItem {
   align-horizontal: center;
 }
 
-Lobby #username {
+Lobby LobbyHeader {
+  height: 1;
   margin-bottom: 1;
 }
 
