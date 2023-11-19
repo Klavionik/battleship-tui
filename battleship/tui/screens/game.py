@@ -82,11 +82,11 @@ class Game(Screen[None]):
         )
         self.enemy_fleet.border_title = "Enemy fleet"
 
-        self.board_map = {
+        self.board_map: dict[str, Board] = {
             self._player_name: self.player_board,
             self._enemy_name: self.enemy_board,
         }
-        self.fleet_map = {
+        self.fleet_map: dict[str, Fleet] = {
             self._player_name: self.player_fleet,
             self._enemy_name: self.enemy_fleet,
         }
