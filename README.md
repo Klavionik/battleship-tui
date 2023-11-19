@@ -39,8 +39,18 @@ pip install battleship-tui[client]
 ## Installation (server)
 Here be dragons.
 
-## Launching the game
-Here be dragons.
+## Play
+Once the game is installed you can use the `battleship` command to run it. This 
+command will launch the user interface and present you with the main menu.
+
+### Play via CLI
+You can launch the game via CLI subcommands too, especially if you want to skip some 
+in-game menus.
+
+For example, if your favorite game mode is singleplayer, salvo variant, you can 
+quickly get into battle by running `battleship play single --salvo`.
+
+Run `battleship play --help` to discover available options.
 
 ## Multiplayer account
 Here be dragons.
