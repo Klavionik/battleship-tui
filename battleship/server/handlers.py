@@ -37,8 +37,10 @@ class GameHandler:
         )
 
         summary = GameSummary.from_raw(string_summary)
-        await self._statistics.save(game.host.user_id, summary)
-        await self._statistics.save(game.guest.user_id, summary)
+
+        for _, player in game.clients.items():
+            if not player.guest:
+                await self._statistics.save(player.user_id, summary)
 
     def start_new_game(self, host: Client, guest: Client, session: Session) -> None:
         logger.debug(f"Start new game {host.nickname} vs. {guest.nickname}.")
