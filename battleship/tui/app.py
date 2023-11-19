@@ -15,7 +15,7 @@ from battleship.tui.widgets import modals
 
 
 class BattleshipApp(App[None]):
-    BINDINGS = [("q", "quit", "Quit"), ("F1", "show_help", "Help")]
+    BINDINGS = [("q", "quit", "Quit")]
     TITLE = "Battleship"
     SUB_TITLE = "The Game"
     CSS_PATH = "styles.tcss"
