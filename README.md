@@ -12,6 +12,8 @@ customize game options and appearance, keep track of your achievements, and more
 ## Planned features
 * Customizable UI 
 * Ranking system
+* Account management
+* Better CLI
 
 ## Requirements
 * A terminal (Windows PowerShell is fine too)
