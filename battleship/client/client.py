@@ -1,7 +1,7 @@
 import asyncio
 import json as json_
 from asyncio import Task
-from typing import Any, AsyncIterator, Callable, Collection, Coroutine, Optional
+from typing import Any, AsyncIterator, Callable, Collection, Coroutine, Optional, cast
 from urllib.parse import urlparse
 
 import httpx
@@ -279,6 +279,10 @@ class Client:
     async def fetch_statistics(self) -> PlayerStatistics:
         response = await self._request("GET", f"/statistics/{self.nickname}")
         return PlayerStatistics(**response.json())
+
+    async def fetch_clients_online(self) -> int:
+        response = await self._request("GET", "/clients/online")
+        return cast(int, response.json())
 
     async def sessions_subscribe(self) -> SessionSubscription:
         subscription = SessionSubscription()

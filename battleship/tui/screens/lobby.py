@@ -1,10 +1,11 @@
 from typing import Any
 
 import inject
-from textual import on
+from loguru import logger
+from textual import on, work
 from textual.app import ComposeResult
 from textual.containers import Container, VerticalScroll
-from textual.events import Mount, Unmount
+from textual.events import Mount, ScreenResume, Unmount
 from textual.screen import Screen
 from textual.widgets import Footer, Label, ListItem, ListView, Markdown
 
@@ -45,8 +46,22 @@ class Lobby(Screen[None]):
         self.app.switch_screen(screens.MainMenu())
 
     @on(Mount)
-    def focus_menu(self) -> None:
+    def on_mount(self) -> None:
         self.query_one(ListView).focus()
+        self.fetch_players_online()
+
+    @on(ScreenResume)
+    def update_online_count(self) -> None:
+        self.fetch_players_online()
+
+    @work(exclusive=True)
+    async def fetch_players_online(self) -> None:
+        try:
+            count = await self._client.fetch_clients_online()
+        except ClientError as exc:
+            logger.exception("Cannot fetch online players count. {exc}", exc=exc)
+        else:
+            self.query_one(LobbyHeader).players_online = count
 
     @on(Unmount)
     async def disconnect_ws(self) -> None:
