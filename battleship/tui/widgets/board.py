@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from itertools import cycle
 from typing import Any, Iterable
 
+from loguru import logger
 from rich.console import Console, ConsoleOptions
 from rich.emoji import EMOJI  # type: ignore[attr-defined]
 from rich.measure import Measurement
@@ -310,7 +311,9 @@ class Board(Widget):
         if not self.mode == self.Mode.TARGET:
             return
 
-        assert self._cursor_coordinate, "Trying to select target w/o cursor"
+        if self._cursor_coordinate is None:
+            logger.warning("Trying to select target w/o a cursor.")
+            return
 
         if self.is_cell_hit(self._cursor_coordinate):
             return
