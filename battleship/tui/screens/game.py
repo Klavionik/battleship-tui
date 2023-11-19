@@ -39,7 +39,7 @@ CANCEL_MSG = {"quit": "%s has quit the game", "disconnect": "%s disconnected fro
 
 
 class Game(Screen[None]):
-    BINDINGS = [("escape", "back", "Back"), ("q", "try_quit", "Quit")]
+    BINDINGS = [("escape", "back", "Back"), ("ctrl+q", "try_quit", "Quit")]
 
     def __init__(self, *args: Any, strategy: strategies.GameStrategy, **kwargs: Any):
         super().__init__(*args, **kwargs)
