@@ -14,6 +14,7 @@ from pyee.asyncio import AsyncIOEventEmitter
 from websockets.client import WebSocketClientProtocol, connect
 
 from battleship.client.auth import IDTokenAuth
+from battleship.client.compat import async_timeout as timeout
 from battleship.client.credentials import Credentials, CredentialsProvider
 from battleship.shared.events import (
     ClientEvent,
@@ -153,10 +154,10 @@ class Client:
 
     async def await_connection(self) -> None:
         try:
-            async with asyncio.timeout(self._ws_timeout):
+            async with timeout(self._ws_timeout):
                 await self._ws_connected.wait()
         except TimeoutError:
-            raise ConnectionImpossible
+            raise ConnectionImpossible("Connection attempt timed out.")
 
     async def connect(self) -> None:
         if self.credentials is None:
@@ -165,10 +166,7 @@ class Client:
         self._run_credentials_worker()
         self._events_worker_task = self._run_events_worker()
 
-        try:
-            await self.await_connection()
-        except TimeoutError:
-            raise ConnectionImpossible("Connection attempt timed out.")
+        await self.await_connection()
 
     async def disconnect(self) -> None:
         if self._events_worker_task:
@@ -332,14 +330,14 @@ class Client:
         assert self.credentials
 
         try:
-            async with asyncio.timeout(self._ws_timeout) as timeout:
+            async with timeout(self._ws_timeout) as tm:
                 async for connection in connect(
                     self.base_url_ws + "/ws",
                     extra_headers={"Authorization": f"Bearer {self.credentials.id_token}"},
                 ):
-                    timeout.reschedule(None)
+                    tm.reschedule(None)
                     yield connection
-                    timeout.reschedule(asyncio.get_running_loop().time() + self._ws_timeout)
+                    tm.reschedule(asyncio.get_running_loop().time() + self._ws_timeout)
         except TimeoutError:
             logger.warning("Cannot establish WebSocket connection.")
             self._emitter.emit(ClientEvent.CONNECTION_IMPOSSIBLE)

@@ -12,14 +12,14 @@ from battleship.engine import errors, roster
 DEFAULT_BOARD_SIZE = 10
 
 
-class Direction(enum.StrEnum):
+class Direction(str, enum.Enum):
     UP = "up"
     DOWN = "down"
     RIGHT = "right"
     LEFT = "left"
 
 
-class FiringOrder(enum.StrEnum):
+class FiringOrder(str, enum.Enum):
     ALTERNATELY = "alternately"
     UNTIL_MISS = "until_miss"
 
@@ -248,7 +248,7 @@ class Salvo:
         return iter(self.shots)
 
 
-class Hook(enum.StrEnum):
+class Hook(str, enum.Enum):
     SHIP_ADDED = enum.auto()
     FLEET_READY = enum.auto()
     NEXT_MOVE = enum.auto()

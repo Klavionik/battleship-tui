@@ -1,10 +1,10 @@
-from enum import StrEnum, auto
-from typing import Any, NotRequired, TypeAlias, TypedDict
+from enum import Enum, auto
+from typing import Any, TypeAlias, TypedDict
 
 from battleship.shared.models import BaseModel
 
 
-class ClientEvent(StrEnum):
+class ClientEvent(str, Enum):
     LOGIN = auto()
     LOGOUT = auto()
     SESSIONS_SUBSCRIBE = auto()
@@ -17,7 +17,7 @@ class ClientEvent(StrEnum):
     CONNECTION_IMPOSSIBLE = auto()
 
 
-class ServerEvent(StrEnum):
+class ServerEvent(str, Enum):
     LOGIN = auto()
     SESSIONS_UPDATE = auto()
     START_GAME = auto()
@@ -33,9 +33,12 @@ Event: TypeAlias = ServerEvent | ClientEvent
 EventPayload: TypeAlias = dict[str, Any]
 
 
-class EventMessageData(TypedDict):
+class EventMessageDataBase(TypedDict):
     kind: Event
-    payload: NotRequired[EventPayload]
+
+
+class EventMessageData(EventMessageDataBase, total=False):
+    payload: EventPayload
 
 
 class EventMessage(BaseModel):

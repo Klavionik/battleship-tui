@@ -90,7 +90,7 @@ class CellFactory:
 
 @dataclass
 class Cell:
-    class Type(enum.StrEnum):
+    class Type(str, enum.Enum):
         EMPTY = "empty"
         FORBIDDEN = "forbidden"
         SHIP = "ship"
@@ -123,7 +123,7 @@ class Grid(DataTable[Cell]):
 
 
 class Board(Widget):
-    class Mode(enum.StrEnum):
+    class Mode(str, enum.Enum):
         DISPLAY = "display"
         ARRANGE = "arrange"
         TARGET = "target"

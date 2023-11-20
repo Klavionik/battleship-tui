@@ -11,7 +11,7 @@ SessionID: TypeAlias = str
 T = TypeVar("T", bound="BaseModel")
 
 
-class Action(enum.StrEnum):
+class Action(str, enum.Enum):
     ADD = enum.auto()
     REMOVE = enum.auto()
     START = enum.auto()

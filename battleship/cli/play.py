@@ -13,7 +13,7 @@ app = typer.Typer()
 console = get_console()
 
 
-class Roster(enum.StrEnum):
+class Roster(str, enum.Enum):
     CLASSIC = enum.auto()
     RUSSIAN = enum.auto()
 

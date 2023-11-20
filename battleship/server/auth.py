@@ -17,7 +17,7 @@ from battleship.server.config import Config
 from battleship.shared.models import IDToken, LoginData
 
 
-class UserRole(enum.StrEnum):
+class UserRole(str, enum.Enum):
     GUEST = "guest"
     USER = "user"
 

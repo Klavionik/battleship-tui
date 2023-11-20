@@ -122,8 +122,11 @@ class RedisClientRepository(ClientRepository):
 
     async def clear(self) -> int:
         keys: list[str] = await self._client.keys(self.pattern)
-        count: int = await self._client.delete(*keys)
-        return count
+
+        if len(keys):
+            count: int = await self._client.delete(*keys)
+            return count
+        return 0
 
     async def _save(self, client: Client) -> bool:
         model = ClientModel(id=client.id, nickname=client.nickname, guest=client.guest)
