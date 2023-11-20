@@ -19,7 +19,7 @@ customize game options and appearance, keep track of your achievements, and more
 
 ## Requirements
 * A terminal (Windows PowerShell is fine too)
-* Python 3.11 or higher
+* Python 3.10 or higher
 
 ## Installation
 The recommended way to install and update the game is via 
