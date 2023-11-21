@@ -16,7 +16,11 @@ from guardpost.authentication import Identity
 from loguru import logger
 
 from battleship.server.auth import AuthManager, InvalidSignup, WrongCredentials
-from battleship.server.handlers import GameHandler, SessionSubscriptionHandler
+from battleship.server.handlers import (
+    ClientSubscriptionHandler,
+    GameHandler,
+    SessionSubscriptionHandler,
+)
 from battleship.server.pubsub import IncomingChannel, OutgoingChannel
 from battleship.server.repositories import (
     ClientRepository,
@@ -45,7 +49,8 @@ async def ws(
     client_repository: ClientRepository,
     in_channel: IncomingChannel,
     out_channel: OutgoingChannel,
-    subscription_handler: SessionSubscriptionHandler,
+    session_subscription_handler: SessionSubscriptionHandler,
+    client_subscription_handler: ClientSubscriptionHandler,
     session_repository: SessionRepository,
     game_handler: GameHandler,
 ) -> None:
@@ -59,7 +64,8 @@ async def ws(
     logger.debug(f"{connection} accepted.")
     await connection.listen()
     logger.debug(f"{connection} disconnected.")
-    subscription_handler.unsubscribe(client.id)
+    session_subscription_handler.unsubscribe(client.id)
+    client_subscription_handler.unsubscribe(client.id)
 
     current_session = await session_repository.get_for_client(client.id)
 
@@ -137,6 +143,26 @@ async def join_session(
 @router.get("/clients/online")
 async def get_players_online(client_repository: ClientRepository) -> int:
     return await client_repository.count()
+
+
+@router.post("/clients/subscribe")
+async def subscribe_to_client_count_updates(
+    identity: Identity,
+    client_repository: ClientRepository,
+    client_subscription_handler: ClientSubscriptionHandler,
+) -> None:
+    client = await client_repository.get(identity.claims["sub"])
+    client_subscription_handler.subscribe(client.id)
+
+
+@router.post("/clients/unsubscribe")
+async def unsubscribe_from_client_count_updates(
+    identity: Identity,
+    client_repository: ClientRepository,
+    client_subscription_handler: ClientSubscriptionHandler,
+) -> None:
+    client = await client_repository.get(identity.claims["sub"])
+    client_subscription_handler.unsubscribe(client.id)
 
 
 @allow_anonymous()
