@@ -6,6 +6,7 @@ from loguru import logger
 from battleship.server.game import Game
 from battleship.server.pubsub import IncomingChannel, OutgoingChannel
 from battleship.server.repositories import (
+    ClientRepository,
     Listener,
     SessionRepository,
     StatisticsRepository,
@@ -92,3 +93,34 @@ class SessionSubscriptionHandler:
 
     def unsubscribe(self, client_id: str) -> None:
         self._sessions.unsubscribe(client_id)
+
+
+class ClientSubscriptionHandler:
+    def __init__(self, out_channel: OutgoingChannel, client_repository: ClientRepository):
+        self._out = out_channel
+        self._clients = client_repository
+
+    def make_client_observer(self, client_id: str) -> Listener:
+        async def client_observer(_: str, action: Action) -> None:
+            payload: dict[str, Any] = dict(action=action)
+
+            if action not in (Action.ADD, Action.REMOVE):
+                return
+
+            payload.update(count=await self._clients.count())
+
+            await self._out.publish(
+                client_id,
+                EventMessage(
+                    kind=ServerEvent.CLIENTS_UPDATE,
+                    payload=payload,
+                ),
+            )
+
+        return client_observer
+
+    def subscribe(self, client_id: str) -> None:
+        self._clients.subscribe(client_id, self.make_client_observer(client_id))
+
+    def unsubscribe(self, client_id: str) -> None:
+        self._clients.unsubscribe(client_id)
