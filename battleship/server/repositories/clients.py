@@ -4,7 +4,9 @@ import asyncio
 import redis.asyncio as redis
 
 from battleship.server.pubsub import IncomingChannel, OutgoingChannel
+from battleship.server.repositories.observable import Observable
 from battleship.server.websocket import Client
+from battleship.shared.models import Action
 from battleship.shared.models import Client as ClientModel
 
 
@@ -12,8 +14,9 @@ class ClientNotFound(Exception):
     pass
 
 
-class ClientRepository(abc.ABC):
+class ClientRepository(Observable, abc.ABC):
     def __init__(self, incoming_channel: IncomingChannel, outgoing_channel: OutgoingChannel):
+        super().__init__()
         self._in_channel = incoming_channel
         self._out_channel = outgoing_channel
 
@@ -48,6 +51,7 @@ class InMemoryClientRepository(ClientRepository):
     async def add(self, user_id: str, nickname: str, guest: bool) -> Client:
         client = Client(user_id, nickname, guest, self._in_channel, self._out_channel)
         self._clients[client.id] = client
+        self._notify_listeners(client.id, Action.ADD)
         return client
 
     async def get(self, client_id: str) -> Client:
@@ -60,6 +64,7 @@ class InMemoryClientRepository(ClientRepository):
         return list(self._clients.values())
 
     async def delete(self, client_id: str) -> bool:
+        self._notify_listeners(client_id, Action.REMOVE)
         return self._clients.pop(client_id, None) is not None
 
     async def clear(self) -> int:
@@ -101,6 +106,7 @@ class RedisClientRepository(ClientRepository):
     async def add(self, client_id: str, nickname: str, guest: bool) -> Client:
         client = Client(client_id, nickname, guest, self._in_channel, self._out_channel)
         await self._save(client)
+        self._notify_listeners(client.id, Action.ADD)
         return client
 
     async def get(self, client_id: str) -> Client:
@@ -118,7 +124,9 @@ class RedisClientRepository(ClientRepository):
         return await asyncio.gather(*get_futures)
 
     async def delete(self, client_id: str) -> bool:
-        return bool(await self._client.delete(self.get_key(client_id)))
+        result = bool(await self._client.delete(self.get_key(client_id)))
+        self._notify_listeners(client_id, Action.REMOVE)
+        return result
 
     async def clear(self) -> int:
         keys: list[str] = await self._client.keys(self.pattern)
