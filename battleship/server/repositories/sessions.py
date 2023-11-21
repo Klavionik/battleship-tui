@@ -1,11 +1,9 @@
 import abc
-import asyncio
-from asyncio import Task
-from typing import Any, Callable, Coroutine, TypeAlias
+from typing import Any
 
 import redis.asyncio as redis
-from loguru import logger
 
+from battleship.server.repositories.observable import Observable
 from battleship.shared.models import (
     Action,
     Session,
@@ -14,17 +12,14 @@ from battleship.shared.models import (
     make_session_id,
 )
 
-Listener: TypeAlias = Callable[[SessionID, Action], Coroutine]
-
 
 class SessionNotFound(Exception):
     pass
 
 
-class SessionRepository(abc.ABC):
+class SessionRepository(Observable, abc.ABC):
     def __init__(self) -> None:
-        self._listeners: dict[str, Listener] = {}
-        self._notification_task: Task[None] | None = None
+        super().__init__()
 
     @abc.abstractmethod
     async def add(self, host_id: str, data: SessionCreate) -> Session:
@@ -52,29 +47,6 @@ class SessionRepository(abc.ABC):
             return session
         except ValueError:
             return None
-
-    def subscribe(self, callback_id: str, callback: Listener) -> None:
-        self._listeners[callback_id] = callback
-
-    def unsubscribe(self, callback_id: str) -> None:
-        self._listeners.pop(callback_id, None)
-
-    def _notify_listeners(self, session_id: str, action: Action) -> None:
-        @logger.catch
-        async def notify_task() -> None:
-            logger.debug(f"Notify {len(self._listeners)} listeners.")
-
-            for subscriber in self._listeners.values():
-                await subscriber(session_id, action)
-
-        @logger.catch
-        def done_callback(_: asyncio.Future[None]) -> None:
-            self._notification_task = None
-            logger.trace("Notification task is cleaned up.")
-
-        task = asyncio.create_task(notify_task())
-        task.add_done_callback(done_callback)
-        self._notification_task = task
 
 
 class InMemorySessionRepository(SessionRepository):

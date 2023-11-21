@@ -16,11 +16,14 @@ from guardpost.authentication import Identity
 from loguru import logger
 
 from battleship.server.auth import AuthManager, InvalidSignup, WrongCredentials
-from battleship.server.clients import ClientRepository
 from battleship.server.handlers import GameHandler, SessionSubscriptionHandler
 from battleship.server.pubsub import IncomingChannel, OutgoingChannel
-from battleship.server.sessions import SessionRepository
-from battleship.server.statistics import StatisticsNotFound, StatisticsRepository
+from battleship.server.repositories import (
+    ClientRepository,
+    SessionRepository,
+    StatisticsRepository,
+)
+from battleship.server.repositories.statistics import StatisticsNotFound
 from battleship.server.websocket import Connection
 from battleship.shared.models import (
     IDToken,

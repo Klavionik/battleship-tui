@@ -8,7 +8,6 @@ from guardpost.common import AuthenticatedRequirement
 from loguru import logger
 
 from battleship.server.auth import Auth0AuthManager, AuthManager
-from battleship.server.clients import ClientRepository, RedisClientRepository
 from battleship.server.config import Config, get_config
 from battleship.server.handlers import GameHandler, SessionSubscriptionHandler
 from battleship.server.pubsub import (
@@ -17,9 +16,15 @@ from battleship.server.pubsub import (
     OutgoingChannel,
     OutgoingRedisChannel,
 )
+from battleship.server.repositories import (
+    ClientRepository,
+    RedisClientRepository,
+    RedisSessionRepository,
+    RedisStatisticsRepository,
+    SessionRepository,
+    StatisticsRepository,
+)
 from battleship.server.routes import router
-from battleship.server.sessions import RedisSessionRepository, SessionRepository
-from battleship.server.statistics import RedisStatisticsRepository, StatisticsRepository
 
 
 async def cleanup_clients(app: Application) -> None:
