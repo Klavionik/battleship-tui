@@ -10,7 +10,12 @@ from textual.events import Mount, Unmount
 from textual.screen import Screen
 from textual.widgets import Footer, Label, ListItem, ListView, Static
 
-from battleship.client import Client, ClientError, SessionSubscription
+from battleship.client import (
+    Client,
+    ClientError,
+    ConnectionImpossible,
+    SessionSubscription,
+)
 from battleship.engine.roster import Roster, RosterItem
 from battleship.shared.events import ClientEvent, ServerEvent
 from battleship.shared.models import Session, SessionID
@@ -63,12 +68,14 @@ class JoinGame(Screen[None]):
         await self.unsubscribe_from_updates()
 
     async def resubscribe(self) -> None:
-        logger.warning("Resubscribe")
-        await self._client.await_connection()
-        await self._session_list.query(SessionItem).remove()
-        await self.subscribe_to_updates()
-        await self.fetch_sessions()
-        logger.warning("Resubscribe success")
+        try:
+            await self._client.await_connection()
+        except ConnectionImpossible:
+            logger.warning("Resubscription impossible.")
+        else:
+            await self._session_list.query(SessionItem).remove()
+            await self.subscribe_to_updates()
+            await self.fetch_sessions()
 
     async def fetch_sessions(self) -> None:
         sessions = await self._client.fetch_sessions()
@@ -85,8 +92,8 @@ class JoinGame(Screen[None]):
     async def unsubscribe_from_updates(self) -> None:
         try:
             await self._client.sessions_unsubscribe()
-        except ClientError:
-            pass
+        except ClientError as exc:
+            logger.warning("Cannot unsubscribe from sessions. {exc}", exc=exc)
 
         self._subscription = None
         self._client.remove_listener(ClientEvent.CONNECTION_LOST, self.resubscribe)

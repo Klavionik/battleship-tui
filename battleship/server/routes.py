@@ -17,8 +17,8 @@ from loguru import logger
 
 from battleship.server.auth import AuthManager, InvalidSignup, WrongCredentials
 from battleship.server.handlers import (
-    ClientSubscriptionHandler,
     GameHandler,
+    PlayerSubscriptionHandler,
     SessionSubscriptionHandler,
 )
 from battleship.server.pubsub import IncomingChannel, OutgoingChannel
@@ -33,6 +33,7 @@ from battleship.shared.models import (
     IDToken,
     LoginCredentials,
     LoginData,
+    PlayerCount,
     RefreshToken,
     Session,
     SessionCreate,
@@ -50,7 +51,7 @@ async def ws(
     in_channel: IncomingChannel,
     out_channel: OutgoingChannel,
     session_subscription_handler: SessionSubscriptionHandler,
-    client_subscription_handler: ClientSubscriptionHandler,
+    player_subscription_handler: PlayerSubscriptionHandler,
     session_repository: SessionRepository,
     game_handler: GameHandler,
 ) -> None:
@@ -65,7 +66,7 @@ async def ws(
     await connection.listen()
     logger.debug(f"{connection} disconnected.")
     session_subscription_handler.unsubscribe(client.id)
-    client_subscription_handler.unsubscribe(client.id)
+    player_subscription_handler.unsubscribe(client.id)
 
     current_session = await session_repository.get_for_client(client.id)
 
@@ -140,29 +141,35 @@ async def join_session(
     game_handler.start_new_game(host, guest, session)
 
 
-@router.get("/clients/online")
-async def get_players_online(client_repository: ClientRepository) -> int:
-    return await client_repository.count()
+@router.get("/players/online")
+async def get_players_online(
+    client_repository: ClientRepository, session_repository: SessionRepository
+) -> PlayerCount:
+    players = await client_repository.count()
+    sessions = await session_repository.list()
+    started_sessions = [s for s in sessions if s.started]
+    players_ingame = len(started_sessions) * 2
+    return PlayerCount(total=players, ingame=players_ingame)
 
 
-@router.post("/clients/subscribe")
-async def subscribe_to_client_count_updates(
+@router.post("/players/subscribe")
+async def subscribe_to_player_count_updates(
     identity: Identity,
     client_repository: ClientRepository,
-    client_subscription_handler: ClientSubscriptionHandler,
+    player_subscription_handler: PlayerSubscriptionHandler,
 ) -> None:
     client = await client_repository.get(identity.claims["sub"])
-    client_subscription_handler.subscribe(client.id)
+    player_subscription_handler.subscribe(client.id)
 
 
-@router.post("/clients/unsubscribe")
-async def unsubscribe_from_client_count_updates(
+@router.post("/players/unsubscribe")
+async def unsubscribe_from_player_count_updates(
     identity: Identity,
     client_repository: ClientRepository,
-    client_subscription_handler: ClientSubscriptionHandler,
+    player_subscription_handler: PlayerSubscriptionHandler,
 ) -> None:
     client = await client_repository.get(identity.claims["sub"])
-    client_subscription_handler.unsubscribe(client.id)
+    player_subscription_handler.unsubscribe(client.id)
 
 
 @allow_anonymous()

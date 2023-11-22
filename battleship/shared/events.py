@@ -25,7 +25,7 @@ class ServerEvent(StrEnum):
     SALVO = auto()
     GAME_ENDED = auto()
     GAME_CANCELLED = auto()
-    CLIENTS_UPDATE = auto()
+    PLAYERS_UPDATE = auto()
 
 
 Event: TypeAlias = ServerEvent | ClientEvent

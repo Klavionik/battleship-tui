@@ -2,14 +2,20 @@ from typing import Any
 
 import inject
 from loguru import logger
-from textual import on, work
+from textual import on
 from textual.app import ComposeResult
 from textual.containers import Container, VerticalScroll
-from textual.events import Mount, ScreenResume, Unmount
+from textual.events import Mount, ScreenResume, ScreenSuspend, Unmount
 from textual.screen import Screen
 from textual.widgets import Footer, Label, ListItem, ListView, Markdown
 
-from battleship.client import Client, ClientError
+from battleship.client import (
+    Client,
+    ClientError,
+    ConnectionImpossible,
+    PlayerSubscription,
+)
+from battleship.shared.events import ClientEvent
 from battleship.tui import resources, screens
 from battleship.tui.widgets import LobbyHeader
 
@@ -22,6 +28,7 @@ class Lobby(Screen[None]):
         super().__init__(*args, **kwargs)
         self._nickname = nickname
         self._client = client
+        self._player_subscription: PlayerSubscription | None = None
 
         with resources.get_resource("lobby_help.md").open() as fh:
             self.help = fh.read()
@@ -46,26 +53,28 @@ class Lobby(Screen[None]):
         self.app.switch_screen(screens.MainMenu())
 
     @on(Mount)
-    def on_mount(self) -> None:
+    async def on_mount(self) -> None:
         self.query_one(ListView).focus()
-        self.fetch_players_online()
+
+        await self._setup_player_count_updates()
+        self._client.add_listener(ClientEvent.CONNECTION_LOST, self.resubscribe)
+
+    @on(ScreenSuspend)
+    async def unsubscribe(self) -> None:
+        await self.unsubscribe_from_player_count()
 
     @on(ScreenResume)
-    def update_online_count(self) -> None:
-        self.fetch_players_online()
-
-    @work(exclusive=True)
-    async def fetch_players_online(self) -> None:
-        try:
-            count = await self._client.fetch_clients_online()
-        except ClientError as exc:
-            logger.exception("Cannot fetch online players count. {exc}", exc=exc)
-        else:
-            self.query_one(LobbyHeader).players_online = count
+    async def update_players_count(self) -> None:
+        await self._setup_player_count_updates()
 
     @on(Unmount)
     async def disconnect_ws(self) -> None:
         await self._client.disconnect()
+
+        try:
+            await self.unsubscribe_from_player_count()
+        except ClientError:
+            logger.warning("Cannot unsubscribe from player count.")
 
     @on(ListView.Selected, item="#logout")
     async def logout(self) -> None:
@@ -94,3 +103,45 @@ class Lobby(Screen[None]):
             )
         finally:
             self.loading = False  # noqa
+
+    async def update_online_count(self, count: int) -> None:
+        self.query_one(LobbyHeader).players_online = count
+
+    async def update_ingame_count(self, count: int) -> None:
+        self.query_one(LobbyHeader).players_ingame = count
+
+    async def fetch_player_count(self) -> None:
+        try:
+            count = await self._client.fetch_players_online()
+        except ClientError as exc:
+            logger.exception("Cannot fetch online players count. {exc}", exc=exc)
+        else:
+            await self.update_online_count(count.total)
+            await self.update_ingame_count(count.ingame)
+
+    async def subscribe_to_player_count(self) -> None:
+        subscription = await self._client.players_subscribe()
+        subscription.on_online_changed(self.update_online_count)
+        subscription.on_ingame_changed(self.update_ingame_count)
+        self._player_subscription = subscription
+
+    async def unsubscribe_from_player_count(self) -> None:
+        try:
+            await self._client.players_unsubscribe()
+        except ClientError as exc:
+            logger.warning("Cannot unsubscribe from online count. {exc}", exc=exc)
+
+        self._player_subscription = None
+        self._client.remove_listener(ClientEvent.CONNECTION_LOST, self.resubscribe)
+
+    async def resubscribe(self) -> None:
+        try:
+            await self._client.await_connection()
+        except ConnectionImpossible:
+            logger.warning("Resubscription impossible.")
+        else:
+            await self._setup_player_count_updates()
+
+    async def _setup_player_count_updates(self) -> None:
+        await self.subscribe_to_player_count()
+        await self.fetch_player_count()

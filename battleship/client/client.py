@@ -1,7 +1,7 @@
 import asyncio
 import json as json_
 from asyncio import Task
-from typing import Any, AsyncIterator, Callable, Collection, Coroutine, Optional, cast
+from typing import Any, AsyncIterator, Callable, Collection, Optional
 from urllib.parse import urlparse
 
 import httpx
@@ -15,6 +15,7 @@ from websockets.client import WebSocketClientProtocol, connect
 
 from battleship.client.auth import IDTokenAuth
 from battleship.client.credentials import Credentials, CredentialsProvider
+from battleship.client.subscriptions import PlayerSubscription, SessionSubscription
 from battleship.shared.compat import async_timeout as timeout
 from battleship.shared.events import (
     ClientEvent,
@@ -26,6 +27,7 @@ from battleship.shared.models import (
     Action,
     IDToken,
     LoginData,
+    PlayerCount,
     PlayerStatistics,
     Session,
     SessionID,
@@ -68,23 +70,6 @@ class RefreshEvent:
 
     def done(self) -> None:
         self._event.set()
-
-
-class SessionSubscription:
-    def __init__(self) -> None:
-        self._ee = AsyncIOEventEmitter()
-
-    def on_add(self, callback: Callable[[Session], Coroutine[Any, Any, Any]]) -> None:
-        self._ee.add_listener(Action.ADD, callback)
-
-    def on_remove(self, callback: Callable[[SessionID], Coroutine[Any, Any, Any]]) -> None:
-        self._ee.add_listener(Action.REMOVE, callback)
-
-    def on_start(self, callback: Callable[[SessionID], Coroutine[Any, Any, Any]]) -> None:
-        self._ee.add_listener(Action.START, callback)
-
-    def emit(self, event: str, *args: Any, **kwargs: Any) -> None:
-        self._ee.emit(event, *args, **kwargs)
 
 
 class Client:
@@ -280,9 +265,9 @@ class Client:
         response = await self._request("GET", f"/statistics/{self.nickname}")
         return PlayerStatistics(**response.json())
 
-    async def fetch_clients_online(self) -> int:
-        response = await self._request("GET", "/clients/online")
-        return cast(int, response.json())
+    async def fetch_players_online(self) -> PlayerCount:
+        response = await self._request("GET", "/players/online")
+        return PlayerCount(**response.json())
 
     async def sessions_subscribe(self) -> SessionSubscription:
         subscription = SessionSubscription()
@@ -305,6 +290,22 @@ class Client:
 
     async def sessions_unsubscribe(self) -> None:
         await self._request("POST", url="/sessions/unsubscribe")
+
+    async def players_subscribe(self) -> PlayerSubscription:
+        subscription = PlayerSubscription()
+
+        def publish_update(payload: dict[str, Any]) -> None:
+            count = payload["count"]
+            event = payload["event"]
+
+            subscription.emit(event, count=count)
+
+        self._emitter.add_listener(ServerEvent.PLAYERS_UPDATE, publish_update)
+        await self._request("POST", url="/players/subscribe")
+        return subscription
+
+    async def players_unsubscribe(self) -> None:
+        await self._request("POST", url="/players/unsubscribe")
 
     def add_listener(self, event: str, handler: Callable[..., Any]) -> None:
         self._emitter.add_listener(event, handler)

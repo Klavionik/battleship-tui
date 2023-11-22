@@ -3,13 +3,13 @@ from battleship.client.client import (
     ClientError,
     ConnectionImpossible,
     RequestFailed,
-    SessionSubscription,
     Unauthorized,
 )
 from battleship.client.credentials import (
     CredentialsProvider,
     filesystem_credentials_provider,
 )
+from battleship.client.subscriptions import PlayerSubscription, SessionSubscription
 
 __all__ = [
     "Client",
@@ -20,4 +20,5 @@ __all__ = [
     "Unauthorized",
     "ConnectionImpossible",
     "ClientError",
+    "PlayerSubscription",
 ]

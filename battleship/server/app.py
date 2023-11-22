@@ -10,8 +10,8 @@ from loguru import logger
 from battleship.server.auth import Auth0AuthManager, AuthManager
 from battleship.server.config import Config, get_config
 from battleship.server.handlers import (
-    ClientSubscriptionHandler,
     GameHandler,
+    PlayerSubscriptionHandler,
     SessionSubscriptionHandler,
 )
 from battleship.server.pubsub import (
@@ -69,7 +69,7 @@ def create_app() -> Application:
     app.services.add_singleton(OutgoingChannel, OutgoingRedisChannel)
     app.services.add_singleton(SessionSubscriptionHandler)
     app.services.add_singleton(GameHandler)
-    app.services.add_singleton(ClientSubscriptionHandler)
+    app.services.add_singleton(PlayerSubscriptionHandler)
 
     app.use_authentication().add(
         JWTBearerAuthentication(

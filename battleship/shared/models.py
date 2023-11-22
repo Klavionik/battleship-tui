@@ -230,5 +230,10 @@ class Client(BaseModel):
     guest: bool
 
 
+class PlayerCount(BaseModel):
+    total: int
+    ingame: int
+
+
 def make_session_id() -> SessionID:
     return f"session_{secrets.token_urlsafe(8)}"

@@ -68,6 +68,10 @@ class SessionSubscriptionHandler:
         self._out = out_channel
         self._sessions = session_repository
 
+    @property
+    def cb_namespace(self) -> str:
+        return self.__class__.__name__.lower()
+
     def make_session_observer(self, client_id: str) -> Listener:
         async def session_observer(session_id: str, action: Action) -> None:
             payload: dict[str, Any] = dict(action=action)
@@ -89,38 +93,72 @@ class SessionSubscriptionHandler:
         return session_observer
 
     def subscribe(self, client_id: str) -> None:
-        self._sessions.subscribe(client_id, self.make_session_observer(client_id))
+        callback_id = f"{self.cb_namespace}:{client_id}"
+        self._sessions.subscribe(callback_id, self.make_session_observer(client_id))
 
     def unsubscribe(self, client_id: str) -> None:
-        self._sessions.unsubscribe(client_id)
+        callback_id = f"{self.cb_namespace}:{client_id}"
+        self._sessions.unsubscribe(callback_id)
 
 
-class ClientSubscriptionHandler:
-    def __init__(self, out_channel: OutgoingChannel, client_repository: ClientRepository):
+class PlayerSubscriptionHandler:
+    def __init__(
+        self,
+        out_channel: OutgoingChannel,
+        client_repository: ClientRepository,
+        session_repository: SessionRepository,
+    ):
         self._out = out_channel
         self._clients = client_repository
+        self._sessions = session_repository
+
+    @property
+    def cb_namespace(self) -> str:
+        return self.__class__.__name__.lower()
 
     def make_client_observer(self, client_id: str) -> Listener:
         async def client_observer(_: str, action: Action) -> None:
-            payload: dict[str, Any] = dict(action=action)
-
             if action not in (Action.ADD, Action.REMOVE):
                 return
 
-            payload.update(count=await self._clients.count())
+            payload = dict(event="online_changed", count=await self._clients.count())
 
             await self._out.publish(
                 client_id,
                 EventMessage(
-                    kind=ServerEvent.CLIENTS_UPDATE,
+                    kind=ServerEvent.PLAYERS_UPDATE,
                     payload=payload,
                 ),
             )
 
         return client_observer
 
+    def make_session_observer(self, client_id: str) -> Listener:
+        async def session_observer(_: str, action: Action) -> None:
+            if action not in (Action.START, Action.REMOVE):
+                return
+
+            sessions = await self._sessions.list()
+            started_sessions = [s for s in sessions if s.started]
+            players_ingame = len(started_sessions) * 2
+            payload = dict(event="ingame_changed", count=players_ingame)
+
+            await self._out.publish(
+                client_id,
+                EventMessage(
+                    kind=ServerEvent.PLAYERS_UPDATE,
+                    payload=payload,
+                ),
+            )
+
+        return session_observer
+
     def subscribe(self, client_id: str) -> None:
-        self._clients.subscribe(client_id, self.make_client_observer(client_id))
+        callback_id = f"{self.cb_namespace}:{client_id}"
+        self._clients.subscribe(callback_id, self.make_client_observer(client_id))
+        self._sessions.subscribe(callback_id, self.make_session_observer(client_id))
 
     def unsubscribe(self, client_id: str) -> None:
-        self._clients.unsubscribe(client_id)
+        callback_id = f"{self.cb_namespace}:{client_id}"
+        self._clients.unsubscribe(callback_id)
+        self._sessions.unsubscribe(callback_id)
