@@ -1,12 +1,11 @@
-from enum import Enum, auto
+from enum import auto
 from typing import Any, TypeAlias, TypedDict
 
+from battleship.shared.compat import StrEnum
 from battleship.shared.models import BaseModel
 
 
-class ClientEvent(str, Enum):
-    LOGIN = auto()
-    LOGOUT = auto()
+class ClientEvent(StrEnum):
     SESSIONS_SUBSCRIBE = auto()
     SESSIONS_UNSUBSCRIBE = auto()
     SPAWN_SHIP = auto()
@@ -17,8 +16,7 @@ class ClientEvent(str, Enum):
     CONNECTION_IMPOSSIBLE = auto()
 
 
-class ServerEvent(str, Enum):
-    LOGIN = auto()
+class ServerEvent(StrEnum):
     SESSIONS_UPDATE = auto()
     START_GAME = auto()
     SHIP_SPAWNED = auto()

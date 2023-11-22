@@ -1,6 +1,6 @@
-import enum
 import string
 from dataclasses import dataclass
+from enum import IntEnum, auto
 from itertools import cycle
 from typing import Any, Iterable
 
@@ -21,6 +21,7 @@ from textual.widget import Widget
 from textual.widgets import DataTable, Label
 
 from battleship.engine.domain import Direction
+from battleship.shared.compat import StrEnum
 
 WATER = EMOJI["water_wave"]
 FIRE = EMOJI["fire"]
@@ -42,7 +43,7 @@ class ShipToPlace:
         self.direction = next(self._directions)
 
 
-class MouseButton(enum.IntEnum):
+class MouseButton(IntEnum):
     LEFT = 1
     RIGHT = 3
 
@@ -90,14 +91,14 @@ class CellFactory:
 
 @dataclass
 class Cell:
-    class Type(str, enum.Enum):
-        EMPTY = "empty"
-        FORBIDDEN = "forbidden"
-        SHIP = "ship"
-        CROSSHAIR = "crosshair"
-        MISS = "miss"
-        SHIP_DAMAGED = "ship_damaged"
-        SHIP_DESTROYED = "ship_destroyed"
+    class Type(StrEnum):
+        EMPTY = auto()
+        FORBIDDEN = auto()
+        SHIP = auto()
+        CROSSHAIR = auto()
+        MISS = auto()
+        SHIP_DAMAGED = auto()
+        SHIP_DESTROYED = auto()
 
     value: str
     bg: str
@@ -123,10 +124,10 @@ class Grid(DataTable[Cell]):
 
 
 class Board(Widget):
-    class Mode(str, enum.Enum):
-        DISPLAY = "display"
-        ARRANGE = "arrange"
-        TARGET = "target"
+    class Mode(StrEnum):
+        DISPLAY = auto()
+        ARRANGE = auto()
+        TARGET = auto()
 
     min_targets: var[int] = var(1)
     mode: var[Mode] = var(Mode.DISPLAY, init=False)

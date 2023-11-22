@@ -14,8 +14,8 @@ from pyee.asyncio import AsyncIOEventEmitter
 from websockets.client import WebSocketClientProtocol, connect
 
 from battleship.client.auth import IDTokenAuth
-from battleship.client.compat import async_timeout as timeout
 from battleship.client.credentials import Credentials, CredentialsProvider
+from battleship.shared.compat import async_timeout as timeout
 from battleship.shared.events import (
     ClientEvent,
     EventMessage,

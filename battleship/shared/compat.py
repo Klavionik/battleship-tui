@@ -4,8 +4,13 @@ from types import TracebackType
 
 if sys.version_info >= (3, 11):
     from asyncio import Timeout as _Timeout
+    from enum import StrEnum
 else:
     from async_timeout import Timeout as _Timeout
+    from backports.strenum import StrEnum
+
+
+__all__ = ["StrEnum", "Timeout", "async_timeout"]
 
 
 class Timeout:

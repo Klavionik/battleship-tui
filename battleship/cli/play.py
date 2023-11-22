@@ -1,4 +1,4 @@
-import enum
+from enum import auto
 from typing import Annotated
 
 import typer
@@ -8,14 +8,15 @@ from battleship.cli.console import get_console
 from battleship.engine import create_game
 from battleship.engine.domain import FiringOrder
 from battleship.engine.roster import get_roster
+from battleship.shared.compat import StrEnum
 
 app = typer.Typer()
 console = get_console()
 
 
-class Roster(str, enum.Enum):
-    CLASSIC = enum.auto()
-    RUSSIAN = enum.auto()
+class Roster(StrEnum):
+    CLASSIC = auto()
+    RUSSIAN = auto()
 
 
 @app.command()

@@ -198,6 +198,18 @@ requests = ">=2.31.0,<3.0.0"
 urllib3 = ">=2.0.7,<3.0.0"
 
 [[package]]
+name = "backports-strenum"
+version = "1.2.8"
+description = "Base class for creating enumerated constants that are also subclasses of str"
+category = "main"
+optional = false
+python-versions = ">=3.8.6,<4.0.0"
+files = [
+    {file = "backports_strenum-1.2.8-py3-none-any.whl", hash = "sha256:fc297cb26971f7d5e15a478a06a78575197f81daea47975771b1aae996dcccf4"},
+    {file = "backports_strenum-1.2.8.tar.gz", hash = "sha256:4dd47365fd427ac8028aeb1ad3628ea38e67c4d0336ceebd5c0f113e0c487ce9"},
+]
+
+[[package]]
 name = "blacksheep"
 version = "1.2.18"
 description = "Fast web framework for Python asyncio"
@@ -2180,4 +2192,4 @@ server = ["auth0-python", "blacksheep", "pyjwt", "redis", "uvicorn", "uvloop"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "55500fe0957b7d0341c23bf97da7e4692f0faada93e8611b2ff494591b7a8d2c"
+content-hash = "4c05ba81fd5c3fd539c93686db0281072fcdfda270d311a3f818399d0f22bec9"

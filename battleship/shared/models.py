@@ -1,20 +1,21 @@
-import enum
 import secrets
+from enum import auto
 from typing import Any, TypeAlias, TypeVar
 
 from pydantic import BaseModel as _BaseModel
 from pydantic import EmailStr, Field, computed_field
 
 from battleship.engine import domain
+from battleship.shared.compat import StrEnum
 
 SessionID: TypeAlias = str
 T = TypeVar("T", bound="BaseModel")
 
 
-class Action(str, enum.Enum):
-    ADD = enum.auto()
-    REMOVE = enum.auto()
-    START = enum.auto()
+class Action(StrEnum):
+    ADD = auto()
+    REMOVE = auto()
+    START = auto()
 
 
 class BaseModel(_BaseModel):

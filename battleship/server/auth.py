@@ -1,6 +1,6 @@
 import asyncio
-import enum
 from abc import ABC, abstractmethod
+from enum import auto
 from functools import partial
 from random import choice
 from secrets import token_urlsafe
@@ -14,12 +14,13 @@ from auth0.management import Auth0 as _Auth0  # type: ignore[import-untyped]
 from loguru import logger
 
 from battleship.server.config import Config
+from battleship.shared.compat import StrEnum
 from battleship.shared.models import IDToken, LoginData
 
 
-class UserRole(str, enum.Enum):
-    GUEST = "guest"
-    USER = "user"
+class UserRole(StrEnum):
+    GUEST = auto()
+    USER = auto()
 
 
 JSONPayload: TypeAlias = dict[str, Any]

@@ -249,10 +249,10 @@ class Salvo:
 
 
 class Hook(str, enum.Enum):
-    SHIP_ADDED = enum.auto()
-    FLEET_READY = enum.auto()
-    NEXT_MOVE = enum.auto()
-    GAME_ENDED = enum.auto()
+    SHIP_ADDED = "ship_added"
+    FLEET_READY = "fleet_ready"
+    NEXT_MOVE = "next_move"
+    GAME_ENDED = "game_ended"
 
 
 class Game:
