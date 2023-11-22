@@ -56,12 +56,12 @@ class Lobby(Screen[None]):
     async def on_mount(self) -> None:
         self.query_one(ListView).focus()
 
-        await self._setup_player_count_updates()
-        self._client.add_listener(ClientEvent.CONNECTION_LOST, self.resubscribe)
-
     @on(ScreenSuspend)
     async def unsubscribe(self) -> None:
-        await self.unsubscribe_from_player_count()
+        try:
+            await self.unsubscribe_from_player_count()
+        except ClientError:
+            logger.warning("Cannot unsubscribe from player count.")
 
     @on(ScreenResume)
     async def update_players_count(self) -> None:
@@ -70,11 +70,6 @@ class Lobby(Screen[None]):
     @on(Unmount)
     async def disconnect_ws(self) -> None:
         await self._client.disconnect()
-
-        try:
-            await self.unsubscribe_from_player_count()
-        except ClientError:
-            logger.warning("Cannot unsubscribe from player count.")
 
     @on(ListView.Selected, item="#logout")
     async def logout(self) -> None:
@@ -145,3 +140,4 @@ class Lobby(Screen[None]):
     async def _setup_player_count_updates(self) -> None:
         await self.subscribe_to_player_count()
         await self.fetch_player_count()
+        self._client.add_listener(ClientEvent.CONNECTION_LOST, self.resubscribe)
