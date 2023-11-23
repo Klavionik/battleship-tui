@@ -6,7 +6,7 @@ from typer import Exit, Option, Typer
 
 from battleship.cli.console import get_console
 
-app = Typer()
+app = Typer(help="Manage multiplayer account.")
 console = get_console()
 
 
@@ -17,12 +17,20 @@ def _unpack_400_errors(errors: list[dict[str, Any]]) -> Generator[tuple[str, str
         yield fields, msg
 
 
-@app.command()
+@app.command(help="Register a new account.")
 def signup(
     ctx: typer.Context,
-    email: Annotated[str, Option(prompt=True)],
-    nickname: Annotated[str, Option(prompt=True)],
-    password: Annotated[str, Option(prompt=True, confirmation_prompt=True, hide_input=True)],
+    email: Annotated[str, Option(prompt=True, help="Your email.")],
+    nickname: Annotated[str, Option(prompt=True, help="Your nickname/display name, 7-20 chars.")],
+    password: Annotated[
+        str,
+        Option(
+            prompt=True,
+            confirmation_prompt=True,
+            hide_input=True,
+            help="Your password (min. 9 chars).",
+        ),
+    ],
 ) -> None:
     server_url = ctx.obj["server_url"]
 
