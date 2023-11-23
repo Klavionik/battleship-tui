@@ -2,9 +2,10 @@ from textual import on
 from textual.app import ComposeResult
 from textual.containers import Container
 from textual.screen import Screen
-from textual.widgets import Footer, Label, ListItem, ListView, Markdown
+from textual.widgets import Label, ListItem, ListView, Markdown
 
 from battleship.tui import screens
+from battleship.tui.widgets import AppFooter
 
 WELCOME_TEXT = """
 # Welcome to Battleship TUI!
@@ -27,7 +28,7 @@ class MainMenu(Screen[None]):
                 yield ListItem(Label(":man: Multiplayer"), id="multiplayer")
                 yield ListItem(Label(":wrench: Settings"), id="settings")
 
-        yield Footer()
+        yield AppFooter()
 
     @on(ListView.Selected, item="#singleplayer")
     def run_singleplayer(self) -> None:

@@ -34,6 +34,18 @@ Tooltip {
   padding: 0 1;
 }
 
+AppFooter {
+  layout: horizontal;
+  height: 1;
+  background: $accent;
+}
+
+Version {
+  dock: right;
+  width: auto;
+  padding: 0 1;
+}
+
 
 /* Main menu screen */
 

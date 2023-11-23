@@ -4,12 +4,13 @@ import inject
 from textual.app import ComposeResult
 from textual.containers import Container, VerticalScroll
 from textual.screen import Screen
-from textual.widgets import DataTable, Footer, Markdown
+from textual.widgets import DataTable, Markdown
 
 from battleship.client import Client
 from battleship.shared.models import PlayerStatistics
 from battleship.tui import resources
 from battleship.tui.format import format_duration
+from battleship.tui.widgets import AppFooter
 
 
 class Statistics(Screen[None]):
@@ -32,7 +33,7 @@ class Statistics(Screen[None]):
             with Container(classes="screen-content"):
                 yield self._make_table()
 
-        yield Footer()
+        yield AppFooter()
 
     def action_back(self) -> None:
         self.app.pop_screen()

@@ -7,7 +7,7 @@ from textual.app import ComposeResult
 from textual.containers import Container, VerticalScroll
 from textual.events import Mount, ScreenResume, ScreenSuspend, Unmount
 from textual.screen import Screen
-from textual.widgets import Footer, Label, ListItem, ListView, Markdown
+from textual.widgets import Label, ListItem, ListView, Markdown
 
 from battleship.client import (
     Client,
@@ -17,7 +17,7 @@ from battleship.client import (
 )
 from battleship.shared.events import ClientEvent
 from battleship.tui import resources, screens
-from battleship.tui.widgets import LobbyHeader
+from battleship.tui.widgets import AppFooter, LobbyHeader
 
 
 class Lobby(Screen[None]):
@@ -47,7 +47,7 @@ class Lobby(Screen[None]):
                     yield ListItem(Label("📜 Statistics"), id="stats")
                     yield ListItem(Label("👋 Logout"), id="logout")
 
-        yield Footer()
+        yield AppFooter()
 
     def action_back(self) -> None:
         self.app.switch_screen(screens.MainMenu())

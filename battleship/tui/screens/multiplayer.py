@@ -9,11 +9,12 @@ from textual.events import Mount
 from textual.reactive import var
 from textual.screen import Screen
 from textual.validation import Length
-from textual.widgets import Button, Footer, Input, Markdown, Rule
+from textual.widgets import Button, Input, Markdown, Rule
 
 from battleship.client import Client, ConnectionImpossible, RequestFailed, Unauthorized
 from battleship.client.client import LoginRequired
 from battleship.tui import resources, screens
+from battleship.tui.widgets import AppFooter
 
 
 class Multiplayer(Screen[None]):
@@ -51,7 +52,7 @@ class Multiplayer(Screen[None]):
                 yield Rule(line_style="heavy")
                 yield Button("Connect as guest", id="connect-guest")
 
-        yield Footer()
+        yield AppFooter()
 
     def action_back(self) -> None:
         self.app.switch_screen(screens.MainMenu())

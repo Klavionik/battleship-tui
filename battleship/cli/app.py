@@ -3,7 +3,7 @@ from typing import Annotated
 import typer
 from xdg_base_dirs import xdg_data_home
 
-from battleship import tui
+from battleship import get_client_version, tui
 from battleship.cli import account, di, logging, play
 
 app = typer.Typer(name="Battleship TUI")
@@ -26,6 +26,7 @@ def main(
             show_envvar=False,
         ),
     ] = "https://battleship.klavionik.dev",
+    version: Annotated[bool, typer.Option("--version")] = False,
 ) -> None:
     ctx.ensure_object(dict)
     ctx.obj["server_url"] = server_url
@@ -33,6 +34,9 @@ def main(
     logging.configure_logger(str(DEFAULT_LOG_SINK))
     config = tui.Config(server_url=server_url, credentials_provider=credentials_provider)
     di.configure_injection(config)
+    if version:
+        typer.echo(get_client_version())
+        raise typer.Exit
 
     if ctx.invoked_subcommand is None:
         tui.run()

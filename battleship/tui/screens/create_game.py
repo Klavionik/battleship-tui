@@ -6,12 +6,13 @@ from textual import on
 from textual.app import ComposeResult
 from textual.containers import Container, VerticalScroll
 from textual.screen import Screen
-from textual.widgets import Footer, Markdown
+from textual.widgets import Markdown
 
 from battleship.client import Client
 from battleship.engine.roster import Roster, RosterItem
 from battleship.shared.events import ServerEvent
 from battleship.tui import resources, screens, strategies
+from battleship.tui.widgets import AppFooter
 from battleship.tui.widgets.modals import WaitingModal
 from battleship.tui.widgets.new_game import NewGame
 
@@ -35,7 +36,7 @@ class CreateGame(Screen[None]):
             with Container(classes="screen-content"):
                 yield NewGame(with_name=True)
 
-        yield Footer()
+        yield AppFooter()
 
     def action_back(self) -> None:
         self.app.pop_screen()

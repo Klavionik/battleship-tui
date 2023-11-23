@@ -4,11 +4,12 @@ from textual import on
 from textual.app import ComposeResult
 from textual.containers import Container, VerticalScroll
 from textual.screen import Screen
-from textual.widgets import Footer, Markdown
+from textual.widgets import Markdown
 
 from battleship.engine import create_game
 from battleship.engine.roster import get_roster
 from battleship.tui import resources, screens, strategies
+from battleship.tui.widgets import AppFooter
 from battleship.tui.widgets.new_game import NewGame
 
 
@@ -29,7 +30,7 @@ class Singleplayer(Screen[None]):
             with Container(classes="screen-content"):
                 yield NewGame()
 
-        yield Footer()
+        yield AppFooter()
 
     def action_back(self) -> None:
         self.app.switch_screen(screens.MainMenu())

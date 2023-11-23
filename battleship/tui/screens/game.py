@@ -7,11 +7,11 @@ from textual.app import DEFAULT_COLORS, ComposeResult
 from textual.containers import Grid
 from textual.coordinate import Coordinate
 from textual.screen import Screen
-from textual.widgets import Footer
 
 from battleship.engine import domain
 from battleship.shared import models
 from battleship.tui import strategies
+from battleship.tui.widgets import AppFooter
 from battleship.tui.widgets.announcement import (
     PHASE_BATTLE,
     PHASE_BATTLE_SALVO,
@@ -115,7 +115,7 @@ class Game(Screen[None]):
             yield self.battle_log
             yield self.enemy_fleet
 
-        yield Footer()
+        yield AppFooter()
 
     @property
     def game_ended(self) -> bool:

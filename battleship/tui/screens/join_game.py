@@ -8,7 +8,7 @@ from textual.containers import Container
 from textual.css.query import NoMatches
 from textual.events import Mount, Unmount
 from textual.screen import Screen
-from textual.widgets import Footer, Label, ListItem, ListView, Static
+from textual.widgets import Label, ListItem, ListView, Static
 
 from battleship.client import (
     Client,
@@ -21,6 +21,7 @@ from battleship.shared.events import ClientEvent, ServerEvent
 from battleship.shared.models import Session, SessionID
 from battleship.tui import screens, strategies
 from battleship.tui.format import format_session
+from battleship.tui.widgets import AppFooter
 
 
 class SessionItem(ListItem):
@@ -52,7 +53,7 @@ class JoinGame(Screen[None]):
             yield Static("Select a game", id="title")
             yield self._session_list
 
-        yield Footer()
+        yield AppFooter()
 
     def action_back(self) -> None:
         self.app.pop_screen()
