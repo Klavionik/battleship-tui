@@ -52,9 +52,24 @@ class BattleshipApp(App[None]):
         instance.call_later(create_session)
         return instance
 
+    @classmethod
+    def multiplayer_join(cls, game_code: str) -> "BattleshipApp":
+        multiplayer_screen = screens.Multiplayer()
+
+        def join_session() -> None:
+            instance.join_multiplayer_session(game_code)
+
+        instance: BattleshipApp = cls(mount_screen=multiplayer_screen)
+        instance.call_later(join_session)
+        return instance
+
     @on(Mount)
     def mount_first_screen(self) -> None:
         self.push_screen(self._mount_screen)
+
+    @on(Unmount)
+    async def disconnect(self) -> None:
+        await self._client.disconnect()
 
     @on(screens.CreateGame.CreateMultiplayerSession)
     def create_session_from_event(self, event: screens.CreateGame.CreateMultiplayerSession) -> None:
@@ -82,12 +97,7 @@ class BattleshipApp(App[None]):
             salvo_mode,
         )
 
-        strategy = strategies.MultiplayerStrategy(
-            self._client.nickname,
-            firing_order,
-            salvo_mode,
-            self._client,
-        )
+        strategy = strategies.MultiplayerStrategy(self._client.nickname, self._client)
 
         waiting_modal = WaitingModal()
         self.app._create_game_waiting_modal = waiting_modal  # type: ignore[attr-defined]
@@ -122,9 +132,27 @@ class BattleshipApp(App[None]):
         else:
             waiting_modal.dismiss(True)
 
-    @on(Unmount)
-    async def disconnect(self) -> None:
-        await self._client.disconnect()
+    @on(screens.JoinGame.JoinMultiplayerSession)
+    async def join_from_event(self, event: screens.JoinGame.JoinMultiplayerSession) -> None:
+        self.join_multiplayer_session(event.session_id)
+
+    @work
+    async def join_multiplayer_session(self, session_id: str) -> None:
+        strategy = strategies.MultiplayerStrategy(self._client.nickname, self._client)
+
+        await self._client.join_game(session_id)
+
+        try:
+            await strategy.started()
+        except strategies.GameNeverStarted:
+            self.notify(
+                "Waiting too long to join the game.",
+                title="Game start aborted",
+                severity="warning",
+                timeout=5,
+            )
+        else:
+            await self.app.push_screen(screens.Game(strategy=strategy))
 
     async def _handle_connection_lost(self) -> None:
         def cancel_active_game() -> None:

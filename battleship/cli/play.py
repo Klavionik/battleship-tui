@@ -65,3 +65,20 @@ def new(
     tui_app = tui.BattleshipApp.multiplayer_new(game_name, roster, firing_order, salvo_mode)
 
     tui.run(tui_app)
+
+
+@multiplayer_app.command(help="Join a multiplayer session.")
+def join(game_code: str) -> None:
+    credentials_provider: CredentialsProvider = inject.instance(CredentialsProvider)
+    credentials = credentials_provider.load()
+
+    if credentials is None:
+        console.warning(
+            "You are not logged in. Please log in using the in-game menu.\n"
+            "Then you'll be able to start multiplayer games from the CLI."
+        )
+        raise typer.Exit(1)
+
+    tui_app = tui.BattleshipApp.multiplayer_join(game_code)
+
+    tui.run(tui_app)

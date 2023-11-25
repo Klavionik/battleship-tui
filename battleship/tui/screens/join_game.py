@@ -2,11 +2,12 @@ from typing import Any
 
 import inject
 from loguru import logger
-from textual import on, work
+from textual import on
 from textual.app import ComposeResult
 from textual.containers import Container
 from textual.css.query import NoMatches
 from textual.events import Mount, Unmount
+from textual.message import Message
 from textual.screen import Screen
 from textual.widgets import Label, ListItem, ListView, Static
 
@@ -18,7 +19,6 @@ from battleship.client import (
 )
 from battleship.shared.events import ClientEvent
 from battleship.shared.models import Session, SessionID
-from battleship.tui import screens, strategies
 from battleship.tui.format import format_session
 from battleship.tui.widgets import AppFooter
 
@@ -38,6 +38,11 @@ class SessionItem(ListItem):
 
 
 class JoinGame(Screen[None]):
+    class JoinMultiplayerSession(Message):
+        def __init__(self, session_id: str):
+            super().__init__()
+            self.session_id = session_id
+
     BINDINGS = [("escape", "back", "Back")]
 
     @inject.param("client", Client)
@@ -103,30 +108,7 @@ class JoinGame(Screen[None]):
         item: SessionItem = event.item  # type: ignore
         session = item.session
 
-        self.join(session.id, session.firing_order, session.salvo_mode)
-
-    @work
-    async def join(self, session_id: str, firing_order: str, salvo_mode: bool) -> None:
-        strategy = strategies.MultiplayerStrategy(
-            self._client.nickname,
-            firing_order,
-            salvo_mode,
-            self._client,
-        )
-
-        await self._client.join_game(session_id)
-
-        try:
-            await strategy.started()
-        except strategies.GameNeverStarted:
-            self.notify(
-                "Waiting too long to join the game.",
-                title="Game start aborted",
-                severity="warning",
-                timeout=5,
-            )
-        else:
-            await self.app.push_screen(screens.Game(strategy=strategy))
+        self.post_message(self.JoinMultiplayerSession(session.id))
 
     async def add_session(self, session: Session) -> None:
         try:

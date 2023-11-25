@@ -137,11 +137,17 @@ class Game:
             asyncio.create_task(client.send_event(event))
 
     def announce_game_start(self) -> None:
+        game_options = dict(
+            roster=asdict(self.roster),
+            firing_order=self.game.firing_order,
+            salvo_mode=self.game.salvo_mode,
+        )
+
         asyncio.create_task(
             self.host.send_event(
                 EventMessage(
                     kind=ServerEvent.START_GAME,
-                    payload=dict(enemy=self.guest.nickname, roster=asdict(self.roster)),
+                    payload=dict(enemy=self.guest.nickname, **game_options),
                 )
             )
         )
@@ -149,7 +155,7 @@ class Game:
             self.guest.send_event(
                 EventMessage(
                     kind=ServerEvent.START_GAME,
-                    payload=dict(enemy=self.host.nickname, roster=asdict(self.roster)),
+                    payload=dict(enemy=self.host.nickname, **game_options),
                 )
             )
         )

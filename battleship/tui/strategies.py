@@ -95,19 +95,13 @@ class GameStrategy(abc.ABC):
 class MultiplayerStrategy(GameStrategy):
     START_TIMEOUT = 60 * 10  # 10 minutes.
 
-    def __init__(
-        self,
-        player: str,
-        firing_order: str,
-        salvo_mode: bool,
-        client: Client,
-    ):
+    def __init__(self, player: str, client: Client):
         super().__init__()
         self._player = player
         self._enemy = ""
         self._roster: Roster | None = None
-        self._firing_order = firing_order
-        self._salvo_mode = salvo_mode
+        self._firing_order: str | None = None
+        self._salvo_mode: bool | None = None
         self._winner = None
         self._client = client
 
@@ -136,10 +130,12 @@ class MultiplayerStrategy(GameStrategy):
 
     @property
     def firing_order(self) -> str:
+        assert self._firing_order
         return self._firing_order
 
     @property
     def salvo_mode(self) -> bool:
+        assert self._salvo_mode is not None
         return self._salvo_mode
 
     @property
@@ -204,10 +200,17 @@ class MultiplayerStrategy(GameStrategy):
 
     def _on_start_game(self, payload: dict[str, Any]) -> None:
         enemy_nickname = payload["enemy"]
-        data = payload["roster"]
-        roster = Roster(name=data["name"], items=[RosterItem(*item) for item in data["items"]])
+        firing_order = payload["firing_order"]
+        salvo_mode = payload["salvo_mode"]
+        roster_data = payload["roster"]
+        roster = Roster(
+            name=roster_data["name"],
+            items=[RosterItem(*item) for item in roster_data["items"]],
+        )
 
         self._enemy = enemy_nickname
+        self._firing_order = firing_order
+        self._salvo_mode = salvo_mode
         self._roster = roster
 
         self._game_started.set()
