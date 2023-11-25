@@ -1,17 +1,19 @@
+import asyncio
 from typing import Any, cast
 
 import inject
 from loguru import logger
-from textual import on
+from textual import on, work
 from textual.app import App
 from textual.events import Mount, Unmount
 from textual.screen import Screen
 
-from battleship.client import Client, ConnectionImpossible
+from battleship.client import Client, ClientError, ConnectionImpossible
 from battleship.engine import domain
 from battleship.shared.events import ClientEvent
 from battleship.tui import screens, strategies
 from battleship.tui.widgets import modals
+from battleship.tui.widgets.modals import WaitingModal
 
 
 class BattleshipApp(App[None]):
@@ -37,9 +39,88 @@ class BattleshipApp(App[None]):
         instance: BattleshipApp = cls(mount_screen=game_screen)
         return instance
 
+    @classmethod
+    def multiplayer_new(
+        cls, game_name: str, roster_name: str, firing_order: str, salvo_mode: bool
+    ) -> "BattleshipApp":
+        multiplayer_screen = screens.Multiplayer()
+
+        def create_session() -> None:
+            instance.create_multiplayer_session(game_name, roster_name, firing_order, salvo_mode)
+
+        instance: BattleshipApp = cls(mount_screen=multiplayer_screen)
+        instance.call_later(create_session)
+        return instance
+
     @on(Mount)
     def mount_first_screen(self) -> None:
         self.push_screen(self._mount_screen)
+
+    @on(screens.CreateGame.CreateMultiplayerSession)
+    def create_session_from_event(self, event: screens.CreateGame.CreateMultiplayerSession) -> None:
+        self.create_multiplayer_session(
+            event.game_name,
+            event.roster_name,
+            event.firing_order,
+            event.salvo_mode,
+        )
+
+    @work
+    async def create_multiplayer_session(
+        self, name: str, roster_name: str, firing_order: str, salvo_mode: bool
+    ) -> None:
+        if not self._client.logged_in:
+            logger.warning("Cannot create multiplayer session if not logged in.")
+            return
+
+        name = name or f"{self._client.nickname}'s game"
+
+        session = await self._client.create_session(
+            name,
+            roster_name,
+            firing_order,
+            salvo_mode,
+        )
+
+        strategy = strategies.MultiplayerStrategy(
+            self._client.nickname,
+            firing_order,
+            salvo_mode,
+            self._client,
+        )
+
+        waiting_modal = WaitingModal()
+        self.app._create_game_waiting_modal = waiting_modal  # type: ignore[attr-defined]
+
+        async def on_modal_dismiss(game_started: bool) -> None:
+            del self.app._create_game_waiting_modal  # type: ignore[attr-defined]
+
+            if game_started:
+                await self.app.push_screen(screens.Game(strategy=strategy))
+                return
+
+            game_started_task.cancel()
+
+            try:
+                await self._client.delete_session(session.id)
+            except ClientError as exc:
+                logger.warning(f"Could not delete created session {session.id}. Error: {exc}")
+
+        await self.app.push_screen(waiting_modal, callback=on_modal_dismiss)
+
+        try:
+            game_started_task = asyncio.create_task(strategy.started())
+            await game_started_task
+        except strategies.GameNeverStarted:
+            self.notify(
+                "Waiting too long for the second player.",
+                title="Game start aborted",
+                severity="warning",
+                timeout=5,
+            )
+            waiting_modal.dismiss(False)
+        else:
+            waiting_modal.dismiss(True)
 
     @on(Unmount)
     async def disconnect(self) -> None:
