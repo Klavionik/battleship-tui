@@ -2,7 +2,7 @@ from typing import Any
 
 import inject
 from loguru import logger
-from textual import on
+from textual import on, work
 from textual.app import ComposeResult
 from textual.containers import Container
 from textual.css.query import NoMatches
@@ -16,8 +16,7 @@ from battleship.client import (
     ConnectionImpossible,
     SessionSubscription,
 )
-from battleship.engine.roster import Roster, RosterItem
-from battleship.shared.events import ClientEvent, ServerEvent
+from battleship.shared.events import ClientEvent
 from battleship.shared.models import Session, SessionID
 from battleship.tui import screens, strategies
 from battleship.tui.format import format_session
@@ -100,31 +99,34 @@ class JoinGame(Screen[None]):
         self._client.remove_listener(ClientEvent.CONNECTION_LOST, self.resubscribe)
 
     @on(ListView.Selected)
-    async def join(self, event: ListView.Selected) -> None:
+    async def join_from_event(self, event: ListView.Selected) -> None:
         item: SessionItem = event.item  # type: ignore
         session = item.session
 
-        def on_start_game(payload: dict[str, Any]) -> None:
-            self._client.remove_listener(ServerEvent.START_GAME, on_start_game)
+        self.join(session.id, session.firing_order, session.salvo_mode)
 
-            enemy_nickname = payload["enemy"]
-            data = payload["roster"]
-            roster = Roster(name=data["name"], items=[RosterItem(*item) for item in data["items"]])
+    @work
+    async def join(self, session_id: str, firing_order: str, salvo_mode: bool) -> None:
+        strategy = strategies.MultiplayerStrategy(
+            self._client.nickname,
+            firing_order,
+            salvo_mode,
+            self._client,
+        )
 
-            strategy = strategies.MultiplayerStrategy(
-                self._client.nickname,
-                enemy_nickname,
-                roster,
-                session.firing_order,
-                session.salvo_mode,
-                self._client,
+        await self._client.join_game(session_id)
+
+        try:
+            await strategy.started()
+        except strategies.GameNeverStarted:
+            self.notify(
+                "Waiting too long to join the game.",
+                title="Game start aborted",
+                severity="warning",
+                timeout=5,
             )
-
-            self.app.push_screen(screens.Game(strategy=strategy))
-
-        self._client.add_listener(ServerEvent.START_GAME, on_start_game)
-
-        await self._client.join_game(session.id)
+        else:
+            await self.app.push_screen(screens.Game(strategy=strategy))
 
     async def add_session(self, session: Session) -> None:
         try:

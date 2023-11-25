@@ -1,16 +1,15 @@
+import asyncio
 from typing import Any
 
 import inject
 from loguru import logger
-from textual import on
+from textual import on, work
 from textual.app import ComposeResult
 from textual.containers import Container, VerticalScroll
 from textual.screen import Screen
 from textual.widgets import Markdown
 
-from battleship.client import Client
-from battleship.engine.roster import Roster, RosterItem
-from battleship.shared.events import ServerEvent
+from battleship.client import Client, ClientError
 from battleship.tui import resources, screens, strategies
 from battleship.tui.widgets import AppFooter
 from battleship.tui.widgets.modals import WaitingModal
@@ -42,44 +41,63 @@ class CreateGame(Screen[None]):
         self.app.pop_screen()
 
     @on(NewGame.PlayPressed)
-    async def create_session(self, event: NewGame.PlayPressed) -> None:
+    def create_session_from_event(self, event: NewGame.PlayPressed) -> None:
         nickname = self._client.nickname
         name = event.name or f"{nickname}'s game"
-        session = await self._client.create_session(
+        self.create_session(
             name,
             event.roster,
             event.firing_order,
             event.salvo_mode,
         )
+
+    @work
+    async def create_session(
+        self, name: str, roster_name: str, firing_order: str, salvo_mode: bool
+    ) -> None:
+        session = await self._client.create_session(
+            name,
+            roster_name,
+            firing_order,
+            salvo_mode,
+        )
+
+        strategy = strategies.MultiplayerStrategy(
+            self._client.nickname,
+            firing_order,
+            salvo_mode,
+            self._client,
+        )
+
         waiting_modal = WaitingModal()
         self.app._create_game_waiting_modal = waiting_modal  # type: ignore[attr-defined]
 
-        @logger.catch
-        def on_start_game(payload: dict[str, Any]) -> None:
-            enemy_nickname = payload["enemy"]
-            data = payload["roster"]
-            roster = Roster(name=data["name"], items=[RosterItem(*item) for item in data["items"]])
-            strategy = strategies.MultiplayerStrategy(
-                self._client.nickname,
-                enemy_nickname,
-                roster,
-                event.firing_order,
-                event.salvo_mode,
-                self._client,
-            )
-            waiting_modal.dismiss(True)
-            self.app.push_screen(screens.Game(strategy=strategy))
-
-        self._client.add_listener(ServerEvent.START_GAME, on_start_game)
-
         async def on_modal_dismiss(game_started: bool) -> None:
             del self.app._create_game_waiting_modal  # type: ignore[attr-defined]
-            self._client.remove_listener(ServerEvent.START_GAME, on_start_game)
 
-            if not game_started:
-                try:
-                    await self._client.delete_session(session.id)
-                except Exception as exc:
-                    logger.warning(f"Could not delete created session {session.id}. Error: {exc}")
+            if game_started:
+                await self.app.push_screen(screens.Game(strategy=strategy))
+                return
+
+            game_started_task.cancel()
+
+            try:
+                await self._client.delete_session(session.id)
+            except ClientError as exc:
+                logger.warning(f"Could not delete created session {session.id}. Error: {exc}")
 
         await self.app.push_screen(waiting_modal, callback=on_modal_dismiss)
+
+        try:
+            game_started_task = asyncio.create_task(strategy.started())
+            await game_started_task
+        except strategies.GameNeverStarted:
+            self.notify(
+                "Waiting too long for the second player.",
+                title="Game start aborted",
+                severity="warning",
+                timeout=5,
+            )
+            waiting_modal.dismiss(False)
+        else:
+            waiting_modal.dismiss(True)

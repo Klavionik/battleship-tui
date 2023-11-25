@@ -1,4 +1,5 @@
 import abc
+import asyncio
 from asyncio import create_task
 from time import time
 from typing import Any, Callable, Collection
@@ -6,11 +7,21 @@ from typing import Any, Callable, Collection
 from pyee.asyncio import AsyncIOEventEmitter
 
 from battleship.client import Client
-from battleship.engine import Roster, ai, domain
+from battleship.engine import Roster, RosterItem, ai, domain
 from battleship.shared import models
+from battleship.shared.compat import async_timeout as timeout
 from battleship.shared.events import ServerEvent
 
-__all__ = ["GameStrategy", "SingleplayerStrategy", "MultiplayerStrategy"]
+__all__ = [
+    "GameStrategy",
+    "SingleplayerStrategy",
+    "MultiplayerStrategy",
+    "GameNeverStarted",
+]
+
+
+class GameNeverStarted(Exception):
+    pass
 
 
 class GameStrategy(abc.ABC):
@@ -82,19 +93,19 @@ class GameStrategy(abc.ABC):
 
 
 class MultiplayerStrategy(GameStrategy):
+    START_TIMEOUT = 60 * 10  # 10 minutes.
+
     def __init__(
         self,
         player: str,
-        enemy: str,
-        roster: Roster,
         firing_order: str,
         salvo_mode: bool,
         client: Client,
     ):
         super().__init__()
         self._player = player
-        self._enemy = enemy
-        self._roster = roster
+        self._enemy = ""
+        self._roster: Roster | None = None
         self._firing_order = firing_order
         self._salvo_mode = salvo_mode
         self._winner = None
@@ -106,6 +117,9 @@ class MultiplayerStrategy(GameStrategy):
         client.add_listener(ServerEvent.SALVO, self._on_salvo)
         client.add_listener(ServerEvent.GAME_ENDED, self._on_game_ended)
         client.add_listener(ServerEvent.GAME_CANCELLED, self._on_game_cancelled)
+        client.add_listener(ServerEvent.START_GAME, self._on_start_game)
+
+        self._game_started = asyncio.Event()
 
     @property
     def player(self) -> str:
@@ -117,6 +131,7 @@ class MultiplayerStrategy(GameStrategy):
 
     @property
     def roster(self) -> Roster:
+        assert self._roster
         return self._roster
 
     @property
@@ -139,6 +154,23 @@ class MultiplayerStrategy(GameStrategy):
 
     def cancel(self) -> None:
         create_task(self._client.cancel_game())
+
+    async def started(self) -> None:
+        try:
+            async with timeout(self.START_TIMEOUT):
+                await self._game_started.wait()
+        except TimeoutError:
+            self._clear_handlers()
+            raise GameNeverStarted
+
+    def _clear_handlers(self) -> None:
+        self._client.remove_listener(ServerEvent.SHIP_SPAWNED, self._on_ship_spawned)
+        self._client.remove_listener(ServerEvent.FLEET_READY, self._on_fleet_ready)
+        self._client.remove_listener(ServerEvent.AWAITING_MOVE, self._on_awaiting_move)
+        self._client.remove_listener(ServerEvent.SALVO, self._on_salvo)
+        self._client.remove_listener(ServerEvent.GAME_ENDED, self._on_game_ended)
+        self._client.remove_listener(ServerEvent.GAME_CANCELLED, self._on_game_cancelled)
+        self._client.remove_listener(ServerEvent.START_GAME, self._on_start_game)
 
     def _on_ship_spawned(self, payload: dict[str, Any]) -> None:
         player = payload["player"]
@@ -164,10 +196,21 @@ class MultiplayerStrategy(GameStrategy):
         self._winner = winner
         summary = models.GameSummary.from_raw(payload["summary"])
         self.emit_game_ended(winner, summary)
+        self._clear_handlers()
 
     def _on_game_cancelled(self, payload: dict[str, Any]) -> None:
         reason = payload["reason"]
         self._ee.emit("game_cancelled", reason=reason)
+
+    def _on_start_game(self, payload: dict[str, Any]) -> None:
+        enemy_nickname = payload["enemy"]
+        data = payload["roster"]
+        roster = Roster(name=data["name"], items=[RosterItem(*item) for item in data["items"]])
+
+        self._enemy = enemy_nickname
+        self._roster = roster
+
+        self._game_started.set()
 
 
 class SingleplayerStrategy(GameStrategy):
