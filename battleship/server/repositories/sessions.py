@@ -79,18 +79,31 @@ class InMemorySessionRepository(SessionRepository):
 
 
 class RedisSessionRepository(SessionRepository):
+    key = "sessions"
+    namespace = key + ":"
+    pattern = namespace + "*"
+
     def __init__(self, client: redis.Redis) -> None:
         super().__init__()
         self._client = client
 
+    def get_key(self, session_id: str) -> str:
+        return f"{self.namespace}{session_id}"
+
+    def get_session_id(self, key: str | bytes) -> str:
+        if isinstance(key, bytes):
+            key = key.decode()
+
+        return key.removeprefix(self.namespace)
+
     async def add(self, host_id: str, data: SessionCreate) -> Session:
         session = Session(id=make_session_id(), host_id=host_id, **data.to_dict())
-        await self._client.set(session.id, session.to_json())
+        await self._save(session)
         self._notify_listeners(session.id, Action.ADD)
         return session
 
     async def get(self, session_id: str) -> Session:
-        data = await self._client.get(session_id)
+        data = await self._client.get(self.get_key(session_id))
 
         if data is None:
             raise SessionNotFound(f"Session {session_id} not found.")
@@ -98,18 +111,21 @@ class RedisSessionRepository(SessionRepository):
         return Session.from_raw(data)
 
     async def list(self) -> list[Session]:
-        session_keys = await self._client.keys(pattern="session_*")
+        session_keys = await self._client.keys(pattern=self.pattern)
         sessions = await self._client.mget(session_keys)
         return list(map(Session.from_raw, sessions))
 
     async def delete(self, session_id: str) -> bool:
-        deleted = await self._client.delete(session_id)
+        deleted = await self._client.delete(self.get_key(session_id))
         self._notify_listeners(session_id, Action.REMOVE)
         return bool(deleted)
 
     async def update(self, session_id: str, **kwargs: Any) -> Session:
         session = await self.get(session_id)
         updated_session = Session.from_dict({**session.to_dict(), **kwargs})
-        await self._client.set(session.id, updated_session.to_json())
+        await self._save(updated_session)
         self._notify_listeners(session_id, Action.START)
         return updated_session
+
+    async def _save(self, session: Session) -> None:
+        await self._client.set(self.get_key(session.id), session.to_json())

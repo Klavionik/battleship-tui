@@ -1,4 +1,5 @@
-import secrets
+import random
+import string
 from enum import auto
 from typing import Any, TypeAlias, TypeVar
 
@@ -235,5 +236,7 @@ class PlayerCount(BaseModel):
     ingame: int
 
 
-def make_session_id() -> SessionID:
-    return f"session_{secrets.token_urlsafe(8)}"
+def make_session_id(length: int = 6) -> SessionID:
+    alphabet = string.ascii_uppercase + string.digits
+    id_ = "".join(random.choices(alphabet, k=length))
+    return id_

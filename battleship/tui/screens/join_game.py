@@ -30,11 +30,16 @@ class SessionItem(ListItem):
 
     def __init__(self, *args: Any, session: Session, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
+        self.id = self.get_id(session.id)
         self.log(session)
         self.session = session
 
     def compose(self) -> ComposeResult:
         yield Label(format_session(self.LABEL_TEMPLATE, self.session))
+
+    @staticmethod
+    def get_id(session_id: str) -> str:
+        return "session" + session_id
 
 
 class JoinGame(Screen[None]):
@@ -111,18 +116,22 @@ class JoinGame(Screen[None]):
         self.post_message(self.JoinMultiplayerSession(session.id))
 
     async def add_session(self, session: Session) -> None:
+        item_id = SessionItem.get_id(session.id)
+
         try:
             # Remove possible duplicate.
-            item = self._session_list.query_one(f"#{session.id}")
+            item = self._session_list.query_one(f"#{item_id}")
             await item.remove()
         except NoMatches:
             pass
 
-        await self._session_list.append(SessionItem(id=session.id, session=session))
+        await self._session_list.append(SessionItem(session=session))
 
     async def remove_session(self, session_id: SessionID) -> None:
+        item_id = SessionItem.get_id(session_id)
+
         try:
-            item = self._session_list.query_one(f"#{session_id}", ListItem)
+            item = self._session_list.query_one(f"#{item_id}", ListItem)
             await item.remove()
         except NoMatches:
             pass
