@@ -99,7 +99,7 @@ class BattleshipApp(App[None]):
 
         strategy = strategies.MultiplayerStrategy(self._client.nickname, self._client)
 
-        waiting_modal = WaitingModal()
+        waiting_modal = WaitingModal(game_code=session.id)
         self.app._create_game_waiting_modal = waiting_modal  # type: ignore[attr-defined]
 
         async def on_modal_dismiss(game_started: bool) -> None:

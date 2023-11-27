@@ -12,10 +12,17 @@ from battleship.tui.format import format_duration
 
 
 class WaitingModal(ModalScreen[bool]):
+    def __init__(self, *args: Any, game_code: str, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        self._game_code = game_code
+
     def compose(self) -> ComposeResult:
         with Container(id="dialog"):
             yield Label("Waiting for the second player...")
-            yield LoadingIndicator()
+            yield Label(f"Game code: [b]{self._game_code}[/]")
+
+            with Container(id="loading"):
+                yield LoadingIndicator()
 
             with Container(id="buttons"):
                 yield Button("Abort", variant="error")
@@ -52,7 +59,9 @@ class ConnectionLostModal(ModalScreen[None]):
         with Container(id="dialog"):
             yield Label("Connection to the server is lost.")
             yield Label("Trying to reconnect...")
-            yield LoadingIndicator()
+
+            with Container(id="loading"):
+                yield LoadingIndicator()
 
 
 class GameSummaryModal(ModalScreen[None]):
