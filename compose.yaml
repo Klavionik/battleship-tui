@@ -12,6 +12,7 @@ services:
       AUTH0_REALM: $AUTH0_REALM
       AUTH0_ROLES: $AUTH0_ROLES
       BROKER_URL: $BROKER_URL
+      SENTRY_DSN: $SENTRY_DSN
     command: ["uvicorn", "--host", "0.0.0.0", "--reload", "--factory", "battleship.server:create_app"]
     ports:
       - "8000:8000"

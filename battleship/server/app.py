@@ -1,11 +1,14 @@
 import sys
+from typing import Any
 
 import redis.asyncio as redis
+import sentry_sdk
 from blacksheep import Application
 from blacksheep.server.authentication.jwt import JWTBearerAuthentication
 from blacksheep.server.authorization import Policy
 from guardpost.common import AuthenticatedRequirement
 from loguru import logger
+from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
 
 from battleship.server.auth import Auth0AuthManager, AuthManager
 from battleship.server.config import Config, get_config
@@ -52,7 +55,16 @@ async def teardown_redis(app: Application) -> None:
         raise
 
 
-def create_app() -> Application:
+def configure_sentry(app: Application, dsn: str) -> SentryAsgiMiddleware:
+    sentry_sdk.init(
+        dsn=dsn,
+        traces_sample_rate=0.7,
+    )
+
+    return SentryAsgiMiddleware(app)
+
+
+def create_app() -> Any:
     config = get_config()
     logger.remove()
     logger.add(sys.stderr, level="TRACE" if config.TRACE else "DEBUG")
@@ -85,4 +97,7 @@ def create_app() -> Application:
 
     app.on_stop += cleanup_clients
     app.on_stop += teardown_redis
+
+    if config.SENTRY_DSN:
+        return configure_sentry(app, config.SENTRY_DSN)
     return app

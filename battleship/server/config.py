@@ -11,6 +11,7 @@ class Config(BaseSettings):
     AUTH0_ROLES: dict[str, str]
     BROKER_URL: RedisDsn
     SERVER_VERSION: str
+    SENTRY_DSN: str
 
     @property
     def auth0_audience(self) -> str:
