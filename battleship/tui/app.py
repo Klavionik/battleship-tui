@@ -1,19 +1,39 @@
 import asyncio
+from datetime import datetime, timezone
 from typing import Any, cast
 
 import inject
+import rich
 from loguru import logger
+from rich.console import Console
+from rich.traceback import Traceback
 from textual import on, work
 from textual.app import App
 from textual.events import Mount, Unmount
 from textual.screen import Screen
 
+from battleship import data_home, get_client_version
 from battleship.client import Client, ClientError, ConnectionImpossible
 from battleship.engine import domain
 from battleship.shared.events import ClientEvent
 from battleship.tui import screens, strategies
 from battleship.tui.widgets import modals
 from battleship.tui.widgets.modals import WaitingModal
+
+
+def save_crash_report() -> None:
+    version = get_client_version()
+    now = datetime.now(tz=timezone.utc)
+    report_path = f"crash_report_{now:%Y-%m-%d_%H:%M:%S}_v{version}.txt"
+
+    with (data_home / report_path).open(mode="w") as fh:
+        console = Console(file=fh)
+        tb = Traceback(show_locals=True, width=150, suppress=[rich])
+        console.print(tb)
+
+
+class BattleshipError(Exception):
+    pass
 
 
 class BattleshipApp(App[None]):
@@ -24,11 +44,17 @@ class BattleshipApp(App[None]):
 
     @inject.param("client", Client)
     def __init__(
-        self, *args: Any, mount_screen: Screen[Any] | None = None, client: Client, **kwargs: Any
+        self,
+        *args: Any,
+        mount_screen: Screen[Any] | None = None,
+        enable_crash_report: bool = True,
+        client: Client,
+        **kwargs: Any,
     ) -> None:
         super().__init__(*args, **kwargs)
         self._mount_screen = mount_screen or screens.MainMenu()
         self._client = client
+        self._enable_crash_report = enable_crash_report
 
         self._client.add_listener(ClientEvent.CONNECTION_LOST, self._handle_connection_lost)
 
@@ -201,9 +227,18 @@ class BattleshipApp(App[None]):
                 timeout=5,
             )
 
+    def _fatal_error(self) -> None:
+        if self._enable_crash_report:
+            save_crash_report()
+
+        self._close_messages_no_wait()
+
 
 def run(app: BattleshipApp | None = None) -> None:
     if app is None:
         app = BattleshipApp()
 
     app.run()
+
+    if app.return_code != 0:
+        raise BattleshipError

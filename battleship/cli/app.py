@@ -1,16 +1,15 @@
 from typing import Annotated
 
 import typer
-from xdg_base_dirs import xdg_data_home
 
-from battleship import get_client_version, tui
+from battleship import data_home, get_client_version, tui
 from battleship.cli import account, di, logging, play
 
 app = typer.Typer(name="Battleship TUI")
 app.add_typer(account.app, name="account")
 app.add_typer(play.app, name="play")
 
-DEFAULT_LOG_SINK = xdg_data_home() / "battleship" / "client.log"
+DEFAULT_LOG_SINK = data_home / "client.log"
 
 
 @app.callback(invoke_without_command=True)
@@ -49,3 +48,10 @@ def main(
 
     if ctx.invoked_subcommand is None:
         tui.run()
+
+
+def run() -> None:
+    try:
+        app()
+    except tui.BattleshipError:
+        raise SystemExit("Oops! An unexpected error occured. Crash report saved.")

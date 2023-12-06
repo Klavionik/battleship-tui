@@ -1,3 +1,3 @@
-from battleship.cli.app import app
+from battleship.cli.app import run
 
-__all__ = ["app"]
+__all__ = ["run"]

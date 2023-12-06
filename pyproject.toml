@@ -55,7 +55,7 @@ client = ["textual", "typer", "pyee", "async-timeout"]
 dev = ["textual-dev"]
 
 [tool.poetry.scripts]
-battleship = "battleship.cli:app"
+battleship = "battleship.cli:run"
 
 [tool.black]
 line-length = 100

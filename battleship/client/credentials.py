@@ -2,8 +2,7 @@ from abc import ABC, abstractmethod
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from xdg_base_dirs import xdg_cache_home
-
+from battleship import cache_home
 from battleship.shared.models import BaseModel
 
 DEFAULT_LEEWAY_SECONDS = 30
@@ -48,12 +47,11 @@ class DummyCredentialsProvider(CredentialsProvider):
 
 
 class FilesystemCredentialsProvider(CredentialsProvider):
-    root = "battleship"
     permission = 0o600  # Read-write for user.
 
     def __init__(self, filename: str = ".credentials.json", cache_dir: str | None = None):
-        cache = Path(cache_dir) if cache_dir else xdg_cache_home()
-        self.cache = cache / self.root / filename
+        cache = Path(cache_dir) if cache_dir else cache_home
+        self.cache = cache / filename
         self._ensure_cache_dir()
 
     def save(self, credentials: Credentials) -> None:
