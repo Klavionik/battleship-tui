@@ -1,15 +1,16 @@
 import sys
-from typing import Any
+from typing import Any, Awaitable, Callable
 
 import redis.asyncio as redis
 import sentry_sdk
-from blacksheep import Application
+from blacksheep import Application, Request, Response
 from blacksheep.server.authentication.jwt import JWTBearerAuthentication
 from blacksheep.server.authorization import Policy
 from guardpost.common import AuthenticatedRequirement
 from loguru import logger
 from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
 
+from battleship.server import context
 from battleship.server.auth import Auth0AuthManager, AuthManager
 from battleship.server.config import Config, get_config
 from battleship.server.handlers import (
@@ -65,6 +66,28 @@ def configure_sentry(app: Application, dsn: str, release: str) -> SentryAsgiMidd
     return SentryAsgiMiddleware(app)
 
 
+async def client_version_middleware(
+    request: Request, handler: Callable[[Request], Awaitable[Response]]
+) -> Response:
+    version = (request.get_first_header(b"X-Client-Version") or b"0.0.0").decode()
+    context.client_version.set(version)
+    return await handler(request)
+
+
+async def sentry_context_middleware(
+    request: Request, handler: Callable[[Request], Awaitable[Response]]
+) -> Response:
+    sentry_sdk.set_context("client", {"version": context.client_version.get()})
+    identity = request.identity
+
+    if identity and identity.is_authenticated():
+        sentry_sdk.set_user(
+            {"id": identity.sub, "username": identity["nickname"], "email": identity["email"]}
+        )
+
+    return await handler(request)
+
+
 def create_app() -> Any:
     config = get_config()
     logger.remove()
@@ -98,6 +121,9 @@ def create_app() -> Any:
 
     app.on_stop += cleanup_clients
     app.on_stop += teardown_redis
+
+    app.middlewares.append(client_version_middleware)
+    app.middlewares.append(sentry_context_middleware)
 
     if config.SENTRY_DSN:
         return configure_sentry(app, config.SENTRY_DSN, config.SERVER_VERSION)

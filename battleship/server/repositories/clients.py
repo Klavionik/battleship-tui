@@ -21,7 +21,7 @@ class ClientRepository(Observable, abc.ABC):
         self._out_channel = outgoing_channel
 
     @abc.abstractmethod
-    async def add(self, client_id: str, nickname: str, guest: bool) -> Client:
+    async def add(self, client_id: str, nickname: str, guest: bool, version: str) -> Client:
         pass
 
     @abc.abstractmethod
@@ -52,8 +52,8 @@ class InMemoryClientRepository(ClientRepository):
         super().__init__(incoming_channel, outgoing_channel)
         self._clients: dict[str, Client] = {}
 
-    async def add(self, user_id: str, nickname: str, guest: bool) -> Client:
-        client = Client(user_id, nickname, guest, self._in_channel, self._out_channel)
+    async def add(self, user_id: str, nickname: str, guest: bool, version: str) -> Client:
+        client = Client(user_id, nickname, guest, version, self._in_channel, self._out_channel)
         self._clients[client.id] = client
         self._notify_listeners(client.id, Action.ADD)
         return client
@@ -110,8 +110,8 @@ class RedisClientRepository(ClientRepository):
 
         return key.removeprefix(self.namespace)
 
-    async def add(self, client_id: str, nickname: str, guest: bool) -> Client:
-        client = Client(client_id, nickname, guest, self._in_channel, self._out_channel)
+    async def add(self, client_id: str, nickname: str, guest: bool, version: str) -> Client:
+        client = Client(client_id, nickname, guest, version, self._in_channel, self._out_channel)
         await self._save(client)
         self._notify_listeners(client.id, Action.ADD)
         return client
@@ -123,7 +123,14 @@ class RedisClientRepository(ClientRepository):
             raise ClientNotFound(f"Client {client_id} not found.")
 
         model = ClientModel.from_raw(data)
-        return Client(model.id, model.nickname, model.guest, self._in_channel, self._out_channel)
+        return Client(
+            model.id,
+            model.nickname,
+            model.guest,
+            model.version,
+            self._in_channel,
+            self._out_channel,
+        )
 
     async def list(self) -> list[Client]:
         keys = await self._client.keys(self.pattern)
@@ -148,5 +155,7 @@ class RedisClientRepository(ClientRepository):
         return len(keys)
 
     async def _save(self, client: Client) -> bool:
-        model = ClientModel(id=client.id, nickname=client.nickname, guest=client.guest)
+        model = ClientModel(
+            id=client.id, nickname=client.nickname, guest=client.guest, version=client.version
+        )
         return bool(await self._client.set(self.get_key(client.id), model.to_json()))

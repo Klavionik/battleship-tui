@@ -229,6 +229,7 @@ class Client(BaseModel):
     id: str
     nickname: str
     guest: bool
+    version: str
 
 
 class PlayerCount(BaseModel):

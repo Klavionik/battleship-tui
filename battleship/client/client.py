@@ -13,6 +13,7 @@ from pyee.asyncio import AsyncIOEventEmitter
 # noinspection PyProtectedMember
 from websockets.client import WebSocketClientProtocol, connect
 
+from battleship import get_client_version
 from battleship.client.auth import IDTokenAuth
 from battleship.client.credentials import Credentials, CredentialsProvider
 from battleship.client.subscriptions import PlayerSubscription, SessionSubscription
@@ -101,6 +102,7 @@ class Client:
             base_url=self.base_url,
             auth=self.auth,
             timeout=http_timeout,
+            headers={"X-Client-Version": get_client_version()},
         )
         self._session.event_hooks = {"request": [log_request]}
         self.credentials_provider = credentials_provider
@@ -338,7 +340,10 @@ class Client:
             async with timeout(self._ws_timeout) as tm:
                 async for connection in connect(
                     self.base_url_ws + "/ws",
-                    extra_headers={"Authorization": f"Bearer {self.credentials.id_token}"},
+                    extra_headers={
+                        "Authorization": f"Bearer {self.credentials.id_token}",
+                        "X-Client-Version": get_client_version(),
+                    },
                 ):
                     tm.reschedule(None)
                     yield connection

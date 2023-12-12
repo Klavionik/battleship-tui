@@ -4,6 +4,7 @@ import typer
 from httpx import Client
 from typer import Exit, Option, Typer
 
+from battleship import get_client_version
 from battleship.cli.console import get_console
 
 app = Typer(help="Manage multiplayer account.")
@@ -37,7 +38,9 @@ def signup(
     with console.status(f"Creating user {nickname}..."):
         creds = dict(email=email, nickname=nickname, password=password)
 
-        with Client(base_url=server_url) as client:
+        with Client(
+            base_url=server_url, headers={"X-Client-Version": get_client_version()}
+        ) as client:
             response = client.post("/signup", json=creds)
 
         if response.status_code != 201:

@@ -91,12 +91,14 @@ class Client:
         user_id: str,
         nickname: str,
         guest: bool,
+        version: str,
         incoming_channel: IncomingChannel,
         outgoing_channel: OutgoingChannel,
     ) -> None:
         self.user_id = user_id
         self.nickname = nickname
         self.guest = guest
+        self.version = version
         self._incoming_channel = incoming_channel
         self._outgoing_channel = outgoing_channel
 

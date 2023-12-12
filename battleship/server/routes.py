@@ -15,6 +15,7 @@ from blacksheep.server.authorization import allow_anonymous
 from guardpost.authentication import Identity
 from loguru import logger
 
+from battleship.server import context
 from battleship.server.auth import AuthManager, InvalidSignup, WrongCredentials
 from battleship.server.handlers import (
     GameHandler,
@@ -58,7 +59,7 @@ async def ws(
     user_id = identity.claims["sub"]
     nickname = identity.claims["nickname"]
     guest = identity.has_claim_value("battleship/role", "guest")
-    client = await client_repository.add(user_id, nickname, guest)
+    client = await client_repository.add(user_id, nickname, guest, context.client_version.get())
     connection = Connection(user_id, nickname, websocket, in_channel, out_channel)
 
     await websocket.accept()
