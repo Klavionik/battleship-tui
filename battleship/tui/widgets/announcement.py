@@ -14,7 +14,7 @@ RULES_TEMPLATE = """
 PHASE_ARRANGE = """
 [b]Current phase[/]: [black on white]ARRANGE FLEET[/]
 
-Select a ship in the right bottom corner of the screen. Use [b]Right Click[/] to rotate the ship and [b]Left Click[/] to place the ship to position.
+Select a ship in the left bottom corner of the screen. Use [b]Right Click[/] to rotate the ship and [b]Left Click[/] to place the ship to position.
 """  # noqa: E501
 
 PHASE_BATTLE = """
