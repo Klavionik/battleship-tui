@@ -18,8 +18,12 @@ customize game options and appearance, keep track of your achievements, and more
 * Better CLI
 
 ## Requirements
-* A terminal (Windows PowerShell is fine too)
+* A terminal (Windows PowerShell is fine too, see below)
 * Python 3.10 or higher
+
+> [!NOTE]
+> If you're on Windows, **make sure** to install [the newer Windows Terminal](https://apps.microsoft.com/detail/9N0DX20HK701?hl=en-us&gl=US). 
+> The older Windows PowerShell can't properly display some symbols. 
 
 ## Installation
 The recommended way to install and update the game is via 
