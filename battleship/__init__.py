@@ -1,7 +1,7 @@
 from functools import cache
 from importlib import metadata
 
-from xdg_base_dirs import xdg_cache_home, xdg_data_home
+from xdg_base_dirs import xdg_cache_home, xdg_config_home, xdg_data_home
 
 
 @cache
@@ -12,6 +12,7 @@ def get_client_version() -> str:
 APP_LABEL = "battleship"
 data_home = xdg_data_home() / APP_LABEL
 cache_home = xdg_cache_home() / APP_LABEL
+config_home = xdg_config_home() / APP_LABEL
 
 try:
     __version__ = get_client_version()

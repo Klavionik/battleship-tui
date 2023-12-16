@@ -23,6 +23,14 @@ def main(
             help="Set multiplayer credentials provider.",
         ),
     ] = "battleship.client:filesystem_credentials_provider",
+    settings_provider: Annotated[
+        str,
+        typer.Option(
+            envvar="BATTLESHIP_SETTINGS_PROVIDER",
+            show_envvar=False,
+            help="Set game settings provider.",
+        ),
+    ] = "battleship.tui.settings:filesystem_settings_provider",
     server_url: Annotated[
         str,
         typer.Option(envvar="BATTLESHIP_SERVER_URL", show_envvar=False, help="Set server URL."),
@@ -39,7 +47,11 @@ def main(
     ctx.obj["server_url"] = server_url
 
     logging.configure_logger(str(DEFAULT_LOG_SINK))
-    config = tui.Config(server_url=server_url, credentials_provider=credentials_provider)
+    config = tui.Config(
+        server_url=server_url,
+        credentials_provider=credentials_provider,
+        game_settings_provider=settings_provider,
+    )
     di.configure_injection(config)
 
     if version:

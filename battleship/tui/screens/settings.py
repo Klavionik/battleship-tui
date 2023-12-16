@@ -1,5 +1,6 @@
 from typing import Any
 
+import inject
 from textual import on
 from textual.app import ComposeResult
 from textual.containers import Container, Horizontal, VerticalScroll
@@ -7,16 +8,17 @@ from textual.screen import Screen
 from textual.widgets import Button, Input, Label, Markdown, Select
 
 from battleship.tui import resources, screens
-from battleship.tui.settings import Settings as SettingsModel
+from battleship.tui.settings import SettingsProvider
 from battleship.tui.widgets import AppFooter
 
 
 class Settings(Screen[None]):
     BINDINGS = [("escape", "back", "Back")]
 
-    def __init__(self, *args: Any, current_settings: SettingsModel, **kwargs: Any) -> None:
+    @inject.param("provider", SettingsProvider)
+    def __init__(self, *args: Any, provider: SettingsProvider, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
-        self.current = current_settings
+        self.current = provider.load()
 
         with resources.get_resource("settings_help.md").open() as fh:
             self.help = fh.read()
