@@ -1798,14 +1798,14 @@ files = [
 
 [[package]]
 name = "textual"
-version = "0.41.0"
+version = "0.45.1"
 description = "Modern Text User Interface framework"
 category = "main"
 optional = true
-python-versions = ">=3.7,<4.0"
+python-versions = ">=3.8,<4.0"
 files = [
-    {file = "textual-0.41.0-py3-none-any.whl", hash = "sha256:ebf5f04a96721adb8685aae32a98d4a4098dafbfef59b1fb43ca7ac2c1ed5049"},
-    {file = "textual-0.41.0.tar.gz", hash = "sha256:73fb675a90ddded17d59ebd864dedaf82a3e7377e68ba1601581281dfd47ea86"},
+    {file = "textual-0.45.1-py3-none-any.whl", hash = "sha256:67ed2fe72451c3c23f9146a0442d05ebadd604dec78800e5bf7bbf4560efe05d"},
+    {file = "textual-0.45.1.tar.gz", hash = "sha256:1a6f80fb87e40a0490cf9a16526f5418a790d9c032a2983b0c7edd1c8abf39f3"},
 ]
 
 [package.dependencies]
@@ -2259,4 +2259,4 @@ server = ["auth0-python", "blacksheep", "pyjwt", "redis", "sentry-sdk", "uvicorn
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "69cdfdb0e87f0ea8f5ba44d5db44118f84e2f46f8ae29f47a9dbe5edc8332551"
+content-hash = "cff19e611e738e003378fd5b4f87dc7fa3872a54f6a47cf0e14bda86e446a6f7"
