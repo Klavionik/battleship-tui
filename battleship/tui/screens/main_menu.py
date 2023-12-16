@@ -5,6 +5,7 @@ from textual.screen import Screen
 from textual.widgets import Label, ListItem, ListView, Markdown
 
 from battleship.tui import screens
+from battleship.tui.settings import Settings
 from battleship.tui.widgets import AppFooter
 
 WELCOME_TEXT = """
@@ -40,4 +41,4 @@ class MainMenu(Screen[None]):
 
     @on(ListView.Selected, item="#settings")
     def to_settings(self) -> None:
-        self.app.switch_screen(screens.Settings())
+        self.app.switch_screen(screens.Settings(current_settings=Settings()))

@@ -4,17 +4,19 @@ from textual import on
 from textual.app import ComposeResult
 from textual.containers import Container, Horizontal, VerticalScroll
 from textual.screen import Screen
-from textual.widgets import Button, Input, Label, Markdown, OptionList
+from textual.widgets import Button, Input, Label, Markdown, Select
 
 from battleship.tui import resources, screens
+from battleship.tui.settings import Settings as SettingsModel
 from battleship.tui.widgets import AppFooter
 
 
 class Settings(Screen[None]):
     BINDINGS = [("escape", "back", "Back")]
 
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
+    def __init__(self, *args: Any, current_settings: SettingsModel, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
+        self.current = current_settings
 
         with resources.get_resource("settings_help.md").open() as fh:
             self.help = fh.read()
@@ -26,16 +28,18 @@ class Settings(Screen[None]):
 
             with Container(classes="screen-content"):
                 yield Label("Player name")
-                yield Input(value="Player")
+                yield Input(value=self.current.player_name)
 
                 yield Label("Your fleet color")
-                yield Input(value="FFFFFF")
+                yield Input(value=self.current.fleet_color)
 
                 yield Label("Enemy fleet color")
-                yield Input(value="AAAAAA")
+                yield Input(value=self.current.enemy_fleet_color)
 
                 yield Label("Language")
-                yield OptionList("English")
+                yield Select.from_values(
+                    self.current.language_options, allow_blank=False, value=self.current.language
+                )
 
                 with Horizontal():
                     yield Button("Reset to defaults", variant="error", id="reset")

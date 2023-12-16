@@ -172,7 +172,7 @@ Settings Label, Settings Button {
   margin-left: 1;
 }
 
-Settings Input, Settings OptionList {
+Settings Input, Settings Select {
   margin-bottom: 1;
 }
 
