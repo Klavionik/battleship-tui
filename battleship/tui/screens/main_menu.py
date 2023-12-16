@@ -37,3 +37,7 @@ class MainMenu(Screen[None]):
     @on(ListView.Selected, item="#multiplayer")
     def run_multiplayer(self) -> None:
         self.app.switch_screen(screens.Multiplayer())
+
+    @on(ListView.Selected, item="#settings")
+    def to_settings(self) -> None:
+        self.app.switch_screen(screens.Settings())

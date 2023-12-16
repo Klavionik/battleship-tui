@@ -168,6 +168,15 @@ JoinGame ListItem {
   margin-bottom: 1;
 }
 
+Settings Label, Settings Button {
+  margin-left: 1;
+}
+
+Settings Input, Settings OptionList {
+  margin-bottom: 1;
+}
+
+
 
 /* Modal screens */
 
