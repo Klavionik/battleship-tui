@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Annotated, Any
 
-from pydantic import AfterValidator
+from pydantic import AfterValidator, Field
 
 from battleship import config_home
 from battleship.shared.models import BaseModel
@@ -24,7 +24,7 @@ HexColor = Annotated[str, AfterValidator(validate_color)]
 
 
 class Settings(BaseModel):
-    player_name: str = "Player"
+    player_name: str = Field("Player", max_length=19)
     fleet_color: HexColor = "#36aa5e"
     enemy_fleet_color: HexColor = "#0065be"
     language: str = "English"
