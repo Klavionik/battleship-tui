@@ -70,7 +70,8 @@ class Settings(Screen[None]):
 
     @on(Button.Pressed, "#reset")
     def reset_settings(self) -> None:
-        defaults = self.provider.save_defaults()
+        self.provider.reset()
+        defaults = self.provider.load()
         self.player_name.value = defaults.player_name
         self.fleet_color.value = defaults.fleet_color
         self.enemy_fleet_color.value = defaults.enemy_fleet_color

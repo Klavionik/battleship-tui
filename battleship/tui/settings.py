@@ -1,5 +1,7 @@
+import json
 from abc import ABC, abstractmethod
 from pathlib import Path
+from typing import Any
 
 from battleship import config_home
 from battleship.shared.models import BaseModel
@@ -15,6 +17,12 @@ class Settings(BaseModel):
     def language_options(self) -> list[str]:
         return ["English"]
 
+    @classmethod
+    def get_changed(cls, settings: "Settings") -> dict[str, Any]:
+        defaults = cls().to_dict()
+        settings_dump = settings.to_dict()
+        return {k: v for k, v in settings_dump.items() if v != defaults[k]}
+
 
 class SettingsProvider(ABC):
     @abstractmethod
@@ -25,10 +33,9 @@ class SettingsProvider(ABC):
     def load(self) -> Settings:
         pass
 
-    def save_defaults(self) -> Settings:
-        defaults = Settings()
-        self.save(defaults)
-        return defaults
+    @abstractmethod
+    def reset(self) -> None:
+        pass
 
 
 class FilesystemSettingsProvider(SettingsProvider):
@@ -40,22 +47,28 @@ class FilesystemSettingsProvider(SettingsProvider):
         self._ensure_config_dir()
 
     def save(self, settings: Settings) -> None:
-        with self.config.open(mode="w") as cache:
-            cache.write(settings.to_json())
+        changed = Settings.get_changed(settings)
 
-        self.config.chmod(self.permission)
+        if len(changed):
+            with self.config.open(mode="w") as file:
+                json.dump(changed, file)
+
+            self.config.chmod(self.permission)
 
     def load(self) -> Settings:
         if not self.config.exists():
-            return self.save_defaults()
+            return Settings()
 
-        with self.config.open() as config:
-            try:
-                settings = Settings.from_raw(config.read())
-            except Exception:  # noqa
-                return self.save_defaults()
+        try:
+            with self.config.open() as config:
+                user_settings = json.load(config)
+        except Exception:  # noqa
+            return Settings()
 
-        return settings
+        return Settings(**user_settings)
+
+    def reset(self) -> None:
+        self.config.unlink(missing_ok=True)
 
     def _ensure_config_dir(self) -> None:
         self.config.parent.mkdir(parents=True, exist_ok=True)
