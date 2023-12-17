@@ -2,8 +2,9 @@ from datetime import datetime
 from string import Template
 from typing import Any, Iterable, Literal
 
+import inject
 from textual import on
-from textual.app import DEFAULT_COLORS, ComposeResult
+from textual.app import ComposeResult
 from textual.containers import Grid
 from textual.coordinate import Coordinate
 from textual.screen import Screen
@@ -11,6 +12,7 @@ from textual.screen import Screen
 from battleship.engine import domain
 from battleship.shared import models
 from battleship.tui import strategies
+from battleship.tui.settings import SettingsProvider
 from battleship.tui.widgets import AppFooter
 from battleship.tui.widgets.announcement import (
     PHASE_BATTLE,
@@ -41,19 +43,23 @@ CANCEL_MSG = {"quit": "%s has quit the game", "disconnect": "%s disconnected fro
 class Game(Screen[None]):
     BINDINGS = [("escape", "back", "Back"), ("ctrl+q", "try_quit", "Quit")]
 
-    def __init__(self, *args: Any, strategy: strategies.GameStrategy, **kwargs: Any):
+    @inject.param("settings_provider", SettingsProvider)
+    def __init__(
+        self,
+        *args: Any,
+        strategy: strategies.GameStrategy,
+        settings_provider: SettingsProvider,
+        **kwargs: Any,
+    ):
         super().__init__(*args, **kwargs)
+        self._settings = settings_provider.load()
         self._strategy = strategy
-
-        dark_theme = DEFAULT_COLORS.get("dark")
-        assert dark_theme
-        colors = dark_theme.generate()
 
         self._player_name = strategy.player
         self._enemy_name = strategy.enemy
 
-        player_cell_factory = CellFactory(ship_bg=colors["success-darken-1"])
-        enemy_cell_factory = CellFactory(ship_bg=colors["accent-darken-1"])
+        player_cell_factory = CellFactory(ship_bg=self._settings.fleet_color)
+        enemy_cell_factory = CellFactory(ship_bg=self._settings.enemy_fleet_color)
 
         self.player_board = Board(
             player_name=strategy.player,

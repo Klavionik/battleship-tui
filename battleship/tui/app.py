@@ -14,7 +14,6 @@ from textual.screen import Screen
 
 from battleship import data_home, get_client_version
 from battleship.client import Client, ClientError, ConnectionImpossible
-from battleship.engine import domain
 from battleship.shared.events import ClientEvent
 from battleship.tui import screens, strategies
 from battleship.tui.widgets import modals
@@ -59,10 +58,14 @@ class BattleshipApp(App[None]):
         self._client.add_listener(ClientEvent.CONNECTION_LOST, self._handle_connection_lost)
 
     @classmethod
-    def singleplayer(cls, game: domain.Game) -> "BattleshipApp":
-        strategy = strategies.SingleplayerStrategy(game)
-        game_screen = screens.Game(strategy=strategy)
-        instance: BattleshipApp = cls(mount_screen=game_screen)
+    def singleplayer(cls, roster: str, firing_order: str, salvo_mode: bool) -> "BattleshipApp":
+        singleplayer_screen = screens.Singleplayer()
+
+        def start_game() -> None:
+            singleplayer_screen.start_game(roster, firing_order, salvo_mode)
+
+        instance: BattleshipApp = cls(mount_screen=singleplayer_screen)
+        instance.call_later(start_game)
         return instance
 
     @classmethod

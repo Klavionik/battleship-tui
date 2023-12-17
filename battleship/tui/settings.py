@@ -7,8 +7,8 @@ from battleship.shared.models import BaseModel
 
 class Settings(BaseModel):
     player_name: str = "Player"
-    fleet_color: str = "#FFFFFF"
-    enemy_fleet_color: str = "#AAAAAA"
+    fleet_color: str = "#36aa5e"
+    enemy_fleet_color: str = "#0065be"
     language: str = "English"
 
     @property

@@ -7,9 +7,7 @@ import typer
 from battleship import tui
 from battleship.cli.console import get_console
 from battleship.client import CredentialsProvider
-from battleship.engine import create_game
 from battleship.engine.domain import FiringOrder
-from battleship.engine.roster import get_roster
 from battleship.shared.compat import StrEnum
 
 app = typer.Typer(help="Play Battleship TUI.")
@@ -33,8 +31,7 @@ def single(
     ] = FiringOrder.ALTERNATELY,
     salvo_mode: Annotated[bool, typer.Option("--salvo", help="Enable salvo mode.")] = False,
 ) -> None:
-    game = create_game("Player", "Computer", get_roster(roster), firing_order, salvo_mode)
-    tui_app = tui.BattleshipApp.singleplayer(game)
+    tui_app = tui.BattleshipApp.singleplayer(roster, firing_order, salvo_mode)
 
     tui.run(tui_app)
 
