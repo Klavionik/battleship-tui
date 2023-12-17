@@ -2,13 +2,13 @@
 Here you can configure the global game settings.
 
 **Player name**  
-Your display name in singleplayer mode.
+Your display name in singleplayer mode *Max. 19 characters.*
 
 **Your fleet color**  
-The color of your ships. You can enter any hexadecimal color. Default is #FFFFFF.
+The color of your ships. You can enter any hex color.
 
 **Enemy fleet color**  
-The color of your enemy's ships. You can enter any hexadecimal color. Default is #AAAAAA.
+The color of your enemy's ships. You can enter any hex color.
 
 **Language**  
-UI language. Default is English. *Requires restart*.
+UI language. *Requires restart.*

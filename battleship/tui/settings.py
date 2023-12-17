@@ -1,32 +1,47 @@
 import json
+import re
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any
+from typing import Annotated, Any
+
+from pydantic import AfterValidator
 
 from battleship import config_home
 from battleship.shared.models import BaseModel
 
+hex_color = re.compile(r"^#([0-9a-f]{6})$")
+
+
+def validate_color(value: str) -> str:
+    color = hex_color.match(value)
+
+    if color is None:
+        raise ValueError(f"Value {value} is not a valid hex color.")
+    return value
+
+
+HexColor = Annotated[str, AfterValidator(validate_color)]
+
 
 class Settings(BaseModel):
     player_name: str = "Player"
-    fleet_color: str = "#36aa5e"
-    enemy_fleet_color: str = "#0065be"
+    fleet_color: HexColor = "#36aa5e"
+    enemy_fleet_color: HexColor = "#0065be"
     language: str = "English"
 
     @property
     def language_options(self) -> list[str]:
         return ["English"]
 
-    @classmethod
-    def get_changed(cls, settings: "Settings") -> dict[str, Any]:
-        defaults = cls().to_dict()
+    def diff(self, settings: "Settings") -> dict[str, Any]:
+        self_dump = self.to_dict()
         settings_dump = settings.to_dict()
-        return {k: v for k, v in settings_dump.items() if v != defaults[k]}
+        return {k: v for k, v in settings_dump.items() if v != self_dump[k]}
 
 
 class SettingsProvider(ABC):
     @abstractmethod
-    def save(self, settings: Settings) -> None:
+    def save(self, settings: Settings) -> bool:
         pass
 
     @abstractmethod
@@ -46,14 +61,18 @@ class FilesystemSettingsProvider(SettingsProvider):
         self.config = config / filename
         self._ensure_config_dir()
 
-    def save(self, settings: Settings) -> None:
-        changed = Settings.get_changed(settings)
+    def save(self, settings: Settings) -> bool:
+        current = self.load()
+        changes = current.diff(settings)
 
-        if len(changed):
-            with self.config.open(mode="w") as file:
-                json.dump(changed, file)
+        if not changes:
+            return False
 
-            self.config.chmod(self.permission)
+        with self.config.open(mode="w") as file:
+            json.dump(changes, file)
+
+        self.config.chmod(self.permission)
+        return True
 
     def load(self) -> Settings:
         if not self.config.exists():

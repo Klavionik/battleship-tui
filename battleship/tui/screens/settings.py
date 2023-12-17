@@ -5,12 +5,22 @@ from textual import on
 from textual.app import ComposeResult
 from textual.containers import Container, Horizontal, VerticalScroll
 from textual.screen import Screen
+from textual.validation import Length, ValidationResult, Validator
 from textual.widgets import Button, Input, Label, Markdown, Select
 
 from battleship.tui import resources, screens
 from battleship.tui.settings import Settings as SettingsModel
-from battleship.tui.settings import SettingsProvider
+from battleship.tui.settings import SettingsProvider, hex_color, validate_color
 from battleship.tui.widgets import AppFooter
+
+
+class HexColor(Validator):
+    def validate(self, value: str) -> ValidationResult:
+        try:
+            validate_color(value)
+            return self.success()
+        except ValueError as exc:
+            return self.failure(str(exc))
 
 
 class Settings(Screen[None]):
@@ -32,13 +42,27 @@ class Settings(Screen[None]):
 
             with Container(classes="screen-content"):
                 yield Label("Player name")
-                yield Input(value=self.current.player_name, id="player_name")
+                yield Input(
+                    value=self.current.player_name,
+                    id="player_name",
+                    validators=[Length(minimum=1, maximum=19)],
+                )
 
                 yield Label("Your fleet color")
-                yield Input(value=self.current.fleet_color, id="fleet_color")
+                yield Input(
+                    value=self.current.fleet_color,
+                    id="fleet_color",
+                    restrict=hex_color.pattern,
+                    validators=[HexColor()],
+                )
 
                 yield Label("Enemy fleet color")
-                yield Input(value=self.current.enemy_fleet_color, id="enemy_fleet_color")
+                yield Input(
+                    value=self.current.enemy_fleet_color,
+                    id="enemy_fleet_color",
+                    restrict=hex_color.pattern,
+                    validators=[HexColor()],
+                )
 
                 yield Label("Language")
                 yield Select.from_values(
@@ -59,14 +83,29 @@ class Settings(Screen[None]):
 
     @on(Button.Pressed, "#save")
     def save_settings(self) -> None:
+        if not (
+            self.player_name.is_valid
+            and self.fleet_color.is_valid
+            and self.enemy_fleet_color.is_valid
+        ):
+            self.notify(
+                "Cannot saved: some fields have invalid values.", severity="warning", timeout=5
+            )
+            return
+
         settings = SettingsModel(
             player_name=self.player_name.value,
             fleet_color=self.fleet_color.value,
             enemy_fleet_color=self.enemy_fleet_color.value,
             language=self.language.value,
         )
-        self.provider.save(settings)
-        self.notify("Settings saved.", title="Success", timeout=3)
+
+        saved = self.provider.save(settings)
+
+        if saved:
+            self.notify("Settings saved.", timeout=3)
+        else:
+            self.notify("No changes to save.", severity="warning", timeout=5)
 
     @on(Button.Pressed, "#reset")
     def reset_settings(self) -> None:
@@ -76,7 +115,7 @@ class Settings(Screen[None]):
         self.fleet_color.value = defaults.fleet_color
         self.enemy_fleet_color.value = defaults.enemy_fleet_color
         self.language.value = defaults.language
-        self.notify("Settings reset.", severity="warning", title="Success", timeout=3)
+        self.notify("Settings reset.", timeout=3)
 
     @property
     def player_name(self) -> Input:
