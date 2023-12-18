@@ -8,6 +8,7 @@ from pydantic import AfterValidator, Field
 
 from battleship import config_home
 from battleship.shared.models import BaseModel
+from battleship.tui.i18n import Language
 
 hex_color = re.compile(r"^#([0-9a-f]{6})$")
 
@@ -27,11 +28,11 @@ class Settings(BaseModel):
     player_name: str = Field("Player", max_length=19)
     fleet_color: HexColor = "#36aa5e"
     enemy_fleet_color: HexColor = "#0065be"
-    language: str = "English"
+    language: Language = Language.ENGLISH
 
     @property
     def language_options(self) -> list[str]:
-        return ["English"]
+        return list(Language)
 
     def diff(self, settings: "Settings") -> dict[str, Any]:
         self_dump = self.to_dict()

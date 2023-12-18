@@ -3,11 +3,12 @@ from typing import Annotated
 import typer
 
 from battleship import data_home, get_client_version, tui
-from battleship.cli import account, di, logging, play
+from battleship.cli import account, di, logging, play, settings
 
 app = typer.Typer(name="Battleship TUI")
 app.add_typer(account.app, name="account")
 app.add_typer(play.app, name="play")
+app.add_typer(settings.app, name="settings")
 
 DEFAULT_LOG_SINK = data_home / "client.log"
 
