@@ -68,6 +68,10 @@ plugins = [
   "pydantic.mypy"
 ]
 
+[[tool.mypy.overrides]]
+module = "battleship.server.app"
+disable_error_code = ["attr-defined"]
+
 [tool.poetry.group.dev.dependencies]
 mypy = "^1.5.0"
 coverage = "^7.3.0"

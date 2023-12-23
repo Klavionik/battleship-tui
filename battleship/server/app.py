@@ -36,7 +36,7 @@ from battleship.server.routes import router
 
 
 async def cleanup_clients(app: Application) -> None:
-    client_repository = app.service_provider.get(ClientRepository)
+    client_repository = app.services.provider.get(ClientRepository)
 
     try:
         count = await client_repository.clear()
@@ -47,7 +47,7 @@ async def cleanup_clients(app: Application) -> None:
 
 
 async def teardown_redis(app: Application) -> None:
-    client = app.service_provider.get(redis.Redis)
+    client = app.services.provider.get(redis.Redis)
 
     try:
         await client.aclose()
