@@ -1,6 +1,6 @@
 ![Battle](screenshots/battle.png)
 
-![Server status](https://uptime.klavionik.dev/api/badge/1/status?upLabel=online&downLabel=offline)
+[<img src="https://uptime.klavionik.dev/api/badge/1/status?upLabel=online&downLabel=offline">](https://uptime.klavionik.dev/status/battleship)
 
 # Battleship TUI
 Battleship TUI is an implementation of the popular paper-and-pen Battleship game for 
