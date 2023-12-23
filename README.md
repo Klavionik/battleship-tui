@@ -11,13 +11,13 @@ customize game options and appearance, keep track of your achievements, and more
 * Singleplayer mode  
 * Multiplayer mode (via Internet)
 * Customizable game rules
+* Customizable UI
+* Launch via CLI
 * Game statistics
 
 ## Planned features
-* Customizable UI 
 * Ranking system
 * Account management
-* Better CLI
 
 ## Requirements
 * A terminal (Windows PowerShell is fine too, see below)
