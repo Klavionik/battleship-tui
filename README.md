@@ -1,5 +1,7 @@
 ![Battle](screenshots/battle.png)
 
+![Server status](https://uptime.klavionik.dev/api/badge/1/status?upLabel=online&downLabel=offline)
+
 # Battleship TUI
 Battleship TUI is an implementation of the popular paper-and-pen Battleship game for 
 your terminal. You can play against the AI or a real player via the Internet, 
