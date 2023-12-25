@@ -17,13 +17,16 @@ jobs:
       contents: read
       packages: write
     steps:
+      - name: Extract semver from tag (server/x.x.x -> x.x.x)
+        id: extract_semver
+        run: echo "version=$(basename ${{ github.ref_name }})" >> "$GITHUB_OUTPUT"
       - uses: Klavionik/gh-actions/build-image@main
         name: Build
         with:
           context: .
           service: server
           build-args: |
-            VERSION=${{ github.ref_name }}
+            VERSION=${{ steps.extract_semver.outputs.version }}
           tags: |
             type=match,pattern=server/(.*),group=1
           cache-bucket: ${{ env.S3_BUCKET }}
