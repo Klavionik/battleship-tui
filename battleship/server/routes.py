@@ -2,6 +2,7 @@ import asyncio
 
 from blacksheep import (
     FromJSON,
+    Request,
     Response,
     Router,
     WebSocket,
@@ -22,6 +23,7 @@ from battleship.server.handlers import (
     PlayerSubscriptionHandler,
     SessionSubscriptionHandler,
 )
+from battleship.server.metrics import render_metrics
 from battleship.server.pubsub import IncomingChannel, OutgoingChannel
 from battleship.server.repositories import (
     ClientRepository,
@@ -41,7 +43,7 @@ from battleship.shared.models import (
     SignupCredentials,
 )
 
-router = Router()  # type: ignore[no-untyped-call]
+router = Router()
 
 
 @router.ws("/ws")
@@ -231,3 +233,12 @@ async def get_player_statistics(
         statistics = await statistics_repository.create(user_id)
 
     return ok(statistics.to_dict())
+
+
+@router.get("/metrics")
+async def get_metrics(request: Request) -> Response:
+    accept_headers = request.get_headers(b"Accept")
+    content, headers = render_metrics(accept_headers)
+    response = ok(content)
+    response.headers.add_many(headers)
+    return response

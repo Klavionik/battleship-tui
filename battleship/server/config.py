@@ -12,6 +12,7 @@ class Config(BaseSettings):
     BROKER_URL: RedisDsn
     SERVER_VERSION: str
     SENTRY_DSN: str
+    METRICS_SCRAPER_SECRET: str
 
     @property
     def auth0_audience(self) -> str:

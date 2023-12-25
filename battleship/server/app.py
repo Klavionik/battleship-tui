@@ -18,6 +18,10 @@ from battleship.server.handlers import (
     PlayerSubscriptionHandler,
     SessionSubscriptionHandler,
 )
+from battleship.server.metrics import (
+    MetricsMiddleware,
+    MetricsScraperAuthenticationHandler,
+)
 from battleship.server.pubsub import (
     IncomingChannel,
     IncomingRedisChannel,
@@ -82,7 +86,11 @@ async def sentry_context_middleware(
 
     if identity and identity.is_authenticated():
         sentry_sdk.set_user(
-            {"id": identity.sub, "username": identity["nickname"], "email": identity["email"]}
+            {
+                "id": identity.sub,
+                "username": identity.get("nickname"),
+                "email": identity.get("email"),
+            }
         )
 
     return await handler(request)
@@ -115,6 +123,10 @@ def create_app() -> Any:
         )
     )
 
+    app.use_authentication().add(
+        MetricsScraperAuthenticationHandler(scraper_secret=config.METRICS_SCRAPER_SECRET)
+    )
+
     app.use_authorization().with_default_policy(
         Policy("authenticated", AuthenticatedRequirement()),
     )
@@ -124,7 +136,16 @@ def create_app() -> Any:
 
     app.middlewares.append(client_version_middleware)
     app.middlewares.append(sentry_context_middleware)
+    app_router = app.router
 
     if config.SENTRY_DSN:
-        return configure_sentry(app, config.SENTRY_DSN, config.SERVER_VERSION)
+        app = configure_sentry(
+            app,
+            config.SENTRY_DSN,
+            config.SERVER_VERSION,
+        )  # type: ignore[assignment]
+
+    if config.METRICS_SCRAPER_SECRET:
+        app = MetricsMiddleware(app, router=app_router)  # type: ignore[assignment]
+
     return app
