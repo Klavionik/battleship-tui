@@ -9,12 +9,6 @@ from aioprometheus.renderer import render
 from blacksheep import Request, Router
 from guardpost import AuthenticationHandler, Identity
 
-__all__ = [
-    "MetricsMiddleware",
-    "MetricsScraperAuthenticationHandler",
-    "render_metrics",
-]
-
 websocket_connections = Gauge(
     "websocket_connections",
     doc="Active WebSocket connections",
