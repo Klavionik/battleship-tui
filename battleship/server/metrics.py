@@ -9,25 +9,27 @@ from aioprometheus.renderer import render
 from blacksheep import Request, Router
 from guardpost import AuthenticationHandler, Identity
 
+hostname_label = {"hostname": gethostname()}
+
 websocket_connections = Gauge(
     "websocket_connections",
     doc="Active WebSocket connections",
-    const_labels={"hostname": gethostname()},
+    const_labels=hostname_label,
 )
 games_started = Gauge(
     "games_started",
     doc="Started games amount",
-    const_labels={"hostname": gethostname()},
+    const_labels=hostname_label,
 )
 games_finished = Gauge(
     "games_finished",
     doc="Finished games amount",
-    const_labels={"hostname": gethostname()},
+    const_labels=hostname_label,
 )
 games_cancelled = Gauge(
     "games_cancelled",
     doc="Cancelled games amount",
-    const_labels={"hostname": gethostname()},
+    const_labels=hostname_label,
 )
 
 
