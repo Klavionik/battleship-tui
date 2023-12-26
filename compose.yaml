@@ -13,6 +13,7 @@ services:
       AUTH0_ROLES: $AUTH0_ROLES
       BROKER_URL: $BROKER_URL
       SENTRY_DSN: $SENTRY_DSN
+      METRICS_SCRAPER_SECRET: $METRICS_SCRAPER_SECRET
     command: ["uvicorn", "--host", "0.0.0.0", "--reload", "--factory", "battleship.server:create_app"]
     ports:
       - "8000:8000"
@@ -25,7 +26,6 @@ services:
       test: curl localhost:8000/healthz || exit 1
       timeout: 2s
       interval: 3s
-
 
   broker:
     image: redis:7.2.3-alpine

@@ -16,14 +16,13 @@ from blacksheep.server.authorization import allow_anonymous
 from guardpost.authentication import Identity
 from loguru import logger
 
-from battleship.server import context
+from battleship.server import context, metrics
 from battleship.server.auth import AuthManager, InvalidSignup, WrongCredentials
 from battleship.server.handlers import (
     GameHandler,
     PlayerSubscriptionHandler,
     SessionSubscriptionHandler,
 )
-from battleship.server.metrics import render_metrics
 from battleship.server.pubsub import IncomingChannel, OutgoingChannel
 from battleship.server.repositories import (
     ClientRepository,
@@ -66,7 +65,9 @@ async def ws(
 
     await websocket.accept()
     logger.debug(f"{connection} accepted.")
+    metrics.websocket_connections.inc({})
     await connection.listen()
+    metrics.websocket_connections.dec({})
     logger.debug(f"{connection} disconnected.")
     session_subscription_handler.unsubscribe(client.id)
     player_subscription_handler.unsubscribe(client.id)
@@ -238,7 +239,7 @@ async def get_player_statistics(
 @router.get("/metrics")
 async def get_metrics(request: Request) -> Response:
     accept_headers = request.get_headers(b"Accept")
-    content, headers = render_metrics(accept_headers)
+    content, headers = metrics.render_metrics(accept_headers)
     response = ok(content)
     response.headers.add_many(headers)
     return response

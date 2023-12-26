@@ -1,9 +1,10 @@
+from socket import gethostname
 from typing import Any
 
 from aioprometheus.asgi.middleware import EXCLUDE_PATHS
 from aioprometheus.asgi.middleware import MetricsMiddleware as _MetricsMiddleware
 from aioprometheus.asgi.middleware import Receive, Scope, Send
-from aioprometheus.collectors import REGISTRY
+from aioprometheus.collectors import REGISTRY, Gauge
 from aioprometheus.renderer import render
 from blacksheep import Request, Router
 from guardpost import AuthenticationHandler, Identity
@@ -13,6 +14,12 @@ __all__ = [
     "MetricsScraperAuthenticationHandler",
     "render_metrics",
 ]
+
+websocket_connections = Gauge(
+    "websocket_connections",
+    doc="Active WebSocket connections",
+    const_labels={"hostname": gethostname()},
+)
 
 
 class MetricsScraperAuthenticationHandler(AuthenticationHandler):
