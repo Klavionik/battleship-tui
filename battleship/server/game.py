@@ -7,6 +7,7 @@ from loguru import logger
 
 from battleship.engine import create_game, domain
 from battleship.engine.roster import get_roster
+from battleship.server import metrics
 from battleship.server.websocket import Client
 from battleship.shared.events import ClientEvent, EventMessage, ServerEvent
 from battleship.shared.models import GameSummary, Session, salvo_to_model
@@ -128,6 +129,7 @@ class Game:
         reason: Literal["quit", "disconnect"],
         by_player: str | None = None,
     ) -> None:
+        metrics.games_cancelled.inc({"reason": reason})
         event = EventMessage(kind=ServerEvent.GAME_CANCELLED, payload=dict(reason=reason))
 
         if by_player is None:
@@ -161,11 +163,13 @@ class Game:
         )
 
     async def play(self) -> GameSummary:
+        metrics.games_started.inc({})
         self.announce_game_start()
         self.start = time()
 
         try:
             await self._stop_event.wait()
+            metrics.games_finished.inc({})
             return self.summary
         except asyncio.CancelledError:
             self.send_game_cancelled(reason="disconnect")

@@ -20,6 +20,21 @@ websocket_connections = Gauge(
     doc="Active WebSocket connections",
     const_labels={"hostname": gethostname()},
 )
+games_started = Gauge(
+    "games_started",
+    doc="Started games amount",
+    const_labels={"hostname": gethostname()},
+)
+games_finished = Gauge(
+    "games_finished",
+    doc="Finished games amount",
+    const_labels={"hostname": gethostname()},
+)
+games_cancelled = Gauge(
+    "games_cancelled",
+    doc="Cancelled games amount",
+    const_labels={"hostname": gethostname()},
+)
 
 
 class MetricsScraperAuthenticationHandler(AuthenticationHandler):
