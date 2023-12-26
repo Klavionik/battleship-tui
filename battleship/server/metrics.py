@@ -1,5 +1,6 @@
 from typing import Any
 
+from aioprometheus.asgi.middleware import EXCLUDE_PATHS
 from aioprometheus.asgi.middleware import MetricsMiddleware as _MetricsMiddleware
 from aioprometheus.asgi.middleware import Receive, Scope, Send
 from aioprometheus.collectors import REGISTRY
@@ -43,6 +44,7 @@ class MetricsMiddleware(_MetricsMiddleware):
     def __init__(self, *args: Any, router: Router, **kwargs: Any):
         super().__init__(*args, **kwargs)
         self.router = router
+        self.exclude_paths = EXCLUDE_PATHS + ("/healthz",)
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] == "websocket":
