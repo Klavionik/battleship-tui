@@ -63,7 +63,7 @@ async def teardown_redis(app: Application) -> None:
 def configure_sentry(app: Application, dsn: str, release: str) -> SentryAsgiMiddleware:
     sentry_sdk.init(
         dsn=dsn,
-        traces_sample_rate=0.7,
+        traces_sample_rate=0.1,
         release=release,
     )
 
