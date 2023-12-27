@@ -129,7 +129,7 @@ class Game:
         reason: Literal["quit", "disconnect"],
         by_player: str | None = None,
     ) -> None:
-        metrics.games_cancelled.inc({"reason": reason})
+        metrics.games_cancelled_total.inc({"reason": reason})
         event = EventMessage(kind=ServerEvent.GAME_CANCELLED, payload=dict(reason=reason))
 
         if by_player is None:
@@ -163,13 +163,13 @@ class Game:
         )
 
     async def play(self) -> GameSummary:
-        metrics.games_started.inc({})
+        metrics.games_started_total.inc({})
         self.announce_game_start()
         self.start = time()
 
         try:
             await self._stop_event.wait()
-            metrics.games_finished.inc({})
+            metrics.games_finished_total.inc({})
             return self.summary
         except asyncio.CancelledError:
             self.send_game_cancelled(reason="disconnect")

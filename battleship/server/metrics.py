@@ -4,7 +4,7 @@ from typing import Any
 from aioprometheus.asgi.middleware import EXCLUDE_PATHS
 from aioprometheus.asgi.middleware import MetricsMiddleware as _MetricsMiddleware
 from aioprometheus.asgi.middleware import Receive, Scope, Send
-from aioprometheus.collectors import REGISTRY, Gauge
+from aioprometheus.collectors import REGISTRY, Counter, Gauge
 from aioprometheus.renderer import render
 from blacksheep import Request, Router
 from guardpost import AuthenticationHandler, Identity
@@ -16,19 +16,24 @@ websocket_connections = Gauge(
     doc="Active WebSocket connections",
     const_labels=hostname_label,
 )
-games_started = Gauge(
-    "games_started",
+games_started_total = Counter(
+    "games_started_total",
     doc="Started games amount",
     const_labels=hostname_label,
 )
-games_finished = Gauge(
-    "games_finished",
+games_finished_total = Counter(
+    "games_finished_total",
     doc="Finished games amount",
     const_labels=hostname_label,
 )
-games_cancelled = Gauge(
-    "games_cancelled",
+games_cancelled_total = Counter(
+    "games_cancelled_total",
     doc="Cancelled games amount",
+    const_labels=hostname_label,
+)
+games_now = Gauge(
+    "games_now",
+    doc="Amount of games in-progress",
     const_labels=hostname_label,
 )
 

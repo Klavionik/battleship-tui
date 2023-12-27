@@ -3,6 +3,7 @@ from typing import Any
 
 from loguru import logger
 
+from battleship.server import metrics
 from battleship.server.game import Game
 from battleship.server.pubsub import IncomingChannel, OutgoingChannel
 from battleship.server.repositories import (
@@ -32,7 +33,12 @@ class GameHandler:
 
     @logger.catch
     async def run_game(self, game: Game) -> None:
-        summary = await game.play()
+        try:
+            metrics.games_now.inc({})
+            summary = await game.play()
+        finally:
+            metrics.games_now.dec({})
+
         string_summary = summary.to_json()
 
         # Replace player nickname with their ID.
