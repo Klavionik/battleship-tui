@@ -896,7 +896,7 @@ name = "inject"
 version = "5.2.0"
 description = "Python dependency injection framework."
 category = "main"
-optional = false
+optional = true
 python-versions = "*"
 files = [
     {file = "inject-5.2.0-py2.py3-none-any.whl", hash = "sha256:0eaed0083c180b1dd3dba169dfa2b7b077fc0d65f454b4cbed1866243cc231a0"},
@@ -2195,7 +2195,7 @@ name = "xdg-base-dirs"
 version = "6.0.1"
 description = "Variables defined by the XDG Base Directory Specification"
 category = "main"
-optional = false
+optional = true
 python-versions = ">=3.10,<4.0"
 files = [
     {file = "xdg_base_dirs-6.0.1-py3-none-any.whl", hash = "sha256:63f6ebc1721ced2e86c340856e004ef829501a30a37e17079c52cfaf0e1741b9"},
@@ -2307,11 +2307,11 @@ idna = ">=2.0"
 multidict = ">=4.0"
 
 [extras]
-client = ["async-timeout", "pyee", "textual", "typer"]
+client = ["async-timeout", "inject", "pyee", "textual", "typer", "xdg-base-dirs"]
 dev = ["textual-dev"]
 server = ["aioprometheus", "auth0-python", "blacksheep", "pyjwt", "redis", "sentry-sdk", "uvicorn", "uvloop"]
 
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "8eb4db10cefc7744a538659938645d24450b237d013562f47eab022aab328eeb"
+content-hash = "96cb64503722332bfdee2f91924c9ef7310449b3bf35e95bfdf2f793bc18818c"
