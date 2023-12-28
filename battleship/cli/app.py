@@ -3,7 +3,8 @@ from typing import Annotated
 import typer
 
 from battleship import data_home, get_client_version, tui
-from battleship.cli import account, di, logging, play, settings
+from battleship.cli import account, logging, play, settings
+from battleship.tui import di
 
 app = typer.Typer(name="Battleship TUI")
 app.add_typer(account.app, name="account")
