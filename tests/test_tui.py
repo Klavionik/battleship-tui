@@ -7,8 +7,8 @@ from battleship.tui import BattleshipApp, Config, configure_injection
 def test_config():
     config = Config(
         server_url="http://locahost:9000",
-        credentials_provider="battleship.client:filesystem_credentials_provider",
-        game_settings_provider="battleship.tui.settings:filesystem_settings_provider",
+        credentials_provider="battleship.client.credentials:dummy_credentials_provider",
+        game_settings_provider="battleship.tui.settings:in_memory_settings_provider",
     )
     return config
 
