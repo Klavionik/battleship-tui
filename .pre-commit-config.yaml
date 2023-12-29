@@ -68,8 +68,9 @@ repos:
   - repo: local
     hooks:
       - id: pytest
-        name: pytest
+        name: pytest-no-snap
         entry: pytest
+        args: ["-m", "not snap"]
         pass_filenames: false
         language: system
         types: [ python ]
