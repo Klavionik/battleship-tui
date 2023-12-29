@@ -54,6 +54,21 @@ class SettingsProvider(ABC):
         pass
 
 
+class InMemorySettingsProvider(SettingsProvider):
+    def __init__(self) -> None:
+        self._settings = Settings()
+
+    def save(self, settings: Settings) -> bool:
+        self._settings = settings
+        return True
+
+    def load(self) -> Settings:
+        return self._settings
+
+    def reset(self) -> None:
+        self._settings = Settings()
+
+
 class FilesystemSettingsProvider(SettingsProvider):
     permission = 0o600  # Read-write for user.
 
@@ -95,3 +110,4 @@ class FilesystemSettingsProvider(SettingsProvider):
 
 
 filesystem_settings_provider = FilesystemSettingsProvider()
+in_memory_settings_provider = InMemorySettingsProvider()
