@@ -63,3 +63,8 @@ def test_multiplayer_screen_snapshot(snap_compare_sized):
 @pytest.mark.snap
 def test_singleplayer_game_screen_snapshot(snap_compare_sized):
     snap_compare_sized(press=["enter", *["tab"] * 4, "enter"])
+
+
+@pytest.mark.snap
+def test_main_screen_snapshot(snap_compare_sized):
+    snap_compare_sized()
