@@ -205,7 +205,7 @@ class MultiplayerStrategy(GameStrategy):
         roster_data = payload["roster"]
         roster = Roster(
             name=roster_data["name"],
-            items=[RosterItem(*item) for item in roster_data["items"]],
+            items=[RosterItem(**item) for item in roster_data["items"]],
         )
 
         self._enemy = enemy_nickname

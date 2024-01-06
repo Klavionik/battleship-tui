@@ -112,6 +112,7 @@ class Fleet(Widget):
         self._previewing_id = ""
         self._ships: dict[str, Ship] = {
             ship.id: Ship(
+                id=f"ship_{ship.id}",
                 key=ship.id,
                 ship_type=ship.type,
                 hp=ship.hp,

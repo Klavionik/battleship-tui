@@ -30,6 +30,7 @@ from battleship.shared.models import (
     LoginData,
     PlayerCount,
     PlayerStatistics,
+    Roster,
     Session,
     SessionID,
 )
@@ -309,7 +310,15 @@ class Client:
     async def players_unsubscribe(self) -> None:
         await self._request("POST", url="/players/unsubscribe")
 
-    def add_listener(self, event: str, handler: Callable[..., Any]) -> None:
+    async def get_roster(self, name: str) -> Roster:
+        response = await self._request("GET", url=f"/rosters/{name}")
+        return Roster(**response.json())
+
+    def add_listener(self, event: str, handler: Callable[..., Any], once: bool = False) -> None:
+        if once:
+            self._emitter.once(event, handler)
+            return
+
         self._emitter.add_listener(event, handler)
 
     def remove_listener(self, event: str, handler: Callable[..., Any]) -> None:

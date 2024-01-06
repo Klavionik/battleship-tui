@@ -75,12 +75,14 @@ class Game(Screen[None]):
         )
 
         self.player_fleet = Fleet(
+            id="player_fleet",
             roster=strategy.roster,
             cell_factory=player_cell_factory,
             classes="player",
         )
         self.player_fleet.border_title = "Your fleet"
         self.enemy_fleet = Fleet(
+            id="enemy_fleet",
             roster=strategy.roster,
             cell_factory=enemy_cell_factory,
             allow_placing=False,

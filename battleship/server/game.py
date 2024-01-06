@@ -1,5 +1,4 @@
 import asyncio
-from dataclasses import asdict
 from time import time
 from typing import Collection, Literal
 
@@ -10,7 +9,7 @@ from battleship.engine.roster import get_roster
 from battleship.server import metrics
 from battleship.server.websocket import Client
 from battleship.shared.events import ClientEvent, EventMessage, ServerEvent
-from battleship.shared.models import GameSummary, Session, salvo_to_model
+from battleship.shared.models import GameSummary, Roster, Session, salvo_to_model
 
 
 class Game:
@@ -140,7 +139,7 @@ class Game:
 
     def announce_game_start(self) -> None:
         game_options = dict(
-            roster=asdict(self.roster),
+            roster=Roster.from_domain(self.roster).to_dict(),
             firing_order=self.game.firing_order,
             salvo_mode=self.game.salvo_mode,
         )

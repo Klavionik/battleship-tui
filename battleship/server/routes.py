@@ -9,6 +9,7 @@ from blacksheep import (
     bad_request,
     created,
     forbidden,
+    not_found,
     ok,
     unauthorized,
 )
@@ -16,6 +17,7 @@ from blacksheep.server.authorization import allow_anonymous
 from guardpost.authentication import Identity
 from loguru import logger
 
+from battleship.engine import roster
 from battleship.server import context, metrics
 from battleship.server.auth import AuthManager, InvalidSignup, WrongCredentials
 from battleship.server.handlers import (
@@ -37,6 +39,7 @@ from battleship.shared.models import (
     LoginData,
     PlayerCount,
     RefreshToken,
+    Roster,
     Session,
     SessionCreate,
     SignupCredentials,
@@ -174,6 +177,16 @@ async def unsubscribe_from_player_count_updates(
 ) -> None:
     client = await client_repository.get(identity.claims["sub"])
     player_subscription_handler.unsubscribe(client.id)
+
+
+@router.get("/rosters/{name}")
+async def get_roster(name: str) -> Roster | Response:
+    try:
+        roster_ = roster.get_roster(name)
+    except KeyError:
+        return not_found()
+    else:
+        return Roster.from_domain(roster_)
 
 
 @allow_anonymous()

@@ -6,7 +6,7 @@ from typing import Any, TypeAlias, TypeVar
 from pydantic import BaseModel as _BaseModel
 from pydantic import EmailStr, Field, computed_field
 
-from battleship.engine import domain
+from battleship.engine import domain, roster
 from battleship.shared.compat import StrEnum
 
 SessionID: TypeAlias = str
@@ -235,6 +235,22 @@ class Client(BaseModel):
 class PlayerCount(BaseModel):
     total: int
     ingame: int
+
+
+class RosterItem(BaseModel):
+    id: str
+    type: str
+    hp: int
+
+
+class Roster(BaseModel):
+    name: str
+    items: list[RosterItem]
+
+    @classmethod
+    def from_domain(cls, obj: roster.Roster) -> "Roster":
+        items = [RosterItem(id=item.id, type=item.type, hp=item.hp) for item in obj.items]
+        return cls(name=obj.name, items=items)
 
 
 def make_session_id(length: int = 6) -> SessionID:
