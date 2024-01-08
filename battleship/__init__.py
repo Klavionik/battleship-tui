@@ -1,7 +1,11 @@
 from functools import cache
 from importlib import metadata
+from pathlib import Path
 
+from loguru import logger
 from xdg_base_dirs import xdg_cache_home, xdg_config_home, xdg_data_home
+
+PACKAGE_NAME = Path().parent.resolve().name
 
 
 @cache
@@ -13,6 +17,8 @@ APP_LABEL = "battleship"
 data_home = xdg_data_home() / APP_LABEL
 cache_home = xdg_cache_home() / APP_LABEL
 config_home = xdg_config_home() / APP_LABEL
+
+logger.disable(PACKAGE_NAME)
 
 try:
     __version__ = get_client_version()

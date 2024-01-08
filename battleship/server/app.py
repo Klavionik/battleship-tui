@@ -10,6 +10,7 @@ from guardpost.common import AuthenticatedRequirement
 from loguru import logger
 from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
 
+from battleship import PACKAGE_NAME
 from battleship.server import context
 from battleship.server.auth import Auth0AuthManager, AuthManager
 from battleship.server.config import Config, get_config
@@ -100,6 +101,7 @@ def create_app() -> Any:
     config = get_config()
     logger.remove()
     logger.add(sys.stderr, level="TRACE" if config.TRACE else "DEBUG")
+    logger.enable(PACKAGE_NAME)
     broker = redis.Redis.from_url(str(config.BROKER_URL))
 
     app = Application(router=router)
