@@ -180,6 +180,11 @@ class Auth0API:
         data = await asyncio.to_thread(func)
         return cast(JSONPayload, data)
 
+    async def delete_user(self, user_id: str) -> JSONPayload:
+        func = partial(self.mgmt.users.delete, id=user_id)
+        data = await asyncio.to_thread(func)
+        return cast(JSONPayload, data)
+
     async def refresh_token(self, refresh_token: str) -> JSONPayload:
         func = partial(self.gettoken.refresh_token, refresh_token=refresh_token)
         data = await asyncio.to_thread(func)
