@@ -1,3 +1,17 @@
+"""
+Simulates concurrent multiplayer game sessions.
+
+Reads host-player pairs from the command line or from a CSV file
+and runs N asyncio tasks, each representing a game session.
+
+During a game session, both users execute following steps.
+
+1. Log in and establish a WS connection.
+2. Create a game (if host)/join a hame (if player).
+3. Make moves.
+4. Disconnect.
+"""
+
 import argparse
 import asyncio
 import csv
@@ -29,12 +43,30 @@ def parse_users_file(file: io.TextIOWrapper) -> list[tuple[VirtualUser, VirtualU
     return [(virtual_user(pair[0]), virtual_user(pair[1])) for pair in reader]
 
 
-parser = argparse.ArgumentParser()
-parser.add_argument("--server-url", default="http://localhost:8000")
+parser = argparse.ArgumentParser(
+    description=__doc__,
+    formatter_class=argparse.RawDescriptionHelpFormatter,
+)
+parser.add_argument(
+    "--server-url",
+    default="http://localhost:8000",
+    help="Target server URL",
+)
 
 group = parser.add_mutually_exclusive_group(required=True)
-group.add_argument("--users", type=virtual_user, nargs=2, action="append")
-group.add_argument("--users-file", type=argparse.FileType())
+group.add_argument(
+    "--users",
+    type=virtual_user,
+    nargs=2,
+    action="append",
+    help="Pairs of host-player",
+    metavar="nickname:password",
+)
+group.add_argument(
+    "--users-file",
+    type=argparse.FileType(),
+    help="CSV file that contains host-player pairs",
+)
 
 
 HOST_SHIP_POSITIONS = [
