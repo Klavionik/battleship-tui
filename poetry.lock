@@ -181,22 +181,23 @@ files = [
 
 [[package]]
 name = "attrs"
-version = "23.1.0"
+version = "23.2.0"
 description = "Classes Without Boilerplate"
 category = "main"
 optional = true
 python-versions = ">=3.7"
 files = [
-    {file = "attrs-23.1.0-py3-none-any.whl", hash = "sha256:1f28b4522cdc2fb4256ac1a020c78acf9cba2c6b461ccd2c126f3aa8e8335d04"},
-    {file = "attrs-23.1.0.tar.gz", hash = "sha256:6279836d581513a26f1bf235f9acd333bc9115683f14f7e8fae46c98fc50e015"},
+    {file = "attrs-23.2.0-py3-none-any.whl", hash = "sha256:99b87a485a5820b23b879f04c2305b44b951b502fd64be915879d77a7e8fc6f1"},
+    {file = "attrs-23.2.0.tar.gz", hash = "sha256:935dc3b529c262f6cf76e50877d35a4bd3c1de194fd41f47a2b7ae8f19971f30"},
 ]
 
 [package.extras]
 cov = ["attrs[tests]", "coverage[toml] (>=5.3)"]
-dev = ["attrs[docs,tests]", "pre-commit"]
+dev = ["attrs[tests]", "pre-commit"]
 docs = ["furo", "myst-parser", "sphinx", "sphinx-notfound-page", "sphinxcontrib-towncrier", "towncrier", "zope-interface"]
 tests = ["attrs[tests-no-zope]", "zope-interface"]
-tests-no-zope = ["cloudpickle", "hypothesis", "mypy (>=1.1.1)", "pympler", "pytest (>=4.3.0)", "pytest-mypy-plugins", "pytest-xdist[psutil]"]
+tests-mypy = ["mypy (>=1.6)", "pytest-mypy-plugins"]
+tests-no-zope = ["attrs[tests-mypy]", "cloudpickle", "hypothesis", "pympler", "pytest (>=4.3.0)", "pytest-xdist[psutil]"]
 
 [[package]]
 name = "auth0-python"
@@ -232,28 +233,28 @@ files = [
 
 [[package]]
 name = "blacksheep"
-version = "2.0.3"
+version = "2.0.4"
 description = "Fast web framework for Python asyncio"
 category = "main"
 optional = true
 python-versions = ">=3.7"
 files = [
-    {file = "blacksheep-2.0.3-cp310-cp310-macosx_11_0_x86_64.whl", hash = "sha256:23bf26ce6602cd3e1d08049cb5a160e5a813283bdb7648c6cfbf6552efd70971"},
-    {file = "blacksheep-2.0.3-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:72ac764a1177bc8fe741a9a2148b2f03547727d7135425507bdb3f7f2cb14550"},
-    {file = "blacksheep-2.0.3-cp310-cp310-win_amd64.whl", hash = "sha256:e6352bae24cca980a011ad4302d1f3c6b80b432f4548e5538a09b2608b549558"},
-    {file = "blacksheep-2.0.3-cp311-cp311-macosx_10_9_universal2.whl", hash = "sha256:9c8efad3f88b3969dd681792ba2a18b832f1a6c8728feb0da0824d203f431b8f"},
-    {file = "blacksheep-2.0.3-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:cab16d1b770c25531a4e6ee17cbce2780b69f11e6b671554772c0c862ec5b437"},
-    {file = "blacksheep-2.0.3-cp311-cp311-win_amd64.whl", hash = "sha256:3f54df38e88fdad5bb72b8be6c1cdd276e9b524cac6ba42a2a07fa01417027ee"},
-    {file = "blacksheep-2.0.3-cp312-cp312-macosx_10_9_universal2.whl", hash = "sha256:8123308aa5a52bd0f932ac04d79a881edc7317869f94939fc734b6efc2c47601"},
-    {file = "blacksheep-2.0.3-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:e53904b6d923b22dece7dfc11234d07946eb39f1dd36601a4885e4ec20a38284"},
-    {file = "blacksheep-2.0.3-cp312-cp312-win_amd64.whl", hash = "sha256:9b4724c1a925132dae898af79f9a63cf2771075a9dc579f31deb5eab80e0f75c"},
-    {file = "blacksheep-2.0.3-cp38-cp38-macosx_11_0_x86_64.whl", hash = "sha256:3f97512fb50081805a3313ca25d7af2d5ba9f5f22ba197342cfb137a4b170f74"},
-    {file = "blacksheep-2.0.3-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:dbff4afe5e76645de42f0b7b31f7a36b92d6dfc39a37c183a5d1ca4c6132c659"},
-    {file = "blacksheep-2.0.3-cp38-cp38-win_amd64.whl", hash = "sha256:b33c1dadd1ff79670e72f6fcadc501aeb21ba613647a31c73cb36207850a15c1"},
-    {file = "blacksheep-2.0.3-cp39-cp39-macosx_11_0_x86_64.whl", hash = "sha256:8c6e22e224085474ff437b6ed0da7ea78ca041a18d7e1f9f55c4362ec2428e9a"},
-    {file = "blacksheep-2.0.3-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:4b4bc5e911e7514a7e0ec0889a4c2e28b01efdf67408832747dac8dc0ff9b53e"},
-    {file = "blacksheep-2.0.3-cp39-cp39-win_amd64.whl", hash = "sha256:7a34b8417ae8238c1fad196bc235e1bcb226f06d6b78be121224cd9b3787bcac"},
-    {file = "blacksheep-2.0.3.tar.gz", hash = "sha256:998f9e4808f68df9b7ba163ef92886f3cb00318a4d416f2229b54080772f3d36"},
+    {file = "blacksheep-2.0.4-cp310-cp310-macosx_11_0_x86_64.whl", hash = "sha256:ad3cda1a727cae4f08308246aec8d77e379df8e128b34a6d36e977125a5aec66"},
+    {file = "blacksheep-2.0.4-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:d1b6af9e6b3b66bbf02f1be72e46e116fca726b46ace43b3b4e3a7a766afd65d"},
+    {file = "blacksheep-2.0.4-cp310-cp310-win_amd64.whl", hash = "sha256:026dbb857f702696f6f4ed6ff535925dea4b4ca6003e217f046f1da4faec545c"},
+    {file = "blacksheep-2.0.4-cp311-cp311-macosx_10_9_universal2.whl", hash = "sha256:fff95fc531861e313a1eacac2b86e215661d3724f42712ead3a8be5d59b5c5fb"},
+    {file = "blacksheep-2.0.4-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:56addef8028d7d51be76d1575740fc5fb3eb141e18d5b091af45169656c27c31"},
+    {file = "blacksheep-2.0.4-cp311-cp311-win_amd64.whl", hash = "sha256:792af3170476a5a9a013e60bea5b8aafa9b0e697217b36e396d1458900d0cafe"},
+    {file = "blacksheep-2.0.4-cp312-cp312-macosx_10_9_universal2.whl", hash = "sha256:c9a26a9fa68872e66d2342675684d8c6413d82f4ba333a907c899017549f839a"},
+    {file = "blacksheep-2.0.4-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:ea0d6ed6a6368f16f38a0a626844bd68fa0e213088c1eaa04eba902080c87a5b"},
+    {file = "blacksheep-2.0.4-cp312-cp312-win_amd64.whl", hash = "sha256:8a821527ad372facf928b405e624114cef422a46129542e72fee1d69aec5b977"},
+    {file = "blacksheep-2.0.4-cp38-cp38-macosx_11_0_x86_64.whl", hash = "sha256:e288bd2e1fe538ef3be9f4e14d15336be92d5fe7d93dd2482d0b7ff71119c541"},
+    {file = "blacksheep-2.0.4-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:8a9886326e63d76e9678bf6c81de98b51ca7c1c48fe30da815cd4c8af0b45fa5"},
+    {file = "blacksheep-2.0.4-cp38-cp38-win_amd64.whl", hash = "sha256:e7960431e97c228342dbc34de5712680bd8157d16ab42d991dbd2870e8e1db55"},
+    {file = "blacksheep-2.0.4-cp39-cp39-macosx_11_0_x86_64.whl", hash = "sha256:3a796ec16c1f1b39c5c5f9e8378f16b81c9e2cbc7e243ca16e56d600b69c2810"},
+    {file = "blacksheep-2.0.4-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:06e5788b47f869c016314499a14af58bd5186906954ac21d99723ece12c03860"},
+    {file = "blacksheep-2.0.4-cp39-cp39-win_amd64.whl", hash = "sha256:ae9e51ec523678cff55e6c18bd321e34062d7e6648e3eee65a029850bcb984c0"},
+    {file = "blacksheep-2.0.4.tar.gz", hash = "sha256:72044b848d86d36d7b43acf680e4936bb0d027ba91cb5ae3490d61edeba0bc28"},
 ]
 
 [package.dependencies]
@@ -1632,14 +1633,14 @@ test = ["flaky", "pretend", "pytest (>=3.0.1)"]
 
 [[package]]
 name = "pytest"
-version = "7.4.3"
+version = "7.4.4"
 description = "pytest: simple powerful testing with Python"
 category = "dev"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "pytest-7.4.3-py3-none-any.whl", hash = "sha256:0d009c083ea859a71b76adf7c1d502e4bc170b80a8ef002da5806527b9591fac"},
-    {file = "pytest-7.4.3.tar.gz", hash = "sha256:d989d136982de4e3b29dabcc838ad581c64e8ed52c11fbe86ddebd9da0818cd5"},
+    {file = "pytest-7.4.4-py3-none-any.whl", hash = "sha256:b090cdf5ed60bf4c45261be03239c2c1c22df034fbffe691abe93cd80cea01d8"},
+    {file = "pytest-7.4.4.tar.gz", hash = "sha256:2cf0005922c6ace4a3e2ec8b4080eb0d9753fdc93107415332f50ce9e7994280"},
 ]
 
 [package.dependencies]
@@ -1655,14 +1656,14 @@ testing = ["argcomplete", "attrs (>=19.2.0)", "hypothesis (>=3.56)", "mock", "no
 
 [[package]]
 name = "pytest-asyncio"
-version = "0.23.2"
+version = "0.23.3"
 description = "Pytest support for asyncio"
 category = "dev"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "pytest-asyncio-0.23.2.tar.gz", hash = "sha256:c16052382554c7b22d48782ab3438d5b10f8cf7a4bdcae7f0f67f097d95beecc"},
-    {file = "pytest_asyncio-0.23.2-py3-none-any.whl", hash = "sha256:ea9021364e32d58f0be43b91c6233fb8d2224ccef2398d6837559e587682808f"},
+    {file = "pytest-asyncio-0.23.3.tar.gz", hash = "sha256:af313ce900a62fbe2b1aed18e37ad757f1ef9940c6b6a88e2954de38d6b1fb9f"},
+    {file = "pytest_asyncio-0.23.3-py3-none-any.whl", hash = "sha256:37a9d912e8338ee7b4a3e917381d1c95bfc8682048cb0fbc35baba316ec1faba"},
 ]
 
 [package.dependencies]
@@ -1941,14 +1942,14 @@ pytest = ">=7.0.0,<8.0.0"
 
 [[package]]
 name = "textual"
-version = "0.46.0"
+version = "0.47.1"
 description = "Modern Text User Interface framework"
 category = "main"
 optional = false
 python-versions = ">=3.8,<4.0"
 files = [
-    {file = "textual-0.46.0-py3-none-any.whl", hash = "sha256:3f8f3769860726d9eb653b164e7a3b8cbd17ea8d625c260a9a6dd3dafece81eb"},
-    {file = "textual-0.46.0.tar.gz", hash = "sha256:66d30f07d082ee5083ea898103e70b8720a98658e0bd3153fbb934a437ffe6f5"},
+    {file = "textual-0.47.1-py3-none-any.whl", hash = "sha256:da79df2e138f6de51bda84a1ee1460936bb2ecf5527ca2d47b9b59c584323327"},
+    {file = "textual-0.47.1.tar.gz", hash = "sha256:4b82e317884bb1092f693f474c319ceb068b5a0b128b121f1aa53a2d48b4b80c"},
 ]
 
 [package.dependencies]
@@ -1961,14 +1962,14 @@ syntax = ["tree-sitter (>=0.20.1,<0.21.0)", "tree_sitter_languages (>=1.7.0)"]
 
 [[package]]
 name = "textual-dev"
-version = "1.3.0"
+version = "1.4.0"
 description = "Development tools for working with Textual"
 category = "main"
 optional = true
 python-versions = ">=3.8,<4.0"
 files = [
-    {file = "textual_dev-1.3.0-py3-none-any.whl", hash = "sha256:e2eadbc516c9ec96789a621d05ce7fbf9fbaa008cb5654932f9a01776b408d9f"},
-    {file = "textual_dev-1.3.0.tar.gz", hash = "sha256:4e9d3a0cf18e6ae299e8b2d89e81e25cccacc5c8f0e3b0e2915fd17695bd583e"},
+    {file = "textual_dev-1.4.0-py3-none-any.whl", hash = "sha256:330beec18b8f469adf7cdf9d69cc94965bf3e69d9aec23625d62cdedcadab044"},
+    {file = "textual_dev-1.4.0.tar.gz", hash = "sha256:a20ea746a93e66978e9dfe71a7e5409854c96cc3e46550cc40760b199d7a5d3b"},
 ]
 
 [package.dependencies]
@@ -2266,7 +2267,7 @@ name = "xdg-base-dirs"
 version = "6.0.1"
 description = "Variables defined by the XDG Base Directory Specification"
 category = "main"
-optional = true
+optional = false
 python-versions = ">=3.10,<4.0"
 files = [
     {file = "xdg_base_dirs-6.0.1-py3-none-any.whl", hash = "sha256:63f6ebc1721ced2e86c340856e004ef829501a30a37e17079c52cfaf0e1741b9"},
@@ -2378,11 +2379,11 @@ idna = ">=2.0"
 multidict = ">=4.0"
 
 [extras]
-client = ["async-timeout", "inject", "pyee", "textual", "typer", "xdg-base-dirs"]
+client = ["async-timeout", "inject", "pyee", "textual", "typer"]
 dev = ["textual-dev"]
 server = ["aioprometheus", "auth0-python", "blacksheep", "pyjwt", "redis", "sentry-sdk", "uvicorn", "uvloop"]
 
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "6e6ca79571d8b102dafe8872742c2e428e43ac92d4eeef12fa54cc3ca0bad628"
+content-hash = "6717a5960f267c6edb697b633c38bd852db2e5047a776b53c17d300e18f77945"
