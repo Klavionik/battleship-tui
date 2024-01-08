@@ -30,11 +30,11 @@ def parse_users_file(file: io.TextIOWrapper) -> list[tuple[VirtualUser, VirtualU
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--server_url", default="http://localhost:8000")
+parser.add_argument("--server-url", default="http://localhost:8000")
 
 group = parser.add_mutually_exclusive_group(required=True)
 group.add_argument("--users", type=virtual_user, nargs=2, action="append")
-group.add_argument("--users-file", type=argparse.FileType(mode="rt"))
+group.add_argument("--users-file", type=argparse.FileType())
 
 
 HOST_SHIP_POSITIONS = [
