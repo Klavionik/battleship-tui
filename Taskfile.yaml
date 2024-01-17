@@ -21,3 +21,4 @@ tasks:
       - git commit -m "Bump client version to $(poetry version --short)"
       - git tag "client/$(poetry version --short)"
       - task: install
+  load: poetry run python tools/load_testing/load.py --server-url http://0.0.0.0:8000 --users-file {{.CLI_ARGS}}
