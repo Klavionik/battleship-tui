@@ -52,7 +52,7 @@ class RedisChannel(Channel):
                 if message["type"] in self.IGNORED_MESSAGE_TYPES:
                     continue
 
-                logger.debug("New message from broker {message}", message=message)
+                logger.trace("New message from broker {message}", message=message)
 
                 if client_id is None:
                     yield None, EventMessage.from_raw(message["data"])
