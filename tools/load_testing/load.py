@@ -15,16 +15,40 @@ During a game session, both users execute following steps.
 import argparse
 import asyncio
 import csv
+import functools
 import io
 import random
+import time
 from collections.abc import Awaitable, Iterator
 from dataclasses import dataclass
 from itertools import cycle
 from typing import Sequence
 
+from rich.console import Console
+from rich.progress import (
+    BarColumn,
+    Progress,
+    SpinnerColumn,
+    TaskID,
+    TaskProgressColumn,
+    TextColumn,
+)
+
 from battleship.client import Client
 from battleship.client.credentials import DummyCredentialsProvider
 from battleship.shared.events import ServerEvent
+
+RUN_TIMEOUT = 600  # 10 minutes.
+
+console = Console()
+progress = Progress(
+    SpinnerColumn(),
+    TextColumn("[progress.description]{task.description}"),
+    BarColumn(),
+    TaskProgressColumn(),
+    transient=True,
+    console=console,
+)
 
 
 @dataclass
@@ -229,9 +253,10 @@ async def wait_sequence(sequence: Sequence[Awaitable[None]]) -> None:
         await awaitable
 
 
-async def load(server_url: str, host_user: VirtualUser, player_user: VirtualUser) -> None:
+async def load(
+    name: str, server_url: str, host_user: VirtualUser, player_user: VirtualUser, task_id: TaskID
+) -> None:
     player = Client(server_url=server_url, credentials_provider=DummyCredentialsProvider())
-
     host = Client(server_url=server_url, credentials_provider=DummyCredentialsProvider())
 
     pre_host = [
@@ -259,11 +284,9 @@ async def load(server_url: str, host_user: VirtualUser, player_user: VirtualUser
     pre_host_task = asyncio.create_task(wait_sequence(pre_host))
     pre_player_task = asyncio.create_task(wait_sequence(pre_player))
 
-    try:
-        await asyncio.gather(pre_player_task, pre_host_task)
-    except Exception as exc:
-        print(f"Exception during pre phase: {exc}.")
-        raise SystemExit(1)
+    await asyncio.gather(pre_player_task, pre_host_task)
+
+    progress.update(task_id, description=f"{name} | Spawn ships", advance=1)
 
     await delay(2)
 
@@ -287,11 +310,9 @@ async def load(server_url: str, host_user: VirtualUser, player_user: VirtualUser
     spawn_host_task = asyncio.create_task(wait_sequence(spawn_host))
     spawn_player_task = asyncio.create_task(wait_sequence(spawn_player))
 
-    try:
-        await asyncio.gather(spawn_host_task, spawn_player_task)
-    except Exception as exc:
-        print(f"Exception during spawn phase: {exc}.")
-        raise SystemExit(1)
+    await asyncio.gather(spawn_host_task, spawn_player_task)
+
+    progress.update(task_id, description=f"{name} | Play game", advance=1)
 
     awaiting_move_event = asyncio.Event()
     first_shooter = ""
@@ -320,9 +341,21 @@ async def load(server_url: str, host_user: VirtualUser, player_user: VirtualUser
         await delay()
         await fire(client, [move])
 
+    progress.update(task_id, description=f"{name} | Disconnect", advance=1)
+
     await delay()
     await disconnect(host)
     await disconnect(player)
+
+    progress.update(task_id, description=f"{name} | Finished", advance=1)
+
+
+def indicate_error_cb(tsk: asyncio.Task[None], task_id: TaskID, name: str) -> None:
+    try:
+        tsk.result()
+    except Exception:
+        progress.update(task_id, description=f"[red]{name} | Error", completed=4)
+        progress.stop_task(task_id)
 
 
 async def main(server_url: str, virtual_users: list[tuple[VirtualUser, VirtualUser]]) -> int:
@@ -330,15 +363,31 @@ async def main(server_url: str, virtual_users: list[tuple[VirtualUser, VirtualUs
     session_tasks = []
 
     for host, player in virtual_users:
-        task = asyncio.create_task(load(server_url, host, player))
+        name = f"{host.nickname} vs. {player.nickname}"
+        task_id = progress.add_task(description=f"{name} | Connect", total=4)
+        done_cb = functools.partial(indicate_error_cb, task_id=task_id, name=name)
+        task = asyncio.create_task(load(name, server_url, host, player, task_id))
+        task.add_done_callback(done_cb)
         session_tasks.append(task)
 
-    results = await asyncio.gather(*session_tasks, return_exceptions=True)
+    console.log(f"[bold]Running {len(session_tasks)} game sessions.")
+    start = time.monotonic()
 
-    for result in results:
-        if isinstance(result, Exception):
-            print(f"Exception happened: {result}")
-            exit_code = 1
+    with progress:
+        for future in asyncio.as_completed(session_tasks, timeout=RUN_TIMEOUT):
+            try:
+                await future
+            except Exception:
+                exit_code = 1
+
+    elapsed = time.monotonic() - start
+
+    console.log(f"[bold]All game sessions finished in {int(elapsed)} s.")
+
+    if exit_code == 1:
+        console.log("[red]There were some error(s) during the execution.")
+    else:
+        console.log("[green]Successfully.")
 
     return exit_code
 
