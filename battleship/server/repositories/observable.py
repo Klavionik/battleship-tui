@@ -25,7 +25,7 @@ class Observable:
         async def notify_task() -> None:
             logger.debug(f"Notify {len(self._listeners)} listeners.")
 
-            for subscriber in self._listeners.values():
+            for subscriber in list(self._listeners.values()):
                 await subscriber(entity_id, action)
 
         @logger.catch
