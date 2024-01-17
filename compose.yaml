@@ -1,4 +1,13 @@
 services:
+  proxy:
+    image: caddy/caddy:2.7.6-alpine
+    command: ["caddy", "reverse-proxy", "--from", ":9090", "--to", "backend:8000"]
+    ports:
+      - "9090:9090"
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+
   backend:
     build:
       dockerfile: Dockerfile
@@ -15,8 +24,7 @@ services:
       SENTRY_DSN: $SENTRY_DSN
       METRICS_SCRAPER_SECRET: $METRICS_SCRAPER_SECRET
     command: ["uvicorn", "--host", "0.0.0.0", "--reload", "--factory", "battleship.server:create_app"]
-    ports:
-      - "8000:8000"
+    scale: 2
     volumes:
       - ./battleship:/app/battleship
     depends_on:
@@ -35,3 +43,7 @@ services:
       test: redis-cli ping | grep PONG
       interval: 2s
       timeout: 3s
+
+volumes:
+  caddy_data:
+  caddy_config:
