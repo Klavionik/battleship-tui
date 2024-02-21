@@ -1,5 +1,7 @@
 from typing import Any
 
+import copykitten
+from rich.console import RenderableType
 from textual import on
 from textual.app import ComposeResult
 from textual.containers import Container
@@ -11,6 +13,19 @@ from battleship.shared import models
 from battleship.tui.format import format_duration
 
 
+class GameCode(Label):
+    def __init__(self, *args: Any, value: str, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        self._value = value
+
+    def render(self) -> RenderableType:
+        return f"Game code: [@click=copy()]{self._value}[/]"
+
+    def action_copy(self) -> None:
+        copykitten.copy(self._value)
+        self.notify("Copied!", timeout=1)
+
+
 class WaitingModal(ModalScreen[bool]):
     def __init__(self, *args: Any, game_code: str, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
@@ -19,7 +34,7 @@ class WaitingModal(ModalScreen[bool]):
     def compose(self) -> ComposeResult:
         with Container(id="dialog"):
             yield Label("Waiting for the second player...")
-            yield Label(f"Game code: [b]{self._game_code}[/]")
+            yield GameCode(value=self._game_code)
 
             with Container(id="loading"):
                 yield LoadingIndicator()

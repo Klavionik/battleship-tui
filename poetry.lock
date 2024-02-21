@@ -462,6 +462,22 @@ files = [
 ]
 
 [[package]]
+name = "copykitten"
+version = "1.1.1"
+description = "A robust, dependency-free way to use the system clipboard in Python."
+category = "main"
+optional = false
+python-versions = ">=3.8, <3.13"
+files = [
+    {file = "copykitten-1.1.1-cp38-abi3-macosx_10_12_x86_64.whl", hash = "sha256:68a1dfd6562594a43612178a3c255ba0e8a3e184cc376331e3d6d9bc061c1726"},
+    {file = "copykitten-1.1.1-cp38-abi3-macosx_11_0_arm64.whl", hash = "sha256:d0d1ec65c263ad85e4d8ab856990260ebcb2bfa6dca111d3bd45fccae9abef03"},
+    {file = "copykitten-1.1.1-cp38-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:a87b5fde13ae4d37d320801d9f944db0d3f97ff47ede5e4eddf89d721757c390"},
+    {file = "copykitten-1.1.1-cp38-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:0af87a6469d68962598ff771046b04819b8de77f0852c0dde001d5066b4d4e1f"},
+    {file = "copykitten-1.1.1-cp38-abi3-win_amd64.whl", hash = "sha256:207b7dd53d004f89d54e386ea8eca62a9bb2da8b16b70f2af2ab7abb947af662"},
+    {file = "copykitten-1.1.1.tar.gz", hash = "sha256:3a912f1825f42d87994ffed093b192944705de349a9b048f89ec006ea30b2be8"},
+]
+
+[[package]]
 name = "coverage"
 version = "7.4.0"
 description = "Code coverage measurement for Python"
@@ -2385,5 +2401,5 @@ server = ["aioprometheus", "auth0-python", "blacksheep", "pyjwt", "redis", "sent
 
 [metadata]
 lock-version = "2.0"
-python-versions = "^3.10"
-content-hash = "6717a5960f267c6edb697b633c38bd852db2e5047a776b53c17d300e18f77945"
+python-versions = ">=3.10,<3.13"
+content-hash = "28a469f0ac5d575915c3e75e69a6499fb615c404d41395ac895b215215da802a"
