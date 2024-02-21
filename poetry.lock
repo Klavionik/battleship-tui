@@ -466,7 +466,7 @@ name = "copykitten"
 version = "1.1.1"
 description = "A robust, dependency-free way to use the system clipboard in Python."
 category = "main"
-optional = false
+optional = true
 python-versions = ">=3.8, <3.13"
 files = [
     {file = "copykitten-1.1.1-cp38-abi3-macosx_10_12_x86_64.whl", hash = "sha256:68a1dfd6562594a43612178a3c255ba0e8a3e184cc376331e3d6d9bc061c1726"},
@@ -2395,11 +2395,11 @@ idna = ">=2.0"
 multidict = ">=4.0"
 
 [extras]
-client = ["async-timeout", "inject", "pyee", "textual", "typer"]
+client = ["async-timeout", "copykitten", "inject", "pyee", "textual", "typer"]
 dev = ["textual-dev"]
 server = ["aioprometheus", "auth0-python", "blacksheep", "pyjwt", "redis", "sentry-sdk", "uvicorn", "uvloop"]
 
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.13"
-content-hash = "b39bf3b0e5ef42f79f96fc5173b44fe4b28c732a9c04d66945d437be3563b046"
+content-hash = "6b88771a9bdc6c3651a38bbc2f690f5e14621486d674c68dfeaf2f91c6a3fac9"

@@ -48,12 +48,12 @@ async-timeout = { version = "^4.0.3", optional = true, markers = "python_version
 backports-strenum = { version = "^1.2.8", markers = "python_version < '3.11'" }
 sentry-sdk = { version = "^1.38.0", optional = true }
 aioprometheus = {version = "^23.3.0", optional = true}
-copykitten = "^1.1.1"
+copykitten = { version = "^1.1.1", optional = true }
 
 
 [tool.poetry.extras]
 server = ["blacksheep", "uvicorn", "auth0-python", "pyjwt", "uvloop", "redis", "sentry-sdk", "aioprometheus"]
-client = ["textual", "typer", "pyee", "async-timeout", "inject"]
+client = ["textual", "typer", "pyee", "async-timeout", "inject", "copykitten"]
 dev = ["textual-dev"]
 
 [tool.poetry.scripts]
