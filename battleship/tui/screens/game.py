@@ -5,7 +5,7 @@ from typing import Any, Iterable, Literal
 import inject
 from textual import on
 from textual.app import ComposeResult
-from textual.containers import Grid
+from textual.containers import Container, Grid
 from textual.coordinate import Coordinate
 from textual.screen import Screen
 
@@ -115,13 +115,14 @@ class Game(Screen[None]):
         self._strategy.subscribe("game_cancelled", self.on_game_cancelled)
 
     def compose(self) -> ComposeResult:
-        with Grid(id="content"):
-            yield self.player_board
-            yield self.announcement
-            yield self.enemy_board
-            yield self.player_fleet
-            yield self.battle_log
-            yield self.enemy_fleet
+        with Container():
+            with Grid(id="content"):
+                yield self.player_board
+                yield self.announcement
+                yield self.enemy_board
+                yield self.player_fleet
+                yield self.battle_log
+                yield self.enemy_fleet
 
         yield AppFooter()
 

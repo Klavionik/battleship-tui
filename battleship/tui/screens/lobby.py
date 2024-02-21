@@ -34,18 +34,19 @@ class Lobby(Screen[None]):
             self.help = fh.read()
 
     def compose(self) -> ComposeResult:
-        with Container(classes="main"):
-            with VerticalScroll():
-                yield Markdown(self.help, classes="screen-help")
+        with Container():
+            with Container(classes="main"):
+                with VerticalScroll():
+                    yield Markdown(self.help, classes="screen-help")
 
-            with Container(classes="screen-content"):
-                yield LobbyHeader(nickname=self._nickname)
+                with Container(classes="screen-content"):
+                    yield LobbyHeader(nickname=self._nickname)
 
-                with ListView():
-                    yield ListItem(Label("🎯 Create game"), id="create_game")
-                    yield ListItem(Label("🔍 Join game"), id="join_game")
-                    yield ListItem(Label("📜 Statistics"), id="stats")
-                    yield ListItem(Label("👋 Logout"), id="logout")
+                    with ListView():
+                        yield ListItem(Label("🎯 Create game"), id="create_game")
+                        yield ListItem(Label("🔍 Join game"), id="join_game")
+                        yield ListItem(Label("📜 Statistics"), id="stats")
+                        yield ListItem(Label("👋 Logout"), id="logout")
 
         yield AppFooter()
 

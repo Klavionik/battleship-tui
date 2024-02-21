@@ -34,12 +34,13 @@ class CreateGame(Screen[None]):
             self.help = fh.read()
 
     def compose(self) -> ComposeResult:
-        with Container(classes="main"):
-            with VerticalScroll():
-                yield Markdown(self.help, classes="screen-help")
+        with Container():
+            with Container(classes="main"):
+                with VerticalScroll():
+                    yield Markdown(self.help, classes="screen-help")
 
-            with Container(classes="screen-content"):
-                yield NewGame(with_name=True)
+                with Container(classes="screen-content"):
+                    yield NewGame(with_name=True)
 
         yield AppFooter()
 
