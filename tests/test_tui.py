@@ -47,24 +47,24 @@ async def test_quits_with_ctrl_q():
 
 @pytest.mark.snap
 def test_settings_screen_snapshot(snap_compare_sized):
-    snap_compare_sized(press=["down", "down", "enter"])
+    assert snap_compare_sized(press=["down", "down", "enter"])
 
 
 @pytest.mark.snap
 def test_singleplayer_screen_snapshot(snap_compare_sized):
-    snap_compare_sized(press=["enter"])
+    assert snap_compare_sized(press=["enter"])
 
 
 @pytest.mark.snap
 def test_multiplayer_screen_snapshot(snap_compare_sized):
-    snap_compare_sized(press=["down", "enter"])
+    assert snap_compare_sized(press=["down", "enter"])
 
 
 @pytest.mark.snap
 def test_singleplayer_game_screen_snapshot(snap_compare_sized):
-    snap_compare_sized(press=["enter", *["tab"] * 4, "enter"])
+    assert snap_compare_sized(press=["enter", *["tab"] * 4, "enter"])
 
 
 @pytest.mark.snap
 def test_main_screen_snapshot(snap_compare_sized):
-    snap_compare_sized()
+    assert snap_compare_sized()
