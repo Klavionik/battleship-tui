@@ -28,9 +28,18 @@ customize game options and appearance, keep track of your achievements, and more
 > The older Windows PowerShell can't properly display some symbols. 
 
 ## Installation
+If you're on Linux or macOS, most probably you already have Python installed. You can verify it by 
+running `$ python --version`. If your Python version is lower than required, try installing the 
+latest operating system updates.
+
+If you're on Windows, you can download and install the latest Python release from the 
+[official site](https://www.python.org/downloads/windows/).
+
 The recommended way to install and update the game is via 
 [pipx](https://pypa.github.io/pipx/) (especially if you don't know anything about 
 virtual environments).
+
+Install `pipx`, then install the game.
 
 ```shell
 pipx install battleship-tui[client]
@@ -39,12 +48,6 @@ pipx install battleship-tui[client]
 `battleship-tui` is merely a Python package and is distributed via PyPI. You can 
 install it via `pip` too, but make sure it installs into a venv so that you're not 
 messing with the system interpreter.
-
-```shell
-# Linux example.
-python -m venv venv && source venv/bin/activate
-pip install battleship-tui[client]
-```
 
 ## Play
 Once the game is installed you can use the `battleship` command to run it. This 
