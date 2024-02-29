@@ -31,7 +31,9 @@ class Roster:
         new_roster_name = f"{self.name}+{other.name}"
         new_roster = Roster(
             name=new_roster_name,
-            items=[RosterItem(make_item_id(), item.type, item.hp) for item in chain(self, other)],
+            items=[
+                RosterItem(str(i), item.type, item.hp) for i, item in enumerate(chain(self, other))
+            ],
         )
         return new_roster
 
@@ -58,7 +60,8 @@ _rosters: RosterRegistry = {}
 def register(func: RosterDefinition) -> None:
     roster_name = func.__name__
     _rosters[roster_name] = Roster(
-        name=roster_name, items=[RosterItem(make_item_id(), type_, hp) for type_, hp in func()]
+        name=roster_name,
+        items=[RosterItem(str(i), type_, hp) for i, (type_, hp) in enumerate(func())],
     )
 
 
