@@ -70,10 +70,6 @@ plugins = [
   "pydantic.mypy"
 ]
 
-[[tool.mypy.overrides]]
-module = "battleship.server.app"
-disable_error_code = ["attr-defined"]
-
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 markers = ["snap: Textual snapshot tests"]

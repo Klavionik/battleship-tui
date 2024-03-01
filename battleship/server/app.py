@@ -8,6 +8,7 @@ from blacksheep.server.authentication.jwt import JWTBearerAuthentication
 from blacksheep.server.authorization import Policy
 from guardpost.common import AuthenticatedRequirement
 from loguru import logger
+from rodi import Container
 from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
 
 from battleship import PACKAGE_NAME
@@ -41,7 +42,7 @@ from battleship.server.routes import router
 
 
 async def cleanup_clients(app: Application) -> None:
-    client_repository = app.services.provider.get(ClientRepository)
+    client_repository = app.services.resolve(ClientRepository)
 
     try:
         count = await client_repository.clear()
@@ -52,7 +53,7 @@ async def cleanup_clients(app: Application) -> None:
 
 
 async def teardown_redis(app: Application) -> None:
-    client = app.services.provider.get(redis.Redis)
+    client = app.services.resolve(redis.Redis)
 
     try:
         await client.aclose()
@@ -104,18 +105,21 @@ def create_app() -> Any:
     logger.enable(PACKAGE_NAME)
     broker = redis.Redis.from_url(str(config.BROKER_URL))
 
-    app = Application(router=router)
-    app.services.add_instance(config, Config)
-    app.services.add_instance(broker, redis.Redis)
-    app.services.add_singleton(AuthManager, Auth0AuthManager)
-    app.services.add_singleton(SessionRepository, RedisSessionRepository)
-    app.services.add_singleton(ClientRepository, RedisClientRepository)
-    app.services.add_singleton(StatisticsRepository, RedisStatisticsRepository)
-    app.services.add_singleton(IncomingChannel, IncomingRedisChannel)
-    app.services.add_singleton(OutgoingChannel, OutgoingRedisChannel)
-    app.services.add_singleton(SessionSubscriptionHandler)
-    app.services.add_singleton(GameHandler)
-    app.services.add_singleton(PlayerSubscriptionHandler)
+    services = Container()
+
+    services.add_instance(config, Config)
+    services.add_instance(broker, redis.Redis)
+    services.add_singleton(AuthManager, Auth0AuthManager)
+    services.add_singleton(SessionRepository, RedisSessionRepository)
+    services.add_singleton(ClientRepository, RedisClientRepository)
+    services.add_singleton(StatisticsRepository, RedisStatisticsRepository)
+    services.add_singleton(IncomingChannel, IncomingRedisChannel)
+    services.add_singleton(OutgoingChannel, OutgoingRedisChannel)
+    services.add_singleton(SessionSubscriptionHandler)
+    services.add_singleton(GameHandler)
+    services.add_singleton(PlayerSubscriptionHandler)
+
+    app = Application(router=router, services=services)
 
     app.use_authentication().add(
         JWTBearerAuthentication(
