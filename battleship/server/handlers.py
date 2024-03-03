@@ -89,11 +89,11 @@ class SessionSubscriptionHandler:
                 payload["session_id"] = session_id
 
             await self._out.publish(
-                client_id,
                 EventMessage(
                     kind=ServerEvent.SESSIONS_UPDATE,
                     payload=payload,
                 ),
+                client_id,
             )
 
         return session_observer
@@ -130,11 +130,11 @@ class PlayerSubscriptionHandler:
             payload = dict(event="online_changed", count=await self._clients.count())
 
             await self._out.publish(
-                client_id,
                 EventMessage(
                     kind=ServerEvent.PLAYERS_UPDATE,
                     payload=payload,
                 ),
+                client_id,
             )
 
         return client_observer
@@ -150,11 +150,11 @@ class PlayerSubscriptionHandler:
             payload = dict(event="ingame_changed", count=players_ingame)
 
             await self._out.publish(
-                client_id,
                 EventMessage(
                     kind=ServerEvent.PLAYERS_UPDATE,
                     payload=payload,
                 ),
+                client_id,
             )
 
         return session_observer

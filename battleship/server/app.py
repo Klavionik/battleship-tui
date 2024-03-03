@@ -1,13 +1,13 @@
 import sys
 from typing import Any, Awaitable, Callable
 
-import redis.asyncio as redis
 import sentry_sdk
 from blacksheep import Application, Request, Response
 from blacksheep.server.authentication.jwt import JWTBearerAuthentication
 from blacksheep.server.authorization import Policy
 from guardpost.common import AuthenticatedRequirement
 from loguru import logger
+from redis.asyncio import Redis, RedisError
 from rodi import Container
 from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
 
@@ -25,10 +25,10 @@ from battleship.server.metrics import (
     MetricsScraperAuthenticationHandler,
 )
 from battleship.server.pubsub import (
+    Broker,
     IncomingChannel,
-    IncomingRedisChannel,
     OutgoingChannel,
-    OutgoingRedisChannel,
+    RedisBroker,
 )
 from battleship.server.repositories import (
     ClientRepository,
@@ -53,11 +53,11 @@ async def cleanup_clients(app: Application) -> None:
 
 
 async def teardown_redis(app: Application) -> None:
-    client = app.services.resolve(redis.Redis)
+    client = app.services.resolve(Redis)
 
     try:
         await client.aclose()
-    except redis.RedisError:
+    except RedisError:
         logger.exception("Cannot close Redis connection.")
         raise
 
@@ -103,18 +103,20 @@ def create_app() -> Any:
     logger.remove()
     logger.add(sys.stderr, level="TRACE" if config.TRACE else "DEBUG")
     logger.enable(PACKAGE_NAME)
-    broker = redis.Redis.from_url(str(config.BROKER_URL))
+    redis = Redis.from_url(str(config.BROKER_URL))
+    broker = RedisBroker(redis)
 
     services = Container()
 
     services.add_instance(config, Config)
-    services.add_instance(broker, redis.Redis)
+    services.add_instance(redis, Redis)
+    services.add_instance(broker, Broker)
     services.add_singleton(AuthManager, Auth0AuthManager)
     services.add_singleton(SessionRepository, RedisSessionRepository)
     services.add_singleton(ClientRepository, RedisClientRepository)
     services.add_singleton(StatisticsRepository, RedisStatisticsRepository)
-    services.add_singleton(IncomingChannel, IncomingRedisChannel)
-    services.add_singleton(OutgoingChannel, OutgoingRedisChannel)
+    services.add_singleton(IncomingChannel)
+    services.add_singleton(OutgoingChannel)
     services.add_singleton(SessionSubscriptionHandler)
     services.add_singleton(GameHandler)
     services.add_singleton(PlayerSubscriptionHandler)

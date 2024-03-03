@@ -64,7 +64,7 @@ class Connection:
 
     async def listen(self) -> None:
         async for event in self.events():
-            asyncio.create_task(self._incoming.publish(self.connection_id, event))
+            asyncio.create_task(self._incoming.publish(event, self.connection_id))
 
         self._message_consumer.cancel()
         del self._message_consumer
@@ -76,7 +76,7 @@ class Connection:
         @logger.catch
         async def consumer() -> None:
             try:
-                async for _, event in self._outgoing.listen(self.connection_id):
+                async for event in self._outgoing.listen(self.connection_id):
                     await self.send_event(event)
             except asyncio.CancelledError:
                 logger.debug("{conn} Stop message consumer.", conn=self)
@@ -113,8 +113,8 @@ class Client:
         return self.user_id
 
     async def listen(self) -> AsyncGenerator[EventMessage, None]:
-        async for _, event in self._incoming_channel.listen(self.id):
+        async for event in self._incoming_channel.listen(self.id):
             yield event
 
     async def send_event(self, event: EventMessage) -> None:
-        await self._outgoing_channel.publish(self.id, event)
+        await self._outgoing_channel.publish(event, self.id)

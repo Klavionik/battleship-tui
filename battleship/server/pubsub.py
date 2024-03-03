@@ -1,50 +1,76 @@
 import abc
-from typing import AsyncIterator, Callable, Iterable, TypeAlias
+import asyncio
+from collections import deque
+from typing import Any, AsyncIterator
 
-import redis.asyncio as redis
-from loguru import logger
+import pymitter  # type: ignore
+from redis import asyncio as redis
 
 from battleship.shared.events import EventMessage
 
-Callback: TypeAlias = Callable[[str], None]
 
-
-class Channel(abc.ABC):
+class Broker(abc.ABC):
     @abc.abstractmethod
-    async def publish(self, client_id: str | Iterable[str], event: EventMessage) -> None:
+    async def publish(self, message: str, topic: str) -> None:
         pass
 
     @abc.abstractmethod
-    def listen(
-        self, client_id: str | Iterable[str] | None = None
-    ) -> AsyncIterator[tuple[str | None, EventMessage]]:
+    def listen(self, topic: str) -> AsyncIterator[str]:
         pass
 
 
-class IncomingChannel(Channel, abc.ABC):
-    pass
+class InMemoryBroker(Broker):
+    class pubsub:
+        def __init__(self, emitter: pymitter.EventEmitter):
+            self._ee = emitter
+            self._messages: deque[str] = deque()
+            self._topic: str | None = None
+
+        def __enter__(self) -> "InMemoryBroker.pubsub":
+            return self
+
+        def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+            self._ee.off(self._topic, self._listener)
+
+        def subscribe(self, topic: str) -> None:
+            self._topic = topic
+            self._ee.on(self._topic, self._listener)
+
+        def _listener(self, message: str) -> None:
+            self._messages.append(message)
+
+        async def listen(self) -> AsyncIterator[str]:
+            assert self._topic is not None
+
+            while len(self._ee.listeners(self._topic)):
+                try:
+                    yield self._messages.popleft()
+                except IndexError:
+                    pass
+
+                await asyncio.sleep(0.1)
+
+    def __init__(self) -> None:
+        self._emitter = pymitter.EventEmitter(wildcard=True)
+
+    async def publish(self, message: str, topic: str) -> None:
+        await self._emitter.emit_async(topic, message)
+
+    async def listen(self, topic: str) -> AsyncIterator[str]:
+        with self.pubsub(self._emitter) as pubsub:
+            pubsub.subscribe(topic)
+
+            async for message in pubsub.listen():
+                yield message
 
 
-class OutgoingChannel(Channel, abc.ABC):
-    pass
-
-
-class RedisChannel(Channel):
+class RedisBroker(Broker):
     IGNORED_MESSAGE_TYPES = {"psubscribe"}
 
-    def __init__(self, topic: str, client: redis.Redis):
-        self.topic = topic
+    def __init__(self, client: redis.Redis):
         self._client = client
 
-    async def publish(self, client_id: str | Iterable[str], event: EventMessage) -> None:
-        topic = self.build_topic(client_id)
-        await self._client.publish(topic, event.to_json())
-
-    async def listen(
-        self, client_id: str | Iterable[str] | None = None
-    ) -> AsyncIterator[tuple[str | None, EventMessage]]:
-        topic = self.build_topic(client_id)
-
+    async def listen(self, topic: str) -> AsyncIterator[str]:
         async with self._client.pubsub() as pubsub:
             await pubsub.psubscribe(topic)
 
@@ -52,30 +78,44 @@ class RedisChannel(Channel):
                 if message["type"] in self.IGNORED_MESSAGE_TYPES:
                     continue
 
-                logger.trace("New message from broker {message}", message=message)
+                yield message["data"]
 
-                if client_id is None:
-                    yield None, EventMessage.from_raw(message["data"])
-                    continue
-
-                target = message["channel"].split(b".", maxsplit=1)[1]
-
-                yield target, EventMessage.from_raw(message["data"])
-
-    def build_topic(self, client_id: str | Iterable[str] | None = None) -> str:
-        if isinstance(client_id, str):
-            return self.topic.replace("*", client_id)
-        elif isinstance(client_id, Iterable):
-            return " ".join(self.topic.replace("*", client) for client in client_id)
-
-        return self.topic
+    async def publish(self, message: str, topic: str) -> None:
+        await self._client.publish(topic, message)
 
 
-class IncomingRedisChannel(RedisChannel, IncomingChannel):
-    def __init__(self, client: redis.Redis):
-        super().__init__("in.*", client)
+class Channel:
+    def __init__(self, prefix: str, broker: Broker):
+        self._prefix = prefix
+        self._broker = broker
+
+    async def publish(self, message: EventMessage, topic: str | None = None) -> None:
+        if topic:
+            topic = self._prefix + "." + topic
+        else:
+            topic = self._prefix
+
+        await self._broker.publish(message.to_json(), topic)
+
+    async def listen(self, topic: str | None = None) -> AsyncIterator[EventMessage]:
+        if topic:
+            topic = self._prefix + "." + topic
+        else:
+            topic = self._prefix
+
+        async for message in self._broker.listen(topic):
+            yield EventMessage.from_raw(message)
+
+    def topic(self, topic: str) -> "Channel":
+        topic = self._prefix + "." + topic
+        return Channel(prefix=topic, broker=self._broker)
 
 
-class OutgoingRedisChannel(RedisChannel, OutgoingChannel):
-    def __init__(self, client: redis.Redis):
-        super().__init__("out.*", client)
+class IncomingChannel(Channel):
+    def __init__(self, broker: Broker):
+        super().__init__("in", broker)
+
+
+class OutgoingChannel(Channel):
+    def __init__(self, broker: Broker):
+        super().__init__("out", broker)
