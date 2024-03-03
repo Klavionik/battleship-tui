@@ -25,14 +25,13 @@ from battleship.server.handlers import (
     PlayerSubscriptionHandler,
     SessionSubscriptionHandler,
 )
-from battleship.server.pubsub import IncomingChannel, OutgoingChannel
 from battleship.server.repositories import (
     ClientRepository,
     SessionRepository,
     StatisticsRepository,
 )
 from battleship.server.repositories.statistics import StatisticsNotFound
-from battleship.server.websocket import Connection
+from battleship.server.websocket import Connection, IncomingChannel, OutgoingChannel
 from battleship.shared.models import (
     IDToken,
     LoginCredentials,

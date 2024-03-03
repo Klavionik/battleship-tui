@@ -5,14 +5,13 @@ from loguru import logger
 
 from battleship.server import metrics
 from battleship.server.game import Game
-from battleship.server.pubsub import IncomingChannel, OutgoingChannel
 from battleship.server.repositories import (
     ClientRepository,
     Listener,
     SessionRepository,
     StatisticsRepository,
 )
-from battleship.server.websocket import Client
+from battleship.server.websocket import Client, IncomingChannel, OutgoingChannel
 from battleship.shared.events import EventMessage, ServerEvent
 from battleship.shared.models import Action, GameSummary, Session
 

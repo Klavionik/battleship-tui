@@ -104,13 +104,3 @@ class Channel:
         if topic:
             return self._prefix + "." + topic
         return self._prefix
-
-
-class IncomingChannel(Channel):
-    def __init__(self, broker: Broker):
-        super().__init__("in", broker)
-
-
-class OutgoingChannel(Channel):
-    def __init__(self, broker: Broker):
-        super().__init__("out", broker)

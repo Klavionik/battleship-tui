@@ -4,8 +4,18 @@ from typing import AsyncGenerator
 from blacksheep import WebSocket, WebSocketDisconnectError
 from loguru import logger
 
-from battleship.server.pubsub import IncomingChannel, OutgoingChannel
+from battleship.server.pubsub import Broker, Channel
 from battleship.shared.events import EventMessage
+
+
+class IncomingChannel(Channel):
+    def __init__(self, broker: Broker):
+        super().__init__("clients.in", broker)
+
+
+class OutgoingChannel(Channel):
+    def __init__(self, broker: Broker):
+        super().__init__("clients.out", broker)
 
 
 class WebSocketWrapper:

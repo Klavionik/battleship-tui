@@ -3,9 +3,8 @@ import asyncio
 
 import redis.asyncio as redis
 
-from battleship.server.pubsub import IncomingChannel, OutgoingChannel
 from battleship.server.repositories.observable import Observable
-from battleship.server.websocket import Client
+from battleship.server.websocket import Client, IncomingChannel, OutgoingChannel
 from battleship.shared.models import Action
 from battleship.shared.models import Client as ClientModel
 

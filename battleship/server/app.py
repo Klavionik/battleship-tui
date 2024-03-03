@@ -24,12 +24,7 @@ from battleship.server.metrics import (
     MetricsMiddleware,
     MetricsScraperAuthenticationHandler,
 )
-from battleship.server.pubsub import (
-    Broker,
-    IncomingChannel,
-    OutgoingChannel,
-    RedisBroker,
-)
+from battleship.server.pubsub import Broker, RedisBroker
 from battleship.server.repositories import (
     ClientRepository,
     RedisClientRepository,
@@ -39,6 +34,7 @@ from battleship.server.repositories import (
     StatisticsRepository,
 )
 from battleship.server.routes import router
+from battleship.server.websocket import IncomingChannel, OutgoingChannel
 
 
 async def cleanup_clients(app: Application) -> None:
