@@ -48,7 +48,7 @@ class InMemoryBroker(Broker):
                 except IndexError:
                     pass
 
-                await asyncio.sleep(0.1)
+                await asyncio.sleep(0.01)
 
     def __init__(self) -> None:
         self._emitter = pymitter.EventEmitter(wildcard=True)
