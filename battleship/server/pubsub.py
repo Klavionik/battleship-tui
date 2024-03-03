@@ -90,25 +90,20 @@ class Channel:
         self._broker = broker
 
     async def publish(self, message: EventMessage, topic: str | None = None) -> None:
-        if topic:
-            topic = self._prefix + "." + topic
-        else:
-            topic = self._prefix
-
-        await self._broker.publish(message.to_json(), topic)
+        await self._broker.publish(message.to_json(), self._build_topic(topic))
 
     async def listen(self, topic: str | None = None) -> AsyncIterator[EventMessage]:
-        if topic:
-            topic = self._prefix + "." + topic
-        else:
-            topic = self._prefix
-
-        async for message in self._broker.listen(topic):
+        async for message in self._broker.listen(self._build_topic(topic)):
             yield EventMessage.from_raw(message)
 
     def topic(self, topic: str) -> "Channel":
         topic = self._prefix + "." + topic
         return Channel(prefix=topic, broker=self._broker)
+
+    def _build_topic(self, topic: str | None = None) -> str:
+        if topic:
+            return self._prefix + "." + topic
+        return self._prefix
 
 
 class IncomingChannel(Channel):
