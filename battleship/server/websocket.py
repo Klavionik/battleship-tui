@@ -48,8 +48,8 @@ class Connection:
         self.connection_id = connection_id
         self.nickname = nickname
         self.websocket = WebSocketWrapper(websocket)
-        self._incoming = incoming_channel
-        self._outgoing = outgoing_channel
+        self._incoming = incoming_channel.topic(self.connection_id)
+        self._outgoing = outgoing_channel.topic(self.connection_id)
         self._message_consumer = self._run_consumer()
 
     def __repr__(self) -> str:
@@ -64,7 +64,7 @@ class Connection:
 
     async def listen(self) -> None:
         async for event in self.events():
-            asyncio.create_task(self._incoming.publish(event, self.connection_id))
+            asyncio.create_task(self._incoming.publish(event))
 
         self._message_consumer.cancel()
         del self._message_consumer
@@ -76,7 +76,7 @@ class Connection:
         @logger.catch
         async def consumer() -> None:
             try:
-                async for event in self._outgoing.listen(self.connection_id):
+                async for event in self._outgoing.listen():
                     await self.send_event(event)
             except asyncio.CancelledError:
                 logger.debug("{conn} Stop message consumer.", conn=self)
@@ -99,8 +99,8 @@ class Client:
         self.nickname = nickname
         self.guest = guest
         self.version = version
-        self._incoming_channel = incoming_channel
-        self._outgoing_channel = outgoing_channel
+        self._incoming_channel = incoming_channel.topic(self.id)
+        self._outgoing_channel = outgoing_channel.topic(self.id)
 
     def __repr__(self) -> str:
         return f"<Client: {self.nickname}>"
@@ -113,8 +113,8 @@ class Client:
         return self.user_id
 
     async def listen(self) -> AsyncGenerator[EventMessage, None]:
-        async for event in self._incoming_channel.listen(self.id):
+        async for event in self._incoming_channel.listen():
             yield event
 
     async def send_event(self, event: EventMessage) -> None:
-        await self._outgoing_channel.publish(event, self.id)
+        await self._outgoing_channel.publish(event)
