@@ -1,6 +1,6 @@
 import asyncio
-import json as json_
 from asyncio import Task
+from enum import auto, unique
 from typing import Any, AsyncIterator, Callable, Collection, Optional
 from urllib.parse import urlparse
 
@@ -17,12 +17,15 @@ from battleship import get_client_version
 from battleship.client.auth import IDTokenAuth
 from battleship.client.credentials import Credentials, CredentialsProvider
 from battleship.client.subscriptions import PlayerSubscription, SessionSubscription
+from battleship.shared.compat import StrEnum
 from battleship.shared.compat import async_timeout as timeout
 from battleship.shared.events import (
-    ClientEvent,
-    EventMessage,
-    EventMessageData,
-    ServerEvent,
+    AnyMessage,
+    ClientGameEvent,
+    GameEvent,
+    Message,
+    Notification,
+    NotificationEvent,
 )
 from battleship.shared.models import (
     Action,
@@ -34,6 +37,13 @@ from battleship.shared.models import (
     Session,
     SessionID,
 )
+
+
+@unique
+class ConnectionEvent(StrEnum):
+    CONNECTION_LOST = auto()
+    CONNECTION_ESTABLISHED = auto()
+    CONNECTION_IMPOSSIBLE = auto()
 
 
 class ClientError(Exception):
@@ -287,7 +297,7 @@ class Client:
 
             subscription.emit(action, **kwargs)
 
-        self._emitter.add_listener(ServerEvent.SESSIONS_UPDATE, publish_update)
+        self._emitter.add_listener(Notification.SESSIONS_UPDATE, publish_update)
         await self._request("POST", url="/sessions/subscribe")
         return subscription
 
@@ -299,11 +309,11 @@ class Client:
 
         def publish_update(payload: dict[str, Any]) -> None:
             count = payload["count"]
-            event = payload["event"]
+            event = payload["type"]
 
             subscription.emit(event, count=count)
 
-        self._emitter.add_listener(ServerEvent.PLAYERS_UPDATE, publish_update)
+        self._emitter.add_listener(Notification.PLAYERS_UPDATE, publish_update)
         await self._request("POST", url="/players/subscribe")
         return subscription
 
@@ -329,14 +339,21 @@ class Client:
 
     async def spawn_ship(self, ship_id: str, position: Collection[str]) -> None:
         payload = dict(ship_id=ship_id, position=position)
-        await self._send(dict(kind=ClientEvent.SPAWN_SHIP, payload=payload))
+        message: Message[GameEvent] = Message(
+            event=GameEvent(type=ClientGameEvent.SPAWN_SHIP, payload=payload)
+        )
+        await self._send(message)
 
     async def fire(self, position: Collection[str]) -> None:
         payload = dict(position=position)
-        await self._send(dict(kind=ClientEvent.FIRE, payload=payload))
+        message: Message[GameEvent] = Message(
+            event=GameEvent(type=ClientGameEvent.FIRE, payload=payload)
+        )
+        await self._send(message)
 
     async def cancel_game(self) -> None:
-        await self._send(dict(kind=ClientEvent.CANCEL_GAME))
+        message: Message[GameEvent] = Message(event=GameEvent(type=ClientGameEvent.CANCEL_GAME))
+        await self._send(message)
 
     def _stop_credentials_worker(self) -> None:
         if self._credentials_worker:
@@ -359,26 +376,38 @@ class Client:
                     tm.reschedule(asyncio.get_running_loop().time() + self._ws_timeout)
         except TimeoutError:
             logger.warning("Cannot establish WebSocket connection.")
-            self._emitter.emit(ClientEvent.CONNECTION_IMPOSSIBLE)
+            self._emitter.emit(ConnectionEvent.CONNECTION_IMPOSSIBLE)
 
     async def _events_worker(self) -> None:
         logger.debug("Run events worker.")
 
         async for connection in self._connect_with_retry():
             logger.debug("Acquired new WebSocket connection.")
-            self._emitter.emit(ClientEvent.CONNECTION_ESTABLISHED)
+            self._emitter.emit(ConnectionEvent.CONNECTION_ESTABLISHED)
             self._ws = connection
             self._ws_connected.set()
 
             try:
-                async for message in connection:
-                    event = EventMessage.from_raw(message)
-                    logger.debug("Received WebSocket event: {event}.", event=event)
-                    self._emitter.emit(event.kind, event.payload)
+                async for ws_message in connection:
+                    message: Message[GameEvent] | Message[NotificationEvent] = Message.from_raw(
+                        ws_message
+                    )
+                    logger.debug("Received WebSocket message: {message}.", message=message)
+                    event = message.event
+
+                    match event:
+                        case NotificationEvent():
+                            self._emitter.emit(event.notification, event.payload)
+                            continue
+                        case GameEvent():
+                            self._emitter.emit(event.type, event.payload)
+                            continue
+                        case _:
+                            logger.warning("Unknown message.")
             except websockets.ConnectionClosed:
                 self._cleanup_ws_connection()
                 logger.warning("Server closed the WebSocket connection, acquire a new one.")
-                self._emitter.emit(ClientEvent.CONNECTION_LOST)
+                self._emitter.emit(ConnectionEvent.CONNECTION_LOST)
                 continue
 
     def _cleanup_ws_connection(self) -> None:
@@ -395,7 +424,7 @@ class Client:
         task.add_done_callback(cleanup)
         return task
 
-    async def _send(self, msg: EventMessageData) -> None:
+    async def _send(self, message: AnyMessage) -> None:
         if self._ws is None:
             raise RuntimeError("Cannot send a message, no connection.")
 
@@ -403,7 +432,7 @@ class Client:
             logger.warning("Trying to send a message, but connection is closed.")
             return
 
-        await self._ws.send(json_.dumps(msg))
+        await self._ws.send(message.to_json())
 
     async def _request(
         self,

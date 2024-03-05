@@ -119,7 +119,7 @@ class Grid(DataTable[Cell]):
         pass
 
     def on_leave(self) -> None:
-        # Leave event doesn't bubble, thus we need to send a custom event
+        # Leave type doesn't bubble, thus we need to send a custom type
         self.post_message(self.GridLeave())
 
 

@@ -1,12 +1,12 @@
 import abc
 import asyncio
 from collections import deque
-from typing import Any, AsyncIterator
+from typing import Any, AsyncIterator, Generic, TypeVar, cast
 
 import pymitter  # type: ignore
 from redis import asyncio as redis
 
-from battleship.shared.events import EventMessage
+from battleship.shared.events import AnyMessage, Message
 
 
 class Broker(abc.ABC):
@@ -84,19 +84,22 @@ class RedisBroker(Broker):
         await self._client.publish(topic, message)
 
 
-class Channel:
+T = TypeVar("T", bound=AnyMessage)
+
+
+class Channel(Generic[T]):
     def __init__(self, prefix: str, broker: Broker):
         self._prefix = prefix
         self._broker = broker
 
-    async def publish(self, message: EventMessage, topic: str | None = None) -> None:
+    async def publish(self, message: T, topic: str | None = None) -> None:
         await self._broker.publish(message.to_json(), self._build_topic(topic))
 
-    async def listen(self, topic: str | None = None) -> AsyncIterator[EventMessage]:
+    async def listen(self, topic: str | None = None) -> AsyncIterator[T]:
         async for message in self._broker.listen(self._build_topic(topic)):
-            yield EventMessage.from_raw(message)
+            yield cast(T, Message.from_raw(message))
 
-    def topic(self, topic: str) -> "Channel":
+    def topic(self, topic: str) -> "Channel[T]":
         topic = self._prefix + "." + topic
         return Channel(prefix=topic, broker=self._broker)
 

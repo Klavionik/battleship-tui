@@ -36,7 +36,7 @@ from rich.progress import (
 
 from battleship.client import Client
 from battleship.client.credentials import DummyCredentialsProvider
-from battleship.shared.events import ServerEvent
+from battleship.shared.events import ServerGameEvent
 
 RUN_TIMEOUT = 600  # 10 minutes.
 
@@ -322,7 +322,7 @@ async def load(
         first_shooter = payload["actor"]
         awaiting_move_event.set()
 
-    host.add_listener(ServerEvent.AWAITING_MOVE, discover_first_shooter, once=True)
+    host.add_listener(ServerGameEvent.AWAITING_MOVE, discover_first_shooter, once=True)
     await awaiting_move_event.wait()
 
     if first_shooter == host.nickname:

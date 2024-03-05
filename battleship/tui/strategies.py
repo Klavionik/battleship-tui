@@ -10,7 +10,7 @@ from battleship.client import Client
 from battleship.engine import Roster, RosterItem, ai, domain
 from battleship.shared import models
 from battleship.shared.compat import async_timeout as timeout
-from battleship.shared.events import ServerEvent
+from battleship.shared.events import ServerGameEvent
 
 __all__ = [
     "GameStrategy",
@@ -105,13 +105,13 @@ class MultiplayerStrategy(GameStrategy):
         self._winner = None
         self._client = client
 
-        client.add_listener(ServerEvent.SHIP_SPAWNED, self._on_ship_spawned)
-        client.add_listener(ServerEvent.FLEET_READY, self._on_fleet_ready)
-        client.add_listener(ServerEvent.AWAITING_MOVE, self._on_awaiting_move)
-        client.add_listener(ServerEvent.SALVO, self._on_salvo)
-        client.add_listener(ServerEvent.GAME_ENDED, self._on_game_ended)
-        client.add_listener(ServerEvent.GAME_CANCELLED, self._on_game_cancelled)
-        client.add_listener(ServerEvent.START_GAME, self._on_start_game)
+        client.add_listener(ServerGameEvent.SHIP_SPAWNED, self._on_ship_spawned)
+        client.add_listener(ServerGameEvent.FLEET_READY, self._on_fleet_ready)
+        client.add_listener(ServerGameEvent.AWAITING_MOVE, self._on_awaiting_move)
+        client.add_listener(ServerGameEvent.SALVO, self._on_salvo)
+        client.add_listener(ServerGameEvent.GAME_ENDED, self._on_game_ended)
+        client.add_listener(ServerGameEvent.GAME_CANCELLED, self._on_game_cancelled)
+        client.add_listener(ServerGameEvent.START_GAME, self._on_start_game)
 
         self._game_started = asyncio.Event()
 
@@ -160,13 +160,13 @@ class MultiplayerStrategy(GameStrategy):
             raise GameNeverStarted
 
     def _clear_handlers(self) -> None:
-        self._client.remove_listener(ServerEvent.SHIP_SPAWNED, self._on_ship_spawned)
-        self._client.remove_listener(ServerEvent.FLEET_READY, self._on_fleet_ready)
-        self._client.remove_listener(ServerEvent.AWAITING_MOVE, self._on_awaiting_move)
-        self._client.remove_listener(ServerEvent.SALVO, self._on_salvo)
-        self._client.remove_listener(ServerEvent.GAME_ENDED, self._on_game_ended)
-        self._client.remove_listener(ServerEvent.GAME_CANCELLED, self._on_game_cancelled)
-        self._client.remove_listener(ServerEvent.START_GAME, self._on_start_game)
+        self._client.remove_listener(ServerGameEvent.SHIP_SPAWNED, self._on_ship_spawned)
+        self._client.remove_listener(ServerGameEvent.FLEET_READY, self._on_fleet_ready)
+        self._client.remove_listener(ServerGameEvent.AWAITING_MOVE, self._on_awaiting_move)
+        self._client.remove_listener(ServerGameEvent.SALVO, self._on_salvo)
+        self._client.remove_listener(ServerGameEvent.GAME_ENDED, self._on_game_ended)
+        self._client.remove_listener(ServerGameEvent.GAME_CANCELLED, self._on_game_cancelled)
+        self._client.remove_listener(ServerGameEvent.START_GAME, self._on_start_game)
 
     def _on_ship_spawned(self, payload: dict[str, Any]) -> None:
         player = payload["player"]

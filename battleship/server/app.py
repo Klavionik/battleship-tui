@@ -34,7 +34,7 @@ from battleship.server.repositories import (
     StatisticsRepository,
 )
 from battleship.server.routes import router
-from battleship.server.websocket import IncomingChannel, OutgoingChannel
+from battleship.server.websocket import ClientInChannel, ClientOutChannel
 
 
 async def cleanup_clients(app: Application) -> None:
@@ -111,8 +111,8 @@ def create_app() -> Any:
     services.add_singleton(SessionRepository, RedisSessionRepository)
     services.add_singleton(ClientRepository, RedisClientRepository)
     services.add_singleton(StatisticsRepository, RedisStatisticsRepository)
-    services.add_singleton(IncomingChannel)
-    services.add_singleton(OutgoingChannel)
+    services.add_singleton(ClientInChannel)
+    services.add_singleton(ClientOutChannel)
     services.add_singleton(SessionSubscriptionHandler)
     services.add_singleton(GameHandler)
     services.add_singleton(PlayerSubscriptionHandler)

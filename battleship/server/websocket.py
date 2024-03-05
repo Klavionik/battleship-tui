@@ -1,19 +1,21 @@
 import asyncio
-from typing import AsyncGenerator
+from typing import AsyncGenerator, AsyncIterator
 
 from blacksheep import WebSocket, WebSocketDisconnectError
 from loguru import logger
 
 from battleship.server.pubsub import Broker, Channel
-from battleship.shared.events import EventMessage
+from battleship.shared.events import GameEvent, Message, NotificationEvent
+
+ClientMessage = Message[GameEvent] | Message[NotificationEvent]
 
 
-class IncomingChannel(Channel):
+class ClientInChannel(Channel[ClientMessage]):
     def __init__(self, broker: Broker):
         super().__init__("clients.in", broker)
 
 
-class OutgoingChannel(Channel):
+class ClientOutChannel(Channel[ClientMessage]):
     def __init__(self, broker: Broker):
         super().__init__("clients.out", broker)
 
@@ -52,8 +54,8 @@ class Connection:
         connection_id: str,
         nickname: str,
         websocket: WebSocket,
-        incoming_channel: IncomingChannel,
-        outgoing_channel: OutgoingChannel,
+        incoming_channel: ClientInChannel,
+        outgoing_channel: ClientOutChannel,
     ):
         self.connection_id = connection_id
         self.nickname = nickname
@@ -68,18 +70,19 @@ class Connection:
     def __del__(self) -> None:
         logger.trace("{conn} was garbage collected.", conn=self)
 
-    async def events(self) -> AsyncGenerator[EventMessage, None]:
+    async def messages(self) -> AsyncIterator[str]:
         async for message in self.websocket:
-            yield EventMessage.from_raw(message)
+            yield message
 
     async def listen(self) -> None:
-        async for event in self.events():
-            asyncio.create_task(self._incoming.publish(event))
+        async for ws_message in self.messages():
+            message: ClientMessage = Message.from_raw(ws_message)
+            asyncio.create_task(self._incoming.publish(message))
 
         self._message_consumer.cancel()
         del self._message_consumer
 
-    async def send_event(self, event: EventMessage) -> None:
+    async def send_event(self, event: ClientMessage) -> None:
         await self.websocket.send_text(event.to_json())
 
     def _run_consumer(self) -> asyncio.Task[None]:
@@ -102,8 +105,8 @@ class Client:
         nickname: str,
         guest: bool,
         version: str,
-        incoming_channel: IncomingChannel,
-        outgoing_channel: OutgoingChannel,
+        incoming_channel: ClientInChannel,
+        outgoing_channel: ClientOutChannel,
     ) -> None:
         self.user_id = user_id
         self.nickname = nickname
@@ -122,9 +125,9 @@ class Client:
     def id(self) -> str:
         return self.user_id
 
-    async def listen(self) -> AsyncGenerator[EventMessage, None]:
+    async def listen(self) -> AsyncIterator[ClientMessage]:
         async for event in self._incoming_channel.listen():
             yield event
 
-    async def send_event(self, event: EventMessage) -> None:
+    async def send_event(self, event: ClientMessage) -> None:
         await self._outgoing_channel.publish(event)

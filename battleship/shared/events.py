@@ -1,23 +1,22 @@
-from enum import auto
-from typing import Any, TypeAlias, TypedDict
+import uuid
+from enum import auto, unique
+from typing import Any, Generic, Literal, TypeAlias, TypeVar
+
+from pydantic import UUID4, Field
 
 from battleship.shared.compat import StrEnum
 from battleship.shared.models import BaseModel
 
 
-class ClientEvent(StrEnum):
-    SESSIONS_SUBSCRIBE = auto()
-    SESSIONS_UNSUBSCRIBE = auto()
+@unique
+class ClientGameEvent(StrEnum):
     SPAWN_SHIP = auto()
     FIRE = auto()
     CANCEL_GAME = auto()
-    CONNECTION_LOST = auto()
-    CONNECTION_ESTABLISHED = auto()
-    CONNECTION_IMPOSSIBLE = auto()
 
 
-class ServerEvent(StrEnum):
-    SESSIONS_UPDATE = auto()
+@unique
+class ServerGameEvent(StrEnum):
     START_GAME = auto()
     SHIP_SPAWNED = auto()
     FLEET_READY = auto()
@@ -25,21 +24,41 @@ class ServerEvent(StrEnum):
     SALVO = auto()
     GAME_ENDED = auto()
     GAME_CANCELLED = auto()
+
+
+@unique
+class Notification(StrEnum):
+    SESSIONS_UPDATE = auto()
     PLAYERS_UPDATE = auto()
 
 
-Event: TypeAlias = ServerEvent | ClientEvent
-EventPayload: TypeAlias = dict[str, Any]
+class GameEvent(BaseModel):
+    message_type: Literal["game_event"] = "game_event"
+    type: ServerGameEvent | ClientGameEvent
+    payload: dict[str, Any] = {}
 
 
-class EventMessageDataBase(TypedDict):
-    kind: Event
+class EntityEvent(BaseModel):
+    message_type: Literal["entity_event"] = "entity_event"
+    entity: Literal["session", "client", "statistics"]
+    entity_id: str
+    action: str
+    payload: dict[str, Any] = {}
 
 
-class EventMessageData(EventMessageDataBase, total=False):
-    payload: EventPayload
+class NotificationEvent(BaseModel):
+    message_type: Literal["notification_event"] = "notification_event"
+    notification: Notification
+    payload: dict[str, Any]
 
 
-class EventMessage(BaseModel):
-    kind: Event
-    payload: EventPayload = {}
+AnyEvent: TypeAlias = NotificationEvent | GameEvent | EntityEvent
+T = TypeVar("T", bound=AnyEvent)
+
+
+class Message(BaseModel, Generic[T]):
+    correlation_id: UUID4 = Field(default_factory=uuid.uuid4)
+    event: AnyEvent = Field(..., discriminator="message_type")
+
+
+AnyMessage: TypeAlias = Message[NotificationEvent] | Message[GameEvent] | Message[EntityEvent]

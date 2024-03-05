@@ -41,7 +41,7 @@ class TargetCaller:
         cells = []
 
         for direction in list(domain.Direction):
-            candidate = self.board.get_adjacent_cell(cell, direction)  # type: ignore[arg-type]
+            candidate = self.board.get_adjacent_cell(cell, direction)
             if candidate is None or candidate.is_shot or candidate in self.next_targets:
                 continue
 

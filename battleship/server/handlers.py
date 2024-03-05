@@ -11,8 +11,8 @@ from battleship.server.repositories import (
     SessionRepository,
     StatisticsRepository,
 )
-from battleship.server.websocket import Client, IncomingChannel, OutgoingChannel
-from battleship.shared.events import EventMessage, ServerEvent
+from battleship.server.websocket import Client, ClientInChannel, ClientOutChannel
+from battleship.shared.events import Message, Notification, NotificationEvent
 from battleship.shared.models import Action, GameSummary, Session
 
 
@@ -21,8 +21,8 @@ class GameHandler:
         self,
         sessions: SessionRepository,
         statistics: StatisticsRepository,
-        in_channel: IncomingChannel,
-        out_channel: OutgoingChannel,
+        in_channel: ClientInChannel,
+        out_channel: ClientOutChannel,
     ):
         self._sessions = sessions
         self._statistics = statistics
@@ -69,7 +69,7 @@ class GameHandler:
 
 
 class SessionSubscriptionHandler:
-    def __init__(self, out_channel: OutgoingChannel, session_repository: SessionRepository):
+    def __init__(self, out_channel: ClientOutChannel, session_repository: SessionRepository):
         self._out = out_channel
         self._sessions = session_repository
 
@@ -88,9 +88,11 @@ class SessionSubscriptionHandler:
                 payload["session_id"] = session_id
 
             await self._out.publish(
-                EventMessage(
-                    kind=ServerEvent.SESSIONS_UPDATE,
-                    payload=payload,
+                Message(
+                    event=NotificationEvent(
+                        notification=Notification.SESSIONS_UPDATE,
+                        payload=payload,
+                    )
                 ),
                 client_id,
             )
@@ -109,7 +111,7 @@ class SessionSubscriptionHandler:
 class PlayerSubscriptionHandler:
     def __init__(
         self,
-        out_channel: OutgoingChannel,
+        out_channel: ClientOutChannel,
         client_repository: ClientRepository,
         session_repository: SessionRepository,
     ):
@@ -129,9 +131,11 @@ class PlayerSubscriptionHandler:
             payload = dict(event="online_changed", count=await self._clients.count())
 
             await self._out.publish(
-                EventMessage(
-                    kind=ServerEvent.PLAYERS_UPDATE,
-                    payload=payload,
+                Message(
+                    event=NotificationEvent(
+                        notification=Notification.PLAYERS_UPDATE,
+                        payload=payload,
+                    )
                 ),
                 client_id,
             )
@@ -149,9 +153,11 @@ class PlayerSubscriptionHandler:
             payload = dict(event="ingame_changed", count=players_ingame)
 
             await self._out.publish(
-                EventMessage(
-                    kind=ServerEvent.PLAYERS_UPDATE,
-                    payload=payload,
+                Message(
+                    event=NotificationEvent(
+                        notification=Notification.PLAYERS_UPDATE,
+                        payload=payload,
+                    )
                 ),
                 client_id,
             )

@@ -4,7 +4,7 @@ import asyncio
 import redis.asyncio as redis
 
 from battleship.server.repositories.observable import Observable
-from battleship.server.websocket import Client, IncomingChannel, OutgoingChannel
+from battleship.server.websocket import Client, ClientInChannel, ClientOutChannel
 from battleship.shared.models import Action
 from battleship.shared.models import Client as ClientModel
 
@@ -14,7 +14,7 @@ class ClientNotFound(Exception):
 
 
 class ClientRepository(Observable, abc.ABC):
-    def __init__(self, incoming_channel: IncomingChannel, outgoing_channel: OutgoingChannel):
+    def __init__(self, incoming_channel: ClientInChannel, outgoing_channel: ClientOutChannel):
         super().__init__()
         self._in_channel = incoming_channel
         self._out_channel = outgoing_channel
@@ -46,7 +46,7 @@ class ClientRepository(Observable, abc.ABC):
 
 class InMemoryClientRepository(ClientRepository):
     def __init__(
-        self, incoming_channel: IncomingChannel, outgoing_channel: OutgoingChannel
+        self, incoming_channel: ClientInChannel, outgoing_channel: ClientOutChannel
     ) -> None:
         super().__init__(incoming_channel, outgoing_channel)
         self._clients: dict[str, Client] = {}
@@ -94,8 +94,8 @@ class RedisClientRepository(ClientRepository):
     def __init__(
         self,
         client: redis.Redis,
-        incoming_channel: IncomingChannel,
-        outgoing_channel: OutgoingChannel,
+        incoming_channel: ClientInChannel,
+        outgoing_channel: ClientOutChannel,
     ) -> None:
         super().__init__(incoming_channel, outgoing_channel)
         self._client = client

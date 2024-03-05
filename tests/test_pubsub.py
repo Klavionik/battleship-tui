@@ -3,7 +3,7 @@ import asyncio
 import pytest
 
 from battleship.server.pubsub import Broker, Channel, InMemoryBroker
-from battleship.shared.events import EventMessage, ServerEvent
+from battleship.shared.events import GameEvent, Message, ServerGameEvent
 
 
 class FakeConsumer:
@@ -89,7 +89,7 @@ async def test_channel(inmemory_broker):
     consumer = FakeConsumer(None, channel)
     await consumer.start()
 
-    msg = EventMessage(kind=ServerEvent.START_GAME)
+    msg = Message(event=GameEvent(type=ServerGameEvent.START_GAME))
     await channel.publish(msg)
 
     await consumer.stop()
@@ -103,7 +103,7 @@ async def test_channel_two_consumers(inmemory_broker):
     await consumer.start()
     await consumer_1.start()
 
-    msg = EventMessage(kind=ServerEvent.START_GAME)
+    msg = Message(event=GameEvent(type=ServerGameEvent.START_GAME))
     await channel.publish(msg)
 
     await consumer.stop()
@@ -122,7 +122,7 @@ async def test_channel_publish_to_subtopic(inmemory_broker):
     await consumer.start()
     await consumer_wildcard.start()
 
-    msg = EventMessage(kind=ServerEvent.START_GAME)
+    msg = Message(event=GameEvent(type=ServerGameEvent.START_GAME))
     await channel.publish(msg, topic="update")
 
     await consumer.stop()
@@ -141,7 +141,7 @@ async def test_channel_subtopic(inmemory_broker):
     await consumer.start()
     await consumer_subtopic.start()
 
-    msg = EventMessage(kind=ServerEvent.START_GAME)
+    msg = Message(event=GameEvent(type=ServerGameEvent.START_GAME))
     await subtopic.publish(msg)
 
     await consumer.stop()

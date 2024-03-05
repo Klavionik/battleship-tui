@@ -31,7 +31,7 @@ from battleship.server.repositories import (
     StatisticsRepository,
 )
 from battleship.server.repositories.statistics import StatisticsNotFound
-from battleship.server.websocket import Connection, IncomingChannel, OutgoingChannel
+from battleship.server.websocket import ClientInChannel, ClientOutChannel, Connection
 from battleship.shared.models import (
     IDToken,
     LoginCredentials,
@@ -52,8 +52,8 @@ async def ws(
     websocket: WebSocket,
     identity: Identity,
     client_repository: ClientRepository,
-    in_channel: IncomingChannel,
-    out_channel: OutgoingChannel,
+    in_channel: ClientInChannel,
+    out_channel: ClientOutChannel,
     session_subscription_handler: SessionSubscriptionHandler,
     player_subscription_handler: PlayerSubscriptionHandler,
     session_repository: SessionRepository,

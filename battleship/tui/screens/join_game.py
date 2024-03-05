@@ -14,10 +14,10 @@ from textual.widgets import Label, ListItem, ListView, Static
 from battleship.client import (
     Client,
     ClientError,
+    ConnectionEvent,
     ConnectionImpossible,
     SessionSubscription,
 )
-from battleship.shared.events import ClientEvent
 from battleship.shared.models import Session, SessionID
 from battleship.tui.format import format_session
 from battleship.tui.widgets import AppFooter
@@ -71,7 +71,7 @@ class JoinGame(Screen[None]):
     async def subscribe(self) -> None:
         await self.subscribe_to_updates()
         await self.fetch_sessions()
-        self._client.add_listener(ClientEvent.CONNECTION_LOST, self.resubscribe)
+        self._client.add_listener(ConnectionEvent.CONNECTION_LOST, self.resubscribe)
 
     @on(Unmount)
     async def unsubscribe(self) -> None:
@@ -106,7 +106,7 @@ class JoinGame(Screen[None]):
             logger.warning("Cannot unsubscribe from sessions. {exc}", exc=exc)
 
         self._subscription = None
-        self._client.remove_listener(ClientEvent.CONNECTION_LOST, self.resubscribe)
+        self._client.remove_listener(ConnectionEvent.CONNECTION_LOST, self.resubscribe)
 
     @on(ListView.Selected)
     async def join_from_event(self, event: ListView.Selected) -> None:

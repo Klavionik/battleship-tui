@@ -12,10 +12,10 @@ from textual.widgets import Label, ListItem, ListView, Markdown
 from battleship.client import (
     Client,
     ClientError,
+    ConnectionEvent,
     ConnectionImpossible,
     PlayerSubscription,
 )
-from battleship.shared.events import ClientEvent
 from battleship.tui import resources, screens
 from battleship.tui.widgets import AppFooter, LobbyHeader
 
@@ -128,7 +128,7 @@ class Lobby(Screen[None]):
             logger.warning("Cannot unsubscribe from online count. {exc}", exc=exc)
 
         self._player_subscription = None
-        self._client.remove_listener(ClientEvent.CONNECTION_LOST, self.resubscribe)
+        self._client.remove_listener(ConnectionEvent.CONNECTION_LOST, self.resubscribe)
 
     async def resubscribe(self) -> None:
         try:
@@ -141,4 +141,4 @@ class Lobby(Screen[None]):
     async def _setup_player_count_updates(self) -> None:
         await self.subscribe_to_player_count()
         await self.fetch_player_count()
-        self._client.add_listener(ClientEvent.CONNECTION_LOST, self.resubscribe)
+        self._client.add_listener(ConnectionEvent.CONNECTION_LOST, self.resubscribe)

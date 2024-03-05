@@ -13,8 +13,7 @@ from textual.events import Mount, Unmount
 from textual.screen import Screen
 
 from battleship import data_home, get_client_version
-from battleship.client import Client, ClientError, ConnectionImpossible
-from battleship.shared.events import ClientEvent
+from battleship.client import Client, ClientError, ConnectionEvent, ConnectionImpossible
 from battleship.tui import screens, strategies
 from battleship.tui.widgets import modals
 from battleship.tui.widgets.modals import WaitingModal
@@ -55,7 +54,7 @@ class BattleshipApp(App[None]):
         self._client = client
         self._enable_crash_report = enable_crash_report
 
-        self._client.add_listener(ClientEvent.CONNECTION_LOST, self._handle_connection_lost)
+        self._client.add_listener(ConnectionEvent.CONNECTION_LOST, self._handle_connection_lost)
 
     @classmethod
     def singleplayer(cls, roster: str, firing_order: str, salvo_mode: bool) -> "BattleshipApp":
