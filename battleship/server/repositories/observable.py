@@ -1,38 +1,35 @@
-import asyncio
-from typing import Callable, Coroutine, TypeAlias
+from typing import Any
 
 from loguru import logger
 
+from battleship.server.repositories import EntityChannel
+from battleship.shared.events import Entity, EntityEvent, Message
 from battleship.shared.models import Action
-
-EntityID: TypeAlias = str
-Listener: TypeAlias = Callable[[EntityID, Action], Coroutine[None, None, None]]
 
 
 class Observable:
-    def __init__(self) -> None:
-        self._listeners: dict[str, Listener] = {}
-        self._notification_task: asyncio.Task[None] | None = None
+    entity: Entity
 
-    def subscribe(self, callback_id: str, callback: Listener) -> None:
-        self._listeners[callback_id] = callback
+    def __init__(self, entity_channel: EntityChannel) -> None:
+        self._entity_channel = entity_channel.topic(self.entity)
 
-    def unsubscribe(self, callback_id: str) -> None:
-        self._listeners.pop(callback_id, None)
+    async def notify(
+        self, entity_id: str, action: Action, payload: dict[str, Any] | None = None
+    ) -> None:
+        payload = payload or {}
 
-    def _notify_listeners(self, entity_id: EntityID, action: Action) -> None:
-        @logger.catch
-        async def notify_task() -> None:
-            logger.debug(f"Notify {len(self._listeners)} listeners.")
+        logger.debug(
+            "{repo} notifies about {action}, entity {entity}:{entity_id}",
+            repo=self.__class__.__name__,
+            action=action,
+            entity=self.entity,
+            entity_id=entity_id,
+        )
 
-            for subscriber in list(self._listeners.values()):
-                await subscriber(entity_id, action)
-
-        @logger.catch
-        def done_callback(_: asyncio.Future[None]) -> None:
-            self._notification_task = None
-            logger.trace("Notification task is cleaned up.")
-
-        task = asyncio.create_task(notify_task())
-        task.add_done_callback(done_callback)
-        self._notification_task = task
+        await self._entity_channel.publish(
+            Message(
+                event=EntityEvent(
+                    action=action, entity=self.entity, payload=payload, entity_id=entity_id
+                )
+            )
+        )

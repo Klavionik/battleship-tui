@@ -1,6 +1,6 @@
 import uuid
 from enum import auto, unique
-from typing import Any, Generic, Literal, TypeAlias, TypeVar
+from typing import Any, Generic, Literal, TypeAlias, TypeVar, cast
 
 from pydantic import UUID4, Field
 
@@ -38,9 +38,12 @@ class GameEvent(BaseModel):
     payload: dict[str, Any] = {}
 
 
+Entity = Literal["session", "client", "statistics"]
+
+
 class EntityEvent(BaseModel):
     message_type: Literal["entity_event"] = "entity_event"
-    entity: Literal["session", "client", "statistics"]
+    entity: Entity
     entity_id: str
     action: str
     payload: dict[str, Any] = {}
@@ -59,6 +62,9 @@ T = TypeVar("T", bound=AnyEvent)
 class Message(BaseModel, Generic[T]):
     correlation_id: UUID4 = Field(default_factory=uuid.uuid4)
     event: AnyEvent = Field(..., discriminator="message_type")
+
+    def unwrap(self) -> T:
+        return cast(T, self.event)
 
 
 AnyMessage: TypeAlias = Message[NotificationEvent] | Message[GameEvent] | Message[EntityEvent]

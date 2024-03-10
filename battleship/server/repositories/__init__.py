@@ -1,7 +1,12 @@
+from .channel import EntityChannel
 from .clients import ClientRepository, RedisClientRepository
-from .observable import Listener, Observable
 from .sessions import RedisSessionRepository, SessionRepository
 from .statistics import RedisStatisticsRepository, StatisticsRepository
+from .subscriptions import (
+    RedisSubscriptionsRepository,
+    Subscription,
+    SubscriptionRepository,
+)
 
 __all__ = [
     "ClientRepository",
@@ -10,6 +15,8 @@ __all__ = [
     "RedisStatisticsRepository",
     "SessionRepository",
     "RedisSessionRepository",
-    "Observable",
-    "Listener",
+    "EntityChannel",
+    "SubscriptionRepository",
+    "Subscription",
+    "RedisSubscriptionsRepository",
 ]

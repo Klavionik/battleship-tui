@@ -20,17 +20,17 @@ from loguru import logger
 from battleship.engine import roster
 from battleship.server import context, metrics
 from battleship.server.auth import AuthManager, InvalidSignup, WrongCredentials
-from battleship.server.handlers import (
-    GameHandler,
-    PlayerSubscriptionHandler,
-    SessionSubscriptionHandler,
-)
+from battleship.server.handlers import GameHandler
 from battleship.server.repositories import (
     ClientRepository,
     SessionRepository,
     StatisticsRepository,
 )
 from battleship.server.repositories.statistics import StatisticsNotFound
+from battleship.server.repositories.subscriptions import (
+    Subscription,
+    SubscriptionRepository,
+)
 from battleship.server.websocket import ClientInChannel, ClientOutChannel, Connection
 from battleship.shared.models import (
     IDToken,
@@ -54,8 +54,7 @@ async def ws(
     client_repository: ClientRepository,
     in_channel: ClientInChannel,
     out_channel: ClientOutChannel,
-    session_subscription_handler: SessionSubscriptionHandler,
-    player_subscription_handler: PlayerSubscriptionHandler,
+    subscription_repository: SubscriptionRepository,
     session_repository: SessionRepository,
     game_handler: GameHandler,
 ) -> None:
@@ -71,8 +70,8 @@ async def ws(
     await connection.listen()
     metrics.websocket_connections.dec({})
     logger.debug(f"{connection} disconnected.")
-    session_subscription_handler.unsubscribe(client.id)
-    player_subscription_handler.unsubscribe(client.id)
+    await subscription_repository.delete_subscriber(Subscription.SESSIONS_UPDATE, client.id)
+    await subscription_repository.delete_subscriber(Subscription.PLAYERS_UPDATE, client.id)
 
     current_session = await session_repository.get_for_client(client.id)
 
@@ -105,20 +104,20 @@ async def create_session(
 async def subscribe_to_session_updates(
     identity: Identity,
     client_repository: ClientRepository,
-    subscription_handler: SessionSubscriptionHandler,
+    subscription_repository: SubscriptionRepository,
 ) -> None:
     client = await client_repository.get(identity.claims["sub"])
-    subscription_handler.subscribe(client.id)
+    await subscription_repository.add_subscriber(Subscription.SESSIONS_UPDATE, client.id)
 
 
 @router.post("/sessions/unsubscribe")
 async def unsubscribe_from_session_updates(
     identity: Identity,
     client_repository: ClientRepository,
-    subscription_handler: SessionSubscriptionHandler,
+    subscription_repository: SubscriptionRepository,
 ) -> None:
     client = await client_repository.get(identity.claims["sub"])
-    subscription_handler.unsubscribe(client.id)
+    await subscription_repository.delete_subscriber(Subscription.SESSIONS_UPDATE, client.id)
 
 
 @router.delete("/sessions/{session_id}")
@@ -162,20 +161,20 @@ async def get_players_online(
 async def subscribe_to_player_count_updates(
     identity: Identity,
     client_repository: ClientRepository,
-    player_subscription_handler: PlayerSubscriptionHandler,
+    subscription_repository: SubscriptionRepository,
 ) -> None:
     client = await client_repository.get(identity.claims["sub"])
-    player_subscription_handler.subscribe(client.id)
+    await subscription_repository.add_subscriber(Subscription.PLAYERS_UPDATE, client.id)
 
 
 @router.post("/players/unsubscribe")
 async def unsubscribe_from_player_count_updates(
     identity: Identity,
     client_repository: ClientRepository,
-    player_subscription_handler: PlayerSubscriptionHandler,
+    subscription_repository: SubscriptionRepository,
 ) -> None:
     client = await client_repository.get(identity.claims["sub"])
-    player_subscription_handler.unsubscribe(client.id)
+    await subscription_repository.delete_subscriber(Subscription.PLAYERS_UPDATE, client.id)
 
 
 @router.get("/rosters/{name}")

@@ -17,7 +17,8 @@ from battleship.server.auth import Auth0AuthManager, AuthManager
 from battleship.server.config import Config, get_config
 from battleship.server.handlers import (
     GameHandler,
-    PlayerSubscriptionHandler,
+    PlayersIngameSubscriptionHandler,
+    PlayersOnlineSubscriptionHandler,
     SessionSubscriptionHandler,
 )
 from battleship.server.metrics import (
@@ -27,11 +28,14 @@ from battleship.server.metrics import (
 from battleship.server.pubsub import Broker, RedisBroker
 from battleship.server.repositories import (
     ClientRepository,
+    EntityChannel,
     RedisClientRepository,
     RedisSessionRepository,
     RedisStatisticsRepository,
+    RedisSubscriptionsRepository,
     SessionRepository,
     StatisticsRepository,
+    SubscriptionRepository,
 )
 from battleship.server.routes import router
 from battleship.server.websocket import ClientInChannel, ClientOutChannel
@@ -113,9 +117,12 @@ def create_app() -> Any:
     services.add_singleton(StatisticsRepository, RedisStatisticsRepository)
     services.add_singleton(ClientInChannel)
     services.add_singleton(ClientOutChannel)
-    services.add_singleton(SessionSubscriptionHandler)
+    services.add_singleton(EntityChannel)
     services.add_singleton(GameHandler)
-    services.add_singleton(PlayerSubscriptionHandler)
+    services.add_singleton(SubscriptionRepository, RedisSubscriptionsRepository)
+    services.add_singleton(SessionSubscriptionHandler)
+    services.add_singleton(PlayersOnlineSubscriptionHandler)
+    services.add_singleton(PlayersIngameSubscriptionHandler)
 
     app = Application(router=router, services=services)
 

@@ -3,6 +3,7 @@ from typing import Any
 
 import redis.asyncio as redis
 
+from battleship.server.repositories import EntityChannel
 from battleship.server.repositories.observable import Observable
 from battleship.shared.models import (
     Action,
@@ -18,8 +19,10 @@ class SessionNotFound(Exception):
 
 
 class SessionRepository(Observable, abc.ABC):
-    def __init__(self) -> None:
-        super().__init__()
+    entity = "session"
+
+    def __init__(self, entity_channel: EntityChannel) -> None:
+        super().__init__(entity_channel)
 
     @abc.abstractmethod
     async def add(self, host_id: str, data: SessionCreate) -> Session:
@@ -50,14 +53,14 @@ class SessionRepository(Observable, abc.ABC):
 
 
 class InMemorySessionRepository(SessionRepository):
-    def __init__(self) -> None:
-        super().__init__()
+    def __init__(self, entity_channel: EntityChannel) -> None:
+        super().__init__(entity_channel)
         self._sessions: dict[SessionID, Session] = {}
 
     async def add(self, host_id: str, data: SessionCreate) -> Session:
         session = Session(id=make_session_id(), host_id=host_id, **data.to_dict())
         self._sessions[session.id] = session
-        self._notify_listeners(session.id, Action.ADD)
+        await self.notify(session.id, Action.ADD, payload=session.to_dict())
         return session
 
     async def get(self, session_id: str) -> Session:
@@ -68,13 +71,13 @@ class InMemorySessionRepository(SessionRepository):
 
     async def delete(self, session_id: str) -> bool:
         session = self._sessions.pop(session_id, None)
-        self._notify_listeners(session_id, Action.REMOVE)
+        await self.notify(session_id, Action.REMOVE)
         return session is not None
 
     async def update(self, session_id: str, **kwargs: Any) -> Session:
         session = await self.get(session_id)
         updated_session = Session.from_dict({**session.to_dict(), **kwargs})
-        self._notify_listeners(session_id, Action.START)
+        await self.notify(session_id, Action.START)
         return updated_session
 
 
@@ -83,8 +86,8 @@ class RedisSessionRepository(SessionRepository):
     namespace = key + ":"
     pattern = namespace + "*"
 
-    def __init__(self, client: redis.Redis) -> None:
-        super().__init__()
+    def __init__(self, client: redis.Redis, entity_channel: EntityChannel) -> None:
+        super().__init__(entity_channel)
         self._client = client
 
     def get_key(self, session_id: str) -> str:
@@ -99,7 +102,7 @@ class RedisSessionRepository(SessionRepository):
     async def add(self, host_id: str, data: SessionCreate) -> Session:
         session = Session(id=make_session_id(), host_id=host_id, **data.to_dict())
         await self._save(session)
-        self._notify_listeners(session.id, Action.ADD)
+        await self.notify(session.id, Action.ADD, payload=session.to_dict())
         return session
 
     async def get(self, session_id: str) -> Session:
@@ -117,14 +120,14 @@ class RedisSessionRepository(SessionRepository):
 
     async def delete(self, session_id: str) -> bool:
         deleted = await self._client.delete(self.get_key(session_id))
-        self._notify_listeners(session_id, Action.REMOVE)
+        await self.notify(session_id, Action.REMOVE)
         return bool(deleted)
 
     async def update(self, session_id: str, **kwargs: Any) -> Session:
         session = await self.get(session_id)
         updated_session = Session.from_dict({**session.to_dict(), **kwargs})
         await self._save(updated_session)
-        self._notify_listeners(session_id, Action.START)
+        await self.notify(session_id, Action.START)
         return updated_session
 
     async def _save(self, session: Session) -> None:
