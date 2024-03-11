@@ -5,6 +5,7 @@ from loguru import logger
 
 from battleship.server import metrics
 from battleship.server.game import Game
+from battleship.server.pubsub import Broker, Channel
 from battleship.server.repositories import (
     ClientRepository,
     EntityChannel,
@@ -15,29 +16,41 @@ from battleship.server.repositories.subscriptions import (
     Subscription,
     SubscriptionRepository,
 )
-from battleship.server.websocket import Client, ClientInChannel, ClientOutChannel
+from battleship.server.websocket import ClientInChannel, ClientMessage, ClientOutChannel
 from battleship.shared.events import (
     EntityEvent,
+    GameEvent,
     Message,
     Notification,
     NotificationEvent,
+    ServerGameEvent,
 )
-from battleship.shared.models import Action, GameSummary, Session
+from battleship.shared.models import Action, GameSummary
+
+
+class GameChannel(Channel[Message[GameEvent]]):
+    def __init__(self, broker: Broker):
+        super().__init__("games", broker)
 
 
 class GameHandler:
     def __init__(
         self,
         sessions: SessionRepository,
+        clients: ClientRepository,
         statistics: StatisticsRepository,
         in_channel: ClientInChannel,
         out_channel: ClientOutChannel,
+        game_channel: GameChannel,
     ):
+        self._clients = clients
         self._sessions = sessions
         self._statistics = statistics
-        self._in = in_channel
-        self._out = out_channel
+        self._in_channel = in_channel
+        self._out_channel = out_channel
+        self._game_channel = game_channel
         self._games: dict[str, asyncio.Task[None]] = {}
+        self._consumer = self._run_consumer()
 
     @logger.catch
     async def run_game(self, game: Game) -> None:
@@ -60,9 +73,13 @@ class GameHandler:
             if not player.guest:
                 await self._statistics.save(player.user_id, summary)
 
-    def start_new_game(self, host: Client, guest: Client, session: Session) -> None:
+    async def start_new_game(self, session_id: str) -> None:
+        session = await self._sessions.get(session_id)
+        host = await self._clients.get(session.host_id)
+        guest = await self._clients.get(session.guest_id)
+
         logger.debug(f"Start new game {host.nickname} vs. {guest.nickname}.")
-        game = Game(host, guest, session)
+        game = Game(host, guest, session, self._in_channel, self._out_channel)
         task = asyncio.create_task(self.run_game(game))
 
         def cleanup(_: asyncio.Task[None]) -> None:
@@ -73,8 +90,28 @@ class GameHandler:
         task.add_done_callback(cleanup)
         self._games[session.id] = task
 
-    def cancel_game(self, session_id: str) -> None:
-        self._games[session_id].cancel()
+    def _run_consumer(self) -> asyncio.Task[None]:
+        @logger.catch
+        async def consumer() -> None:
+            try:
+                async for msg in self._game_channel.listen():
+                    await self.handle(msg)
+            except asyncio.CancelledError:
+                logger.debug("{conn} Stop message consumer.", conn=self)
+                raise
+
+        return asyncio.create_task(consumer())
+
+    async def handle(self, msg: ClientMessage) -> None:
+        event = msg.event
+
+        match event:
+            case GameEvent(type=ServerGameEvent.START_GAME):
+                await self.start_new_game(event.payload["session_id"])
+            case GameEvent(type=ServerGameEvent.CANCEL_GAME):
+                self._games[event.payload["session_id"]].cancel()
+            case _:
+                logger.warning(f"Unknown message {event}.")
 
 
 class SessionSubscriptionHandler:

@@ -22,6 +22,7 @@ class ServerGameEvent(StrEnum):
     FLEET_READY = auto()
     AWAITING_MOVE = auto()
     SALVO = auto()
+    CANCEL_GAME = auto()
     GAME_ENDED = auto()
     GAME_CANCELLED = auto()
 

@@ -16,6 +16,7 @@ from battleship.server import context
 from battleship.server.auth import Auth0AuthManager, AuthManager
 from battleship.server.config import Config, get_config
 from battleship.server.handlers import (
+    GameChannel,
     GameHandler,
     PlayersIngameSubscriptionHandler,
     PlayersOnlineSubscriptionHandler,
@@ -123,6 +124,7 @@ def create_app() -> Any:
     services.add_singleton(SessionSubscriptionHandler)
     services.add_singleton(PlayersOnlineSubscriptionHandler)
     services.add_singleton(PlayersIngameSubscriptionHandler)
+    services.add_singleton(GameChannel)
 
     app = Application(router=router, services=services)
 

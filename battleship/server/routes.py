@@ -20,7 +20,7 @@ from loguru import logger
 from battleship.engine import roster
 from battleship.server import context, metrics
 from battleship.server.auth import AuthManager, InvalidSignup, WrongCredentials
-from battleship.server.handlers import GameHandler
+from battleship.server.handlers import GameChannel
 from battleship.server.repositories import (
     ClientRepository,
     SessionRepository,
@@ -32,6 +32,7 @@ from battleship.server.repositories.subscriptions import (
     SubscriptionRepository,
 )
 from battleship.server.websocket import ClientInChannel, ClientOutChannel, Connection
+from battleship.shared.events import GameEvent, Message, ServerGameEvent
 from battleship.shared.models import (
     IDToken,
     LoginCredentials,
@@ -56,7 +57,7 @@ async def ws(
     out_channel: ClientOutChannel,
     subscription_repository: SubscriptionRepository,
     session_repository: SessionRepository,
-    game_handler: GameHandler,
+    game_channel: GameChannel,
 ) -> None:
     user_id = identity.claims["sub"]
     nickname = identity.claims["nickname"]
@@ -77,7 +78,14 @@ async def ws(
 
     if current_session:
         if current_session.started:
-            game_handler.cancel_game(current_session.id)
+            await game_channel.publish(
+                Message(
+                    event=GameEvent(
+                        type=ServerGameEvent.CANCEL_GAME,
+                        payload=dict(session_id=current_session.id),
+                    )
+                )
+            )
 
         await session_repository.delete(current_session.id)
 
@@ -134,7 +142,7 @@ async def join_session(
     session_id: str,
     session_repository: SessionRepository,
     client_repository: ClientRepository,
-    game_handler: GameHandler,
+    game_channel: GameChannel,
 ) -> None:
     guest_id = identity.claims["sub"]
     session = await session_repository.get(session_id)
@@ -143,7 +151,11 @@ async def join_session(
     )
     host, guest = players
     await session_repository.update(session.id, guest_id=guest.id, started=True)
-    game_handler.start_new_game(host, guest, session)
+    await game_channel.publish(
+        Message(
+            event=GameEvent(type=ServerGameEvent.START_GAME, payload=dict(session_id=session_id))
+        )
+    )
 
 
 @router.get("/players/online")

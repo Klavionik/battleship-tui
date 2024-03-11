@@ -7,7 +7,7 @@ from loguru import logger
 from battleship.engine import create_game, domain
 from battleship.engine.roster import get_roster
 from battleship.server import metrics
-from battleship.server.websocket import Client
+from battleship.server.websocket import Client, ClientInChannel, ClientOutChannel
 from battleship.shared.events import (
     AnyMessage,
     ClientGameEvent,
@@ -24,6 +24,8 @@ class Game:
         host: Client,
         guest: Client,
         session: Session,
+        client_in_channel: ClientInChannel,
+        client_out_channel: ClientOutChannel,
     ) -> None:
         self.session_id = session.id
         self.host = host
@@ -36,6 +38,8 @@ class Game:
             firing_order=session.firing_order,
             salvo_mode=session.salvo_mode,
         )
+        self.client_in_channel = client_in_channel
+        self.client_out_channel = client_out_channel
         self.summary = GameSummary()
         self.start: float = 0
         self.clients: dict[str, Client] = {host.nickname: host, guest.nickname: guest}
@@ -70,7 +74,7 @@ class Game:
                 event = await self._event_queue.get()
 
                 for client in self.clients.values():
-                    await client.send_event(event)
+                    await self.client_out_channel.publish(event, client.id)
 
                 self._event_queue.task_done()
 
@@ -79,7 +83,7 @@ class Game:
     def _run_consumer(self, client: Client) -> asyncio.Task[None]:
         @logger.catch
         async def consumer() -> None:
-            async for event in client.listen():
+            async for event in self.client_in_channel.listen(client.id):
                 self.handle(client.nickname, event)
 
         return asyncio.create_task(consumer())
@@ -139,7 +143,8 @@ class Game:
         event = Message[GameEvent](
             event=GameEvent(type=ServerGameEvent.SHIP_SPAWNED, payload=payload)
         )
-        asyncio.create_task(self.clients[player.name].send_event(event))
+        client = self.clients[player.name]
+        asyncio.create_task(self.client_out_channel.publish(event, client.id))
 
     def send_game_cancelled(
         self,
@@ -155,7 +160,7 @@ class Game:
             self.broadcast(msg)
         else:
             client = self.guest if self.host.nickname == by_player else self.host
-            asyncio.create_task(client.send_event(msg))
+            asyncio.create_task(self.client_out_channel.publish(msg, client.id))
 
     def announce_game_start(self) -> None:
         game_options = dict(
@@ -165,23 +170,25 @@ class Game:
         )
 
         asyncio.create_task(
-            self.host.send_event(
+            self.client_out_channel.publish(
                 Message(
                     event=GameEvent(
                         type=ServerGameEvent.START_GAME,
                         payload=dict(enemy=self.guest.nickname, **game_options),
                     )
-                )
+                ),
+                self.host.id,
             )
         )
         asyncio.create_task(
-            self.guest.send_event(
+            self.client_out_channel.publish(
                 Message(
                     event=GameEvent(
                         type=ServerGameEvent.START_GAME,
                         payload=dict(enemy=self.host.nickname, **game_options),
                     )
-                )
+                ),
+                self.guest.id,
             )
         )
 
