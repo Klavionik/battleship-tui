@@ -24,8 +24,8 @@ from battleship.shared.events import (
     ClientGameEvent,
     GameEvent,
     Message,
-    Notification,
     NotificationEvent,
+    Subscription,
 )
 from battleship.shared.models import (
     Action,
@@ -297,7 +297,7 @@ class Client:
 
             subscription.emit(action, **kwargs)
 
-        self._emitter.add_listener(Notification.SESSIONS_UPDATE, publish_update)
+        self._emitter.add_listener(Subscription.SESSIONS_UPDATE, publish_update)
         await self._request("POST", url="/sessions/subscribe")
         return subscription
 
@@ -313,7 +313,7 @@ class Client:
 
             subscription.emit(event, count=count)
 
-        self._emitter.add_listener(Notification.PLAYERS_UPDATE, publish_update)
+        self._emitter.add_listener(Subscription.PLAYERS_UPDATE, publish_update)
         await self._request("POST", url="/players/subscribe")
         return subscription
 
@@ -393,11 +393,11 @@ class Client:
                         ws_message
                     )
                     logger.debug("Received WebSocket message: {message}.", message=message)
-                    event = message.event
+                    event: GameEvent | NotificationEvent = message.unwrap()
 
                     match event:
                         case NotificationEvent():
-                            self._emitter.emit(event.notification, event.payload)
+                            self._emitter.emit(str(event.subscription), event.payload)
                             continue
                         case GameEvent():
                             self._emitter.emit(event.type, event.payload)
@@ -416,7 +416,16 @@ class Client:
         self._ws_connected.clear()
 
     def _run_events_worker(self) -> Task[None]:
-        def cleanup(_: Task[None]) -> None:
+        def cleanup(t: Task[None]) -> None:
+            try:
+                exc = t.exception()
+                if exc:
+                    raise exc
+            except asyncio.InvalidStateError:
+                pass
+            except Exception:
+                logger.exception("Exception caught in events worker.")
+
             self._cleanup_ws_connection()
             self._events_worker_task = None
 

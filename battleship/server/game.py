@@ -7,7 +7,6 @@ from loguru import logger
 from battleship.engine import create_game, domain
 from battleship.engine.roster import get_roster
 from battleship.server import metrics
-from battleship.server.websocket import Client, ClientInChannel, ClientOutChannel
 from battleship.shared.events import (
     AnyMessage,
     ClientGameEvent,
@@ -15,7 +14,13 @@ from battleship.shared.events import (
     Message,
     ServerGameEvent,
 )
-from battleship.shared.models import GameSummary, Roster, Session, salvo_to_model
+from battleship.shared.models import (
+    Client,
+    GameSummary,
+    Roster,
+    Session,
+    salvo_to_model,
+)
 
 
 class Game:
@@ -24,8 +29,6 @@ class Game:
         host: Client,
         guest: Client,
         session: Session,
-        client_in_channel: ClientInChannel,
-        client_out_channel: ClientOutChannel,
     ) -> None:
         self.session_id = session.id
         self.host = host
@@ -38,8 +41,6 @@ class Game:
             firing_order=session.firing_order,
             salvo_mode=session.salvo_mode,
         )
-        self.client_in_channel = client_in_channel
-        self.client_out_channel = client_out_channel
         self.summary = GameSummary()
         self.start: float = 0
         self.clients: dict[str, Client] = {host.nickname: host, guest.nickname: guest}

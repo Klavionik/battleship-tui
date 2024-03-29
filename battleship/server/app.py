@@ -13,33 +13,14 @@ from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
 
 from battleship import PACKAGE_NAME
 from battleship.server import context
-from battleship.server.auth import Auth0AuthManager, AuthManager
-from battleship.server.config import Config, get_config
-from battleship.server.handlers import (
-    GameChannel,
-    GameHandler,
-    PlayersIngameSubscriptionHandler,
-    PlayersOnlineSubscriptionHandler,
-    SessionSubscriptionHandler,
-)
+from battleship.server.config import Config
+from battleship.server.di import build_container, connect_event_handlers
 from battleship.server.metrics import (
     MetricsMiddleware,
     MetricsScraperAuthenticationHandler,
 )
-from battleship.server.pubsub import Broker, RedisBroker
-from battleship.server.repositories import (
-    ClientRepository,
-    EntityChannel,
-    RedisClientRepository,
-    RedisSessionRepository,
-    RedisStatisticsRepository,
-    RedisSubscriptionsRepository,
-    SessionRepository,
-    StatisticsRepository,
-    SubscriptionRepository,
-)
+from battleship.server.repositories import ClientRepository
 from battleship.server.routes import router
-from battleship.server.websocket import ClientInChannel, ClientOutChannel
 
 
 async def cleanup_clients(app: Application) -> None:
@@ -99,32 +80,17 @@ async def sentry_context_middleware(
     return await handler(request)
 
 
-def create_app() -> Any:
-    config = get_config()
+def configure_logging(level: str) -> None:
     logger.remove()
-    logger.add(sys.stderr, level="TRACE" if config.TRACE else "DEBUG")
+    logger.add(sys.stderr, level=level)
     logger.enable(PACKAGE_NAME)
-    redis = Redis.from_url(str(config.BROKER_URL))
-    broker = RedisBroker(redis)
 
-    services = Container()
 
-    services.add_instance(config, Config)
-    services.add_instance(redis, Redis)
-    services.add_instance(broker, Broker)
-    services.add_singleton(AuthManager, Auth0AuthManager)
-    services.add_singleton(SessionRepository, RedisSessionRepository)
-    services.add_singleton(ClientRepository, RedisClientRepository)
-    services.add_singleton(StatisticsRepository, RedisStatisticsRepository)
-    services.add_singleton(ClientInChannel)
-    services.add_singleton(ClientOutChannel)
-    services.add_singleton(EntityChannel)
-    services.add_singleton(GameHandler)
-    services.add_singleton(SubscriptionRepository, RedisSubscriptionsRepository)
-    services.add_singleton(SessionSubscriptionHandler)
-    services.add_singleton(PlayersOnlineSubscriptionHandler)
-    services.add_singleton(PlayersIngameSubscriptionHandler)
-    services.add_singleton(GameChannel)
+def create_app(container: Container | None = None) -> Any:
+    services = container or build_container()
+    connect_event_handlers(services)
+    config = services.resolve(Config)
+    configure_logging("TRACE" if config.TRACE else "DEBUG")
 
     app = Application(router=router, services=services)
 

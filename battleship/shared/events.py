@@ -28,9 +28,9 @@ class ServerGameEvent(StrEnum):
 
 
 @unique
-class Notification(StrEnum):
-    SESSIONS_UPDATE = auto()
+class Subscription(StrEnum):
     PLAYERS_UPDATE = auto()
+    SESSIONS_UPDATE = auto()
 
 
 class GameEvent(BaseModel):
@@ -52,11 +52,16 @@ class EntityEvent(BaseModel):
 
 class NotificationEvent(BaseModel):
     message_type: Literal["notification_event"] = "notification_event"
-    notification: Notification
+    subscription: Subscription
     payload: dict[str, Any]
 
 
-AnyEvent: TypeAlias = NotificationEvent | GameEvent | EntityEvent
+class ClientDisconnectedEvent(BaseModel):
+    message_type: Literal["client_disconnected"] = "client_disconnected"
+    client_id: str
+
+
+AnyEvent: TypeAlias = NotificationEvent | GameEvent | EntityEvent | ClientDisconnectedEvent
 T = TypeVar("T", bound=AnyEvent)
 
 
@@ -68,4 +73,9 @@ class Message(BaseModel, Generic[T]):
         return cast(T, self.event)
 
 
-AnyMessage: TypeAlias = Message[NotificationEvent] | Message[GameEvent] | Message[EntityEvent]
+AnyMessage: TypeAlias = (
+    Message[NotificationEvent]
+    | Message[GameEvent]
+    | Message[EntityEvent]
+    | Message[ClientDisconnectedEvent]
+)

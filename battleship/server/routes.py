@@ -20,19 +20,22 @@ from loguru import logger
 from battleship.engine import roster
 from battleship.server import context, metrics
 from battleship.server.auth import AuthManager, InvalidSignup, WrongCredentials
-from battleship.server.handlers import GameChannel
+from battleship.server.bus import MessageBus
 from battleship.server.repositories import (
     ClientRepository,
     SessionRepository,
     StatisticsRepository,
 )
 from battleship.server.repositories.statistics import StatisticsNotFound
-from battleship.server.repositories.subscriptions import (
+from battleship.server.repositories.subscriptions import SubscriptionRepository
+from battleship.server.websocket import Connection
+from battleship.shared.events import (
+    ClientDisconnectedEvent,
+    GameEvent,
+    Message,
+    ServerGameEvent,
     Subscription,
-    SubscriptionRepository,
 )
-from battleship.server.websocket import ClientInChannel, ClientOutChannel, Connection
-from battleship.shared.events import GameEvent, Message, ServerGameEvent
 from battleship.shared.models import (
     IDToken,
     LoginCredentials,
@@ -53,43 +56,26 @@ async def ws(
     websocket: WebSocket,
     identity: Identity,
     client_repository: ClientRepository,
-    in_channel: ClientInChannel,
-    out_channel: ClientOutChannel,
     subscription_repository: SubscriptionRepository,
-    session_repository: SessionRepository,
-    game_channel: GameChannel,
+    message_bus: MessageBus,
 ) -> None:
     user_id = identity.claims["sub"]
     nickname = identity.claims["nickname"]
     guest = identity.has_claim_value("battleship/role", "guest")
     client = await client_repository.add(user_id, nickname, guest, context.client_version.get())
-    connection = Connection(user_id, nickname, websocket, in_channel, out_channel)
+    connection = Connection(user_id, nickname, websocket, message_bus, subscription_repository)
 
     await websocket.accept()
     logger.debug(f"{connection} accepted.")
     metrics.websocket_connections.inc({})
-    await connection.listen()
+
+    with connection:
+        await connection.listen()
+
     metrics.websocket_connections.dec({})
     logger.debug(f"{connection} disconnected.")
-    await subscription_repository.delete_subscriber(Subscription.SESSIONS_UPDATE, client.id)
-    await subscription_repository.delete_subscriber(Subscription.PLAYERS_UPDATE, client.id)
 
-    current_session = await session_repository.get_for_client(client.id)
-
-    if current_session:
-        if current_session.started:
-            await game_channel.publish(
-                Message(
-                    event=GameEvent(
-                        type=ServerGameEvent.CANCEL_GAME,
-                        payload=dict(session_id=current_session.id),
-                    )
-                )
-            )
-
-        await session_repository.delete(current_session.id)
-
-    await client_repository.delete(client.id)
+    await message_bus.emit("websocket", Message(event=ClientDisconnectedEvent(client_id=client.id)))
 
 
 @router.get("/sessions")
@@ -142,7 +128,7 @@ async def join_session(
     session_id: str,
     session_repository: SessionRepository,
     client_repository: ClientRepository,
-    game_channel: GameChannel,
+    message_bus: MessageBus,
 ) -> None:
     guest_id = identity.claims["sub"]
     session = await session_repository.get(session_id)
@@ -151,10 +137,11 @@ async def join_session(
     )
     host, guest = players
     await session_repository.update(session.id, guest_id=guest.id, started=True)
-    await game_channel.publish(
+    await message_bus.emit(
+        "games",
         Message(
             event=GameEvent(type=ServerGameEvent.START_GAME, payload=dict(session_id=session_id))
-        )
+        ),
     )
 
 

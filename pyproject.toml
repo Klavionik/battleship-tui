@@ -28,7 +28,7 @@ packages = [
 python = ">=3.10,<3.13"
 websockets = "^12.0.0"
 loguru = "^0.7.0"
-pyee = { version = "^11.0.0", optional = true }
+pyee = "^11.0.0"
 blacksheep = { version ="^2.0.7", optional = true }
 uvicorn = { version = "^0.27.0", optional = true }
 httpx = "^0.27.0"
@@ -49,12 +49,11 @@ backports-strenum = { version = "^1.2.8", markers = "python_version < '3.11'" }
 sentry-sdk = { version = "^1.38.0", optional = true }
 aioprometheus = {version = "^23.3.0", optional = true}
 copykitten = { version = "^1.1.1", optional = true }
-pymitter = {version = "^0.5.0", optional = true}
 
 
 [tool.poetry.extras]
-server = ["blacksheep", "uvicorn", "auth0-python", "pyjwt", "uvloop", "redis", "sentry-sdk", "aioprometheus", "pymitter"]
-client = ["textual", "typer", "pyee", "async-timeout", "inject", "copykitten"]
+server = ["blacksheep", "uvicorn", "auth0-python", "pyjwt", "uvloop", "redis", "sentry-sdk", "aioprometheus"]
+client = ["textual", "typer", "async-timeout", "inject", "copykitten"]
 dev = ["textual-dev"]
 
 [tool.poetry.scripts]

@@ -1,20 +1,13 @@
 import abc
 from collections import defaultdict
-from enum import unique
 
 import redis.asyncio as redis
 
-from battleship.shared.compat import StrEnum
+from battleship.shared.events import Subscription
 
 
 class SubscriptionNotFound(Exception):
     pass
-
-
-@unique
-class Subscription(StrEnum):
-    PLAYERS_UPDATE = "players_update"
-    SESSIONS_UPDATE = "sessions_update"
 
 
 class SubscriptionRepository(abc.ABC):

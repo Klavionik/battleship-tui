@@ -1,23 +1,13 @@
-import asyncio
-from typing import AsyncGenerator, AsyncIterator
+from typing import Any, AsyncGenerator, AsyncIterator
 
 from blacksheep import WebSocket, WebSocketDisconnectError
 from loguru import logger
 
-from battleship.server.pubsub import Broker, Channel
+from battleship.server.bus import MessageBus
+from battleship.server.repositories import SubscriptionRepository
 from battleship.shared.events import GameEvent, Message, NotificationEvent
 
 ClientMessage = Message[GameEvent] | Message[NotificationEvent]
-
-
-class ClientInChannel(Channel[ClientMessage]):
-    def __init__(self, broker: Broker):
-        super().__init__("clients.in", broker)
-
-
-class ClientOutChannel(Channel[ClientMessage]):
-    def __init__(self, broker: Broker):
-        super().__init__("clients.out", broker)
 
 
 class WebSocketWrapper:
@@ -51,83 +41,45 @@ class WebSocketWrapper:
 class Connection:
     def __init__(
         self,
-        connection_id: str,
+        user_id: str,
         nickname: str,
         websocket: WebSocket,
-        incoming_channel: ClientInChannel,
-        outgoing_channel: ClientOutChannel,
+        message_bus: MessageBus,
+        subscription_repository: SubscriptionRepository,
     ):
-        self.connection_id = connection_id
+        self.connection_id = user_id
         self.nickname = nickname
-        self.websocket = WebSocketWrapper(websocket)
-        self._incoming = incoming_channel.topic(self.connection_id)
-        self._outgoing = outgoing_channel.topic(self.connection_id)
-        self._message_consumer = self._run_consumer()
+        self._websocket = WebSocketWrapper(websocket)
+        self._message_bus = message_bus
+        self._subscription_repository = subscription_repository
 
     def __repr__(self) -> str:
-        return f"<Connection {self.nickname} {self.websocket.client_ip}>"
+        return f"<Connection {self.nickname} {self._websocket.client_ip}>"
+
+    def __enter__(self) -> None:
+        self._message_bus.subscribe("notifications", self._handle_notification)
+
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+        self._message_bus.unsubscribe("notifications", self._handle_notification)
 
     def __del__(self) -> None:
         logger.trace("{conn} was garbage collected.", conn=self)
 
     async def messages(self) -> AsyncIterator[str]:
-        async for message in self.websocket:
+        async for message in self._websocket:
             yield message
 
     async def listen(self) -> None:
         async for ws_message in self.messages():
             message: ClientMessage = Message.from_raw(ws_message)
-            asyncio.create_task(self._incoming.publish(message))
-
-        self._message_consumer.cancel()
-        del self._message_consumer
+            await self._message_bus.emit("clients.in", message)
 
     async def send_event(self, event: ClientMessage) -> None:
-        await self.websocket.send_text(event.to_json())
+        await self._websocket.send_text(event.to_json())
 
-    def _run_consumer(self) -> asyncio.Task[None]:
-        @logger.catch
-        async def consumer() -> None:
-            try:
-                async for event in self._outgoing.listen():
-                    await self.send_event(event)
-            except asyncio.CancelledError:
-                logger.debug("{conn} Stop message consumer.", conn=self)
-                raise
+    async def _handle_notification(self, message: Message[NotificationEvent]) -> None:
+        event = message.unwrap()
+        subscribers = await self._subscription_repository.get_subscribers(event.subscription)
 
-        return asyncio.create_task(consumer())
-
-
-class Client:
-    def __init__(
-        self,
-        user_id: str,
-        nickname: str,
-        guest: bool,
-        version: str,
-        incoming_channel: ClientInChannel,
-        outgoing_channel: ClientOutChannel,
-    ) -> None:
-        self.user_id = user_id
-        self.nickname = nickname
-        self.guest = guest
-        self.version = version
-        self._incoming_channel = incoming_channel.topic(self.id)
-        self._outgoing_channel = outgoing_channel.topic(self.id)
-
-    def __repr__(self) -> str:
-        return f"<Client: {self.nickname}>"
-
-    def __del__(self) -> None:
-        logger.trace("{client} was garbage collected.", client=self)
-
-    @property
-    def id(self) -> str:
-        return self.user_id
-
-    async def listen(self) -> AsyncIterator[ClientMessage]:
-        async for event in self._incoming_channel.listen():
-            yield event
-
-    async def send_event(self, event: ClientMessage) -> None:
-        await self._outgoing_channel.publish(event)
+        if self.connection_id in subscribers:
+            await self.send_event(message)

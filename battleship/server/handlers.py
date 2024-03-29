@@ -4,33 +4,25 @@ from typing import Any
 from loguru import logger
 
 from battleship.server import metrics
+from battleship.server.bus import MessageBus
 from battleship.server.game import Game
-from battleship.server.pubsub import Broker, Channel
 from battleship.server.repositories import (
     ClientRepository,
-    EntityChannel,
     SessionRepository,
     StatisticsRepository,
 )
-from battleship.server.repositories.subscriptions import (
-    Subscription,
-    SubscriptionRepository,
-)
-from battleship.server.websocket import ClientInChannel, ClientMessage, ClientOutChannel
+from battleship.server.repositories.subscriptions import SubscriptionRepository
+from battleship.server.websocket import ClientMessage
 from battleship.shared.events import (
+    ClientDisconnectedEvent,
     EntityEvent,
     GameEvent,
     Message,
-    Notification,
     NotificationEvent,
     ServerGameEvent,
+    Subscription,
 )
 from battleship.shared.models import Action, GameSummary
-
-
-class GameChannel(Channel[Message[GameEvent]]):
-    def __init__(self, broker: Broker):
-        super().__init__("games", broker)
 
 
 class GameHandler:
@@ -39,16 +31,13 @@ class GameHandler:
         sessions: SessionRepository,
         clients: ClientRepository,
         statistics: StatisticsRepository,
-        in_channel: ClientInChannel,
-        out_channel: ClientOutChannel,
-        game_channel: GameChannel,
+        message_bus: MessageBus,
     ):
         self._clients = clients
         self._sessions = sessions
         self._statistics = statistics
-        self._in_channel = in_channel
-        self._out_channel = out_channel
-        self._game_channel = game_channel
+        self._message_bus = message_bus
+        self._message_bus = message_bus
         self._games: dict[str, asyncio.Task[None]] = {}
         self._consumer = self._run_consumer()
 
@@ -63,15 +52,15 @@ class GameHandler:
         string_summary = summary.to_json()
 
         # Replace player nickname with their ID.
-        string_summary = string_summary.replace(game.host.nickname, game.host.user_id).replace(
-            game.guest.nickname, game.guest.user_id
+        string_summary = string_summary.replace(game.host.nickname, game.host.id).replace(
+            game.guest.nickname, game.guest.id
         )
 
         summary = GameSummary.from_raw(string_summary)
 
         for _, player in game.clients.items():
             if not player.guest:
-                await self._statistics.save(player.user_id, summary)
+                await self._statistics.save(player.id, summary)
 
     async def start_new_game(self, session_id: str) -> None:
         session = await self._sessions.get(session_id)
@@ -114,138 +103,153 @@ class GameHandler:
                 logger.warning(f"Unknown message {event}.")
 
 
-class SessionSubscriptionHandler:
+class SessionUpdateHandler:
     def __init__(
         self,
-        client_out_channel: ClientOutChannel,
-        entity_channel: EntityChannel,
+        message_bus: MessageBus,
         subscription_repository: SubscriptionRepository,
     ):
-        self._client_out_channel = client_out_channel
-        self._entity_channel = entity_channel
-        self._consumer = self._run_consumer()
+        self._message_bus = message_bus
         self._subscriptions = subscription_repository
 
-    async def notify(self, event: EntityEvent) -> None:
+    async def __call__(self, message: Message[EntityEvent]) -> None:
+        logger.info(
+            "{handler} called with message {message}",
+            handler=self.__class__.__name__,
+            message=message,
+        )
+        event = message.unwrap()
+
         payload: dict[str, Any] = dict(action=event.action)
 
         if event.action == Action.ADD:
             payload["session"] = event.payload
 
         if event.action in [Action.REMOVE, Action.START]:
-            payload["session_id"] = event.payload["id"]
+            payload["session_id"] = event.entity_id
 
-        for subscriber in await self._subscriptions.get_subscribers(Subscription.SESSIONS_UPDATE):
-            await self._client_out_channel.publish(
-                Message(
-                    event=NotificationEvent(
-                        notification=Notification.SESSIONS_UPDATE,
-                        payload=payload,
-                    )
-                ),
-                subscriber,
-            )
-
-    def _run_consumer(self) -> asyncio.Task[None]:
-        @logger.catch
-        async def consumer() -> None:
-            try:
-                async for msg in self._entity_channel.listen("session.*"):
-                    event = msg.unwrap()
-                    await self.notify(event)
-            except asyncio.CancelledError:
-                logger.debug("{conn} Stop message consumer.", conn=self)
-                raise
-
-        return asyncio.create_task(consumer())
+        await self._message_bus.emit(
+            "notifications",
+            Message(
+                event=NotificationEvent(
+                    subscription=Subscription.SESSIONS_UPDATE,
+                    payload=payload,
+                )
+            ),
+        )
 
 
 class PlayersOnlineSubscriptionHandler:
     def __init__(
         self,
-        client_out_channel: ClientOutChannel,
         client_repository: ClientRepository,
-        entity_channel: EntityChannel,
-        subscription_repository: SubscriptionRepository,
+        message_bus: MessageBus,
     ):
-        self._client_out_channel = client_out_channel
         self._clients = client_repository
-        self._entity_channel = entity_channel
-        self._subscriptions = subscription_repository
+        self._message_bus = message_bus
 
-    async def notify(self, event: EntityEvent) -> None:
+    async def __call__(self, message: Message[EntityEvent]) -> None:
+        logger.info(
+            "{handler} called with message {message}",
+            handler=self.__class__.__name__,
+            message=message,
+        )
+        event = message.unwrap()
+
         if event.action not in (Action.ADD, Action.REMOVE):
             return
 
-        payload = dict(event="online_changed", count=await self._clients.count())
+        payload = dict(type="online_changed", count=await self._clients.count())
 
-        for subscriber in await self._subscriptions.get_subscribers(Subscription.PLAYERS_UPDATE):
-            await self._client_out_channel.publish(
-                Message(
-                    event=NotificationEvent(
-                        notification=Notification.PLAYERS_UPDATE,
-                        payload=payload,
-                    )
-                ),
-                subscriber,
-            )
-
-    def _run_consumer(self) -> asyncio.Task[None]:
-        @logger.catch
-        async def consumer() -> None:
-            try:
-                async for msg in self._entity_channel.listen("client"):
-                    event = msg.unwrap()
-                    await self.notify(event)
-            except asyncio.CancelledError:
-                logger.debug("{conn} Stop message consumer.", conn=self)
-                raise
-
-        return asyncio.create_task(consumer())
+        await self._message_bus.emit(
+            "notifications",
+            Message(
+                event=NotificationEvent(
+                    subscription=Subscription.PLAYERS_UPDATE,
+                    payload=payload,
+                )
+            ),
+        )
 
 
 class PlayersIngameSubscriptionHandler:
     def __init__(
         self,
-        client_out_channel: ClientOutChannel,
         session_repository: SessionRepository,
-        entity_channel: EntityChannel,
-        subscription_repository: SubscriptionRepository,
+        message_bus: MessageBus,
     ):
-        self._client_out_channel = client_out_channel
         self._sessions = session_repository
-        self._entity_channel = entity_channel
-        self._subscriptions = subscription_repository
+        self._message_bus = message_bus
 
-    async def notify(self, event: EntityEvent) -> None:
+    async def __call__(self, message: Message[EntityEvent]) -> None:
+        logger.info(
+            "{handler} called with message {message}",
+            handler=self.__class__.__name__,
+            message=message,
+        )
+        event = message.unwrap()
+
         if event.action not in (Action.START, Action.REMOVE):
             return
 
         sessions = await self._sessions.list()
         started_sessions = [s for s in sessions if s.started]
         players_ingame = len(started_sessions) * 2
-        payload = dict(event="ingame_changed", count=players_ingame)
+        payload = dict(type="ingame_changed", count=players_ingame)
 
-        for subscriber in await self._subscriptions.get_subscribers(Subscription.PLAYERS_UPDATE):
-            await self._client_out_channel.publish(
-                Message(
-                    event=NotificationEvent(
-                        notification=Notification.PLAYERS_UPDATE,
-                        payload=payload,
-                    )
-                ),
-                subscriber,
-            )
+        await self._message_bus.emit(
+            "notifications",
+            Message(
+                event=NotificationEvent(
+                    subscription=Subscription.PLAYERS_UPDATE,
+                    payload=payload,
+                )
+            ),
+        )
 
-    def _run_consumer(self) -> asyncio.Task[None]:
-        @logger.catch
-        async def consumer() -> None:
-            try:
-                async for msg in self._entity_channel.listen("session.*"):
-                    event = msg.unwrap()
-                    await self.notify(event)
-            except asyncio.CancelledError:
-                logger.debug("{conn} Stop message consumer.", conn=self)
-                raise
 
-        return asyncio.create_task(consumer())
+class ClientDisconnectedHandler:
+    def __init__(
+        self,
+        subscription_repository: SubscriptionRepository,
+        session_repository: SessionRepository,
+        client_repository: ClientRepository,
+        message_bus: MessageBus,
+    ):
+        self._subscription_repository = subscription_repository
+        self._session_repository = session_repository
+        self._client_repository = client_repository
+        self._message_bus = message_bus
+
+    async def __call__(self, message: Message[ClientDisconnectedEvent]) -> None:
+        logger.info(
+            "{handler} called with message {message}",
+            handler=self.__class__.__name__,
+            message=message,
+        )
+        event = message.unwrap()
+
+        await self._subscription_repository.delete_subscriber(
+            Subscription.SESSIONS_UPDATE, event.client_id
+        )
+        await self._subscription_repository.delete_subscriber(
+            Subscription.PLAYERS_UPDATE, event.client_id
+        )
+
+        current_session = await self._session_repository.get_for_client(event.client_id)
+
+        if current_session:
+            if current_session.started:
+                await self._message_bus.emit(
+                    "games",
+                    Message(
+                        event=GameEvent(
+                            type=ServerGameEvent.CANCEL_GAME,
+                            payload=dict(session_id=current_session.id),
+                        )
+                    ),
+                )
+            else:
+                await self._session_repository.delete(current_session.id)
+
+        await self._client_repository.delete(event.client_id)

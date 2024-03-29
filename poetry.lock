@@ -1591,7 +1591,7 @@ name = "pyee"
 version = "11.1.0"
 description = "A rough port of Node.js's EventEmitter to Python with a few tricks of its own"
 category = "main"
-optional = true
+optional = false
 python-versions = ">=3.8"
 files = [
     {file = "pyee-11.1.0-py3-none-any.whl", hash = "sha256:5d346a7d0f861a4b2e6c47960295bd895f816725b27d656181947346be98d7c1"},
@@ -1640,21 +1640,6 @@ crypto = ["cryptography (>=3.4.0)"]
 dev = ["coverage[toml] (==5.0.4)", "cryptography (>=3.4.0)", "pre-commit", "pytest (>=6.0.0,<7.0.0)", "sphinx (>=4.5.0,<5.0.0)", "sphinx-rtd-theme", "zope.interface"]
 docs = ["sphinx (>=4.5.0,<5.0.0)", "sphinx-rtd-theme", "zope.interface"]
 tests = ["coverage[toml] (==5.0.4)", "pytest (>=6.0.0,<7.0.0)"]
-
-[[package]]
-name = "pymitter"
-version = "0.5.0"
-description = "Python port of the extended Node.js EventEmitter 2 approach providing namespaces, wildcards and TTL."
-category = "main"
-optional = true
-python-versions = ">=3.7"
-files = [
-    {file = "pymitter-0.5.0-py3-none-any.whl", hash = "sha256:ac5d9721ed2572924f1d3dae5ee5d8dafac5465dc1e3ecb38542d10592110aca"},
-    {file = "pymitter-0.5.0.tar.gz", hash = "sha256:a500747ff30b57f9a38e867936b3e8842330e7f8e3438b0566a09c908588db40"},
-]
-
-[package.extras]
-dev = ["flake8 (>=4.0)", "flake8-commas (>=2.1)", "flake8-quotes (>=3.3)", "pytest-cov (>=3.0)"]
 
 [[package]]
 name = "pytest"
@@ -2405,11 +2390,11 @@ idna = ">=2.0"
 multidict = ">=4.0"
 
 [extras]
-client = ["async-timeout", "copykitten", "inject", "pyee", "textual", "typer"]
+client = ["async-timeout", "copykitten", "inject", "textual", "typer"]
 dev = ["textual-dev"]
-server = ["aioprometheus", "auth0-python", "blacksheep", "pyjwt", "pymitter", "redis", "sentry-sdk", "uvicorn", "uvloop"]
+server = ["aioprometheus", "auth0-python", "blacksheep", "pyjwt", "redis", "sentry-sdk", "uvicorn", "uvloop"]
 
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.13"
-content-hash = "84f1c7314ad75c7e4cd5be2c616dfc7257e62697c710eee3d6ffc445215c2592"
+content-hash = "7bcf07badf5f080b2c62903bc49a67527a9edb215f117038002237139ca06fb3"

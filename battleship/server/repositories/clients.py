@@ -3,11 +3,9 @@ import asyncio
 
 import redis.asyncio as redis
 
-from battleship.server.repositories.channel import EntityChannel
+from battleship.server.bus import MessageBus
 from battleship.server.repositories.observable import Observable
-from battleship.server.websocket import Client, ClientInChannel, ClientOutChannel
-from battleship.shared.models import Action
-from battleship.shared.models import Client as ClientModel
+from battleship.shared.models import Action, Client
 
 
 class ClientNotFound(Exception):
@@ -19,13 +17,9 @@ class ClientRepository(Observable, abc.ABC):
 
     def __init__(
         self,
-        incoming_channel: ClientInChannel,
-        outgoing_channel: ClientOutChannel,
-        entity_channel: EntityChannel,
+        message_bus: MessageBus,
     ):
-        super().__init__(entity_channel)
-        self._in_channel = incoming_channel
-        self._out_channel = outgoing_channel
+        super().__init__(message_bus)
 
     @abc.abstractmethod
     async def add(self, client_id: str, nickname: str, guest: bool, version: str) -> Client:
@@ -55,15 +49,13 @@ class ClientRepository(Observable, abc.ABC):
 class InMemoryClientRepository(ClientRepository):
     def __init__(
         self,
-        incoming_channel: ClientInChannel,
-        outgoing_channel: ClientOutChannel,
-        entity_channel: EntityChannel,
+        message_bus: MessageBus,
     ) -> None:
-        super().__init__(incoming_channel, outgoing_channel, entity_channel)
+        super().__init__(message_bus)
         self._clients: dict[str, Client] = {}
 
     async def add(self, user_id: str, nickname: str, guest: bool, version: str) -> Client:
-        client = Client(user_id, nickname, guest, version, self._in_channel, self._out_channel)
+        client = Client(id=user_id, nickname=nickname, guest=guest, version=version)
         self._clients[client.id] = client
         await self.notify(client.id, Action.ADD)
         return client
@@ -105,11 +97,9 @@ class RedisClientRepository(ClientRepository):
     def __init__(
         self,
         client: redis.Redis,
-        incoming_channel: ClientInChannel,
-        outgoing_channel: ClientOutChannel,
-        entity_channel: EntityChannel,
+        message_bus: MessageBus,
     ) -> None:
-        super().__init__(incoming_channel, outgoing_channel, entity_channel)
+        super().__init__(message_bus)
         self._client = client
 
     def get_key(self, client_id: str) -> str:
@@ -122,7 +112,7 @@ class RedisClientRepository(ClientRepository):
         return key.removeprefix(self.namespace)
 
     async def add(self, client_id: str, nickname: str, guest: bool, version: str) -> Client:
-        client = Client(client_id, nickname, guest, version, self._in_channel, self._out_channel)
+        client = Client(id=client_id, nickname=nickname, guest=guest, version=version)
         await self._save(client)
         return client
 
@@ -132,15 +122,7 @@ class RedisClientRepository(ClientRepository):
         if data is None:
             raise ClientNotFound(f"Client {client_id} not found.")
 
-        model = ClientModel.from_raw(data)
-        return Client(
-            model.id,
-            model.nickname,
-            model.guest,
-            model.version,
-            self._in_channel,
-            self._out_channel,
-        )
+        return Client.from_raw(data)
 
     async def list(self) -> list[Client]:
         keys = await self._client.keys(self.pattern)
@@ -165,7 +147,7 @@ class RedisClientRepository(ClientRepository):
         return len(keys)
 
     async def _save(self, client: Client) -> bool:
-        model = ClientModel(
+        model = Client(
             id=client.id, nickname=client.nickname, guest=client.guest, version=client.version
         )
         await self.notify(client.id, Action.ADD, payload=model.to_dict())

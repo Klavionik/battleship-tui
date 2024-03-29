@@ -3,7 +3,7 @@ from typing import Any
 
 import redis.asyncio as redis
 
-from battleship.server.repositories import EntityChannel
+from battleship.server.bus import MessageBus
 from battleship.server.repositories.observable import Observable
 from battleship.shared.models import (
     Action,
@@ -21,8 +21,8 @@ class SessionNotFound(Exception):
 class SessionRepository(Observable, abc.ABC):
     entity = "session"
 
-    def __init__(self, entity_channel: EntityChannel) -> None:
-        super().__init__(entity_channel)
+    def __init__(self, message_bus: MessageBus) -> None:
+        super().__init__(message_bus)
 
     @abc.abstractmethod
     async def add(self, host_id: str, data: SessionCreate) -> Session:
@@ -53,8 +53,8 @@ class SessionRepository(Observable, abc.ABC):
 
 
 class InMemorySessionRepository(SessionRepository):
-    def __init__(self, entity_channel: EntityChannel) -> None:
-        super().__init__(entity_channel)
+    def __init__(self, message_bus: MessageBus) -> None:
+        super().__init__(message_bus)
         self._sessions: dict[SessionID, Session] = {}
 
     async def add(self, host_id: str, data: SessionCreate) -> Session:
@@ -86,8 +86,8 @@ class RedisSessionRepository(SessionRepository):
     namespace = key + ":"
     pattern = namespace + "*"
 
-    def __init__(self, client: redis.Redis, entity_channel: EntityChannel) -> None:
-        super().__init__(entity_channel)
+    def __init__(self, client: redis.Redis, message_bus: MessageBus) -> None:
+        super().__init__(message_bus)
         self._client = client
 
     def get_key(self, session_id: str) -> str:
