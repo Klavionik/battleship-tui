@@ -7,8 +7,13 @@ from loguru import logger
 from battleship.engine import create_game, domain
 from battleship.engine.roster import get_roster
 from battleship.server import metrics
+from battleship.server.bus import MessageBus
+from battleship.server.repositories import (
+    ClientRepository,
+    SessionRepository,
+    StatisticsRepository,
+)
 from battleship.shared.events import (
-    AnyMessage,
     ClientGameEvent,
     GameEvent,
     Message,
@@ -25,14 +30,11 @@ from battleship.shared.models import (
 
 class Game:
     def __init__(
-        self,
-        host: Client,
-        guest: Client,
-        session: Session,
+        self, host: Client, guest: Client, session: Session, message_bus: MessageBus
     ) -> None:
-        self.session_id = session.id
         self.host = host
         self.guest = guest
+        self.session_id = session.id
         self.roster = get_roster(session.roster)
         self.game = create_game(
             player_a=host.nickname,
@@ -41,6 +43,7 @@ class Game:
             firing_order=session.firing_order,
             salvo_mode=session.salvo_mode,
         )
+        self.message_bus = message_bus
         self.summary = GameSummary()
         self.start: float = 0
         self.clients: dict[str, Client] = {host.nickname: host, guest.nickname: guest}
@@ -56,14 +59,12 @@ class Game:
 
         self._event_queue: asyncio.Queue[Message[GameEvent]] = asyncio.Queue()
         self._background_tasks = [
-            self._run_consumer(self.host),
-            self._run_consumer(self.guest),
             self._run_broadcaster(),
         ]
         self._stop_event = asyncio.Event()
 
     def __repr__(self) -> str:
-        return f"<Game {self.session_id} | {self.host.nickname} vs {self.guest.nickname}>"
+        return f"<Game {self.session_id} | {self.host} vs {self.guest}>"
 
     def __del__(self) -> None:
         logger.trace("{game} was garbage collected.", game=self)
@@ -75,19 +76,11 @@ class Game:
                 event = await self._event_queue.get()
 
                 for client in self.clients.values():
-                    await self.client_out_channel.publish(event, client.id)
+                    await self.message_bus.emit(f"clients.out.{client.id}", event)
 
                 self._event_queue.task_done()
 
         return asyncio.create_task(broadcaster())
-
-    def _run_consumer(self, client: Client) -> asyncio.Task[None]:
-        @logger.catch
-        async def consumer() -> None:
-            async for event in self.client_in_channel.listen(client.id):
-                self.handle(client.nickname, event)
-
-        return asyncio.create_task(consumer())
 
     def stop(self) -> None:
         self._stop_event.set()
@@ -141,11 +134,11 @@ class Game:
         position: Collection[str],
     ) -> None:
         payload = dict(player=player.name, ship_id=ship_id, position=position)
-        event = Message[GameEvent](
+        msg = Message[GameEvent](
             event=GameEvent(type=ServerGameEvent.SHIP_SPAWNED, payload=payload)
         )
         client = self.clients[player.name]
-        asyncio.create_task(self.client_out_channel.publish(event, client.id))
+        asyncio.create_task(self.message_bus.emit(f"clients.out.{client.id}", msg))
 
     def send_game_cancelled(
         self,
@@ -161,7 +154,8 @@ class Game:
             self.broadcast(msg)
         else:
             client = self.guest if self.host.nickname == by_player else self.host
-            asyncio.create_task(self.client_out_channel.publish(msg, client.id))
+            client = self.clients[client.nickname]
+            asyncio.create_task(self.message_bus.emit(f"clients.out.{client.id}", msg))
 
     def announce_game_start(self) -> None:
         game_options = dict(
@@ -171,30 +165,31 @@ class Game:
         )
 
         asyncio.create_task(
-            self.client_out_channel.publish(
+            self.message_bus.emit(
+                f"clients.out.{self.host.id}",
                 Message(
                     event=GameEvent(
                         type=ServerGameEvent.START_GAME,
                         payload=dict(enemy=self.guest.nickname, **game_options),
                     )
                 ),
-                self.host.id,
             )
         )
         asyncio.create_task(
-            self.client_out_channel.publish(
+            self.message_bus.emit(
+                f"clients.out.{self.guest.id}",
                 Message(
                     event=GameEvent(
                         type=ServerGameEvent.START_GAME,
                         payload=dict(enemy=self.host.nickname, **game_options),
                     )
                 ),
-                self.guest.id,
             )
         )
 
     async def play(self) -> GameSummary:
         metrics.games_started_total.inc({})
+        self.connect_event_handlers()
         self.announce_game_start()
         self.start = time()
 
@@ -219,25 +214,114 @@ class Game:
                 break
 
         self.game.clear_hooks()
+        self.disconnect_event_handlers()
 
-    @logger.catch
-    def handle(self, client_nickname: str, message: AnyMessage) -> None:
-        event = message.event
+    def fire(self, position: Collection[str]) -> None:
+        salvo = self.game.fire(position)
+        self.summary.update_shots(salvo)
+        self.send_salvo(salvo)
+        self.game.turn(salvo)
+
+    def add_ship(self, nickname: str, position: Collection[str], ship_id: str) -> None:
+        player = self.players[nickname]
+        self.game.add_ship(player, position, ship_id)
+
+    def handle_client_event(self, client_nickname: str, message: Message[GameEvent]) -> None:
+        logger.debug("Received message {message}", message=message)
+        event = message.unwrap()
 
         match event:
             case GameEvent(type=ClientGameEvent.SPAWN_SHIP):
                 ship_id: str = event.payload["ship_id"]
                 position: Collection[str] = event.payload["position"]
-                player = self.players[client_nickname]
-                self.game.add_ship(player, position, ship_id)
+                self.add_ship(client_nickname, position, ship_id)
             case GameEvent(type=ClientGameEvent.FIRE):
-                position = event.payload["position"]
-                salvo = self.game.fire(position)
-                self.summary.update_shots(salvo)
-                self.send_salvo(salvo)
-                self.game.turn(salvo)
+                position: Collection[str] = event.payload["position"]  # type: ignore[no-redef]
+                self.fire(position)
             case GameEvent(type=ClientGameEvent.CANCEL_GAME):
                 self.send_game_cancelled(reason="quit", by_player=client_nickname)
                 self.stop()
             case _:
                 logger.warning("Unknown event {event}", event=event)
+
+    async def handle_host_event(self, message: Message[GameEvent]) -> None:
+        self.handle_client_event(self.host.nickname, message)
+
+    async def handle_guest_event(self, message: Message[GameEvent]) -> None:
+        self.handle_client_event(self.guest.nickname, message)
+
+    def connect_event_handlers(self) -> None:
+        self.message_bus.subscribe(f"clients.in.{self.host.id}", self.handle_host_event)
+        self.message_bus.subscribe(f"clients.in.{self.guest.id}", self.handle_guest_event)
+
+    def disconnect_event_handlers(self) -> None:
+        self.message_bus.unsubscribe(f"clients.in.{self.host.id}", self.handle_host_event)
+        self.message_bus.unsubscribe(f"clients.in.{self.guest.id}", self.handle_guest_event)
+
+
+class GameManager:
+    def __init__(
+        self,
+        sessions: SessionRepository,
+        clients: ClientRepository,
+        statistics: StatisticsRepository,
+        message_bus: MessageBus,
+    ):
+        self._clients = clients
+        self._sessions = sessions
+        self._statistics = statistics
+        self._message_bus = message_bus
+        self._games: dict[str, tuple[Game, asyncio.Task[None]]] = {}
+
+    def get_game(self, session_id: str) -> Game:
+        game, _ = self._games[session_id]
+        return game
+
+    @logger.catch
+    async def run_game(self, game: Game) -> None:
+        try:
+            metrics.games_now.inc({})
+            summary = await game.play()
+        finally:
+            metrics.games_now.dec({})
+
+        await self.save_game_summary(game, summary)
+
+    async def save_game_summary(self, game: Game, summary: GameSummary) -> None:
+        string_summary = summary.to_json()
+
+        # Replace player nickname with their ID.
+        string_summary = string_summary.replace(game.host.nickname, game.host.id).replace(
+            game.guest.nickname, game.guest.id
+        )
+
+        summary = GameSummary.from_raw(string_summary)
+
+        for client in (game.host, game.guest):
+            if not client.guest:
+                await self._statistics.save(client.id, summary)
+
+    async def start_new_game(self, session_id: str) -> None:
+        session = await self._sessions.get(session_id)
+        players = await asyncio.gather(
+            self._clients.get(session.host_id),
+            self._clients.get(session.guest_id),
+        )
+        host, guest = players
+
+        logger.debug(f"Start new game {host.nickname} vs. {guest.nickname}.")
+        game = Game(host, guest, session, self._message_bus)
+        await self._sessions.update(session.id, guest_id=guest.id, started=True)
+        task = asyncio.create_task(self.run_game(game))
+
+        def cleanup(_: asyncio.Task[None]) -> None:
+            self._games.pop(session.id, None)
+            asyncio.create_task(self._sessions.delete(session.id))
+            logger.trace("Game {session_id} is cleaned up.", session_id=session.id)
+
+        task.add_done_callback(cleanup)
+        self._games[session.id] = (game, task)
+
+    def cancel_game(self, session_id: str) -> None:
+        _, task = self._games[session_id]
+        task.cancel()

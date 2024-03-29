@@ -1,8 +1,7 @@
-import uuid
 from enum import auto, unique
 from typing import Any, Generic, Literal, TypeAlias, TypeVar, cast
 
-from pydantic import UUID4, Field
+from pydantic import Field
 
 from battleship.shared.compat import StrEnum
 from battleship.shared.models import BaseModel
@@ -36,6 +35,7 @@ class Subscription(StrEnum):
 class GameEvent(BaseModel):
     message_type: Literal["game_event"] = "game_event"
     type: ServerGameEvent | ClientGameEvent
+    session_id: str | None = None
     payload: dict[str, Any] = {}
 
 
@@ -66,7 +66,6 @@ T = TypeVar("T", bound=AnyEvent)
 
 
 class Message(BaseModel, Generic[T]):
-    correlation_id: UUID4 = Field(default_factory=uuid.uuid4)
     event: AnyEvent = Field(..., discriminator="message_type")
 
     def unwrap(self) -> T:

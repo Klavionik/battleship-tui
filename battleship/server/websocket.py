@@ -57,10 +57,12 @@ class Connection:
         return f"<Connection {self.nickname} {self._websocket.client_ip}>"
 
     def __enter__(self) -> None:
-        self._message_bus.subscribe("notifications", self._handle_notification)
+        self._message_bus.subscribe("notifications", self._handle_notification_event)
+        self._message_bus.subscribe(f"clients.out.{self.connection_id}", self.send_event)
 
     def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
-        self._message_bus.unsubscribe("notifications", self._handle_notification)
+        self._message_bus.unsubscribe("notifications", self._handle_notification_event)
+        self._message_bus.unsubscribe(f"clients.out.{self.connection_id}", self.send_event)
 
     def __del__(self) -> None:
         logger.trace("{conn} was garbage collected.", conn=self)
@@ -72,12 +74,12 @@ class Connection:
     async def listen(self) -> None:
         async for ws_message in self.messages():
             message: ClientMessage = Message.from_raw(ws_message)
-            await self._message_bus.emit("clients.in", message)
+            await self._message_bus.emit(f"clients.in.{self.connection_id}", message)
 
     async def send_event(self, event: ClientMessage) -> None:
         await self._websocket.send_text(event.to_json())
 
-    async def _handle_notification(self, message: Message[NotificationEvent]) -> None:
+    async def _handle_notification_event(self, message: Message[NotificationEvent]) -> None:
         event = message.unwrap()
         subscribers = await self._subscription_repository.get_subscribers(event.subscription)
 

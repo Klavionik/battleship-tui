@@ -24,7 +24,6 @@ services:
       SENTRY_DSN: $SENTRY_DSN
       METRICS_SCRAPER_SECRET: $METRICS_SCRAPER_SECRET
     command: ["uvicorn", "--host", "0.0.0.0", "--reload", "--factory", "battleship.server:create_app"]
-    scale: 2
     volumes:
       - ./battleship:/app/battleship
     depends_on:

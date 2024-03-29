@@ -4,8 +4,10 @@ from rodi import Container
 from battleship.server.auth import Auth0AuthManager, AuthManager
 from battleship.server.bus import MessageBus, PyeeMessageBus
 from battleship.server.config import Config, get_config
+from battleship.server.game import GameManager
 from battleship.server.handlers import (
     ClientDisconnectedHandler,
+    HandleServerGameEvent,
     PlayersIngameSubscriptionHandler,
     PlayersOnlineSubscriptionHandler,
     SessionUpdateHandler,
@@ -28,6 +30,7 @@ def connect_event_handlers(services: Container) -> None:
     message_bus.subscribe("entities.session.*", services.resolve(PlayersIngameSubscriptionHandler))
     message_bus.subscribe("entities.client", services.resolve(PlayersOnlineSubscriptionHandler))
     message_bus.subscribe("websocket", services.resolve(ClientDisconnectedHandler))
+    message_bus.subscribe("games", services.resolve(HandleServerGameEvent))
 
 
 def build_container() -> Container:
@@ -43,9 +46,11 @@ def build_container() -> Container:
     container.add_singleton(PlayersIngameSubscriptionHandler)
     container.add_singleton(PlayersOnlineSubscriptionHandler)
     container.add_singleton(ClientDisconnectedHandler)
+    container.add_singleton(HandleServerGameEvent)
     container.add_singleton(AuthManager, Auth0AuthManager)
     container.add_singleton(SessionRepository, RedisSessionRepository)
     container.add_singleton(ClientRepository, RedisClientRepository)
     container.add_singleton(StatisticsRepository, RedisStatisticsRepository)
     container.add_singleton(SubscriptionRepository, RedisSubscriptionsRepository)
+    container.add_singleton(GameManager)
     return container

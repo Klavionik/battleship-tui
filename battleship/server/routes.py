@@ -139,9 +139,7 @@ async def join_session(
     await session_repository.update(session.id, guest_id=guest.id, started=True)
     await message_bus.emit(
         "games",
-        Message(
-            event=GameEvent(type=ServerGameEvent.START_GAME, payload=dict(session_id=session_id))
-        ),
+        Message(event=GameEvent(type=ServerGameEvent.START_GAME, session_id=session_id)),
     )
 
 

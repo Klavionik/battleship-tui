@@ -58,6 +58,10 @@ class RequestFailed(ClientError):
     pass
 
 
+class ServerUnavailable(ClientError):
+    pass
+
+
 class Unauthorized(ClientError):
     pass
 
@@ -464,6 +468,8 @@ class Client:
             match exc.response.status_code:
                 case 401:
                     raise Unauthorized("Wrong nickname or password.")
+                case 502:
+                    raise ServerUnavailable("Server is unavailable at the moment.")
                 case _:
                     raise ClientError(f"API error: {exc}.")
         else:

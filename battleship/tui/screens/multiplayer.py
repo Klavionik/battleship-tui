@@ -12,7 +12,7 @@ from textual.validation import Length
 from textual.widgets import Button, Input, Markdown, Rule
 
 from battleship.client import Client, ConnectionImpossible, RequestFailed, Unauthorized
-from battleship.client.client import LoginRequired
+from battleship.client.client import LoginRequired, ServerUnavailable
 from battleship.tui import resources, screens
 from battleship.tui.widgets import AppFooter
 
@@ -154,6 +154,14 @@ class Multiplayer(Screen[None]):
             self.notify(
                 "Incorrect nickname or password.",
                 title="Unauthorized",
+                severity="error",
+                timeout=5,
+            )
+        except ServerUnavailable:
+            self.loading = False  # noqa
+            self.notify(
+                "Server cannot process the request. :'(",
+                title="Server unavailable",
                 severity="error",
                 timeout=5,
             )
