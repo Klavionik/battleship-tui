@@ -90,7 +90,7 @@ class Settings(Screen[None]):
             and self.enemy_fleet_color.is_valid
         ):
             self.notify(
-                "Cannot saved: some fields have invalid values.", severity="warning", timeout=5
+                "Cannot save: some fields have invalid values.", severity="warning", timeout=5
             )
             return
 
