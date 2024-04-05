@@ -17,7 +17,7 @@ group.add_argument("--users-file", type=argparse.FileType())
 
 def parse_users_file(file: io.TextIOWrapper) -> list[str]:
     reader = csv.reader(file)
-    return [line[0] for line in reader]
+    return ["auth0|" + line[0] for line in reader]
 
 
 async def delete_load_testing_users(user_ids: Sequence[str]) -> None:
