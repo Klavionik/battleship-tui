@@ -1,3 +1,4 @@
+import os
 from functools import cache
 from importlib import metadata
 from pathlib import Path
@@ -10,7 +11,7 @@ PACKAGE_NAME = Path().parent.resolve().name
 
 @cache
 def get_client_version() -> str:
-    return metadata.version("battleship-tui")
+    return os.getenv("BATTLESHIP_CLIENT_VERSION", metadata.version("battleship-tui"))
 
 
 APP_LABEL = "battleship"
