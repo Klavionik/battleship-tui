@@ -20,21 +20,21 @@ services:
       AUTH0_CLIENT_SECRET: $AUTH0_CLIENT_SECRET
       AUTH0_REALM: $AUTH0_REALM
       AUTH0_ROLES: $AUTH0_ROLES
-      BROKER_URL: $BROKER_URL
+      REDIS_URL: $REDIS_URL
       SENTRY_DSN: $SENTRY_DSN
       METRICS_SCRAPER_SECRET: $METRICS_SCRAPER_SECRET
     command: ["uvicorn", "--host", "0.0.0.0", "--reload", "--factory", "battleship.server:create_app"]
     volumes:
       - ./battleship:/app/battleship
     depends_on:
-      broker:
+      redis:
         condition: service_healthy
     healthcheck:
       test: curl localhost:8000/healthz || exit 1
       timeout: 2s
       interval: 3s
 
-  broker:
+  redis:
     image: redis:7.2.3-alpine
     ports:
       - "6379:6379"

@@ -9,7 +9,7 @@ class Config(BaseSettings):
     AUTH0_CLIENT_SECRET: str
     AUTH0_REALM: str
     AUTH0_ROLES: dict[str, str]
-    BROKER_URL: RedisDsn
+    REDIS_URL: RedisDsn
     SERVER_VERSION: str
     SENTRY_DSN: str
     METRICS_SCRAPER_SECRET: str

@@ -36,7 +36,7 @@ def connect_event_handlers(services: Container) -> None:
 def build_container() -> Container:
     container = Container()
     config = get_config()
-    redis = Redis.from_url(str(config.BROKER_URL))
+    redis = Redis.from_url(str(config.REDIS_URL))
     container.add_instance(redis, Redis)
     message_bus = PyeeMessageBus()
 
