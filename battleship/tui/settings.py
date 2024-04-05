@@ -10,7 +10,7 @@ from battleship import config_home
 from battleship.shared.models import BaseModel
 from battleship.tui.i18n import Language
 
-hex_color = re.compile(r"^#([0-9a-f]{6})$")
+hex_color = re.compile(r"^#([0-9a-f]{0,6})$")
 
 
 def validate_color(value: str) -> str:
