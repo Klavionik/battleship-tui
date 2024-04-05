@@ -142,7 +142,7 @@ class Game:
 
     def send_game_cancelled(
         self,
-        reason: Literal["quit", "disconnect"],
+        reason: Literal["quit", "disconnect", "error"],
         by_player: str | None = None,
     ) -> None:
         metrics.games_cancelled_total.inc({"reason": reason})
@@ -230,19 +230,26 @@ class Game:
         logger.debug("Received message {message}", message=message)
         event = message.unwrap()
 
-        match event:
-            case GameEvent(type=ClientGameEvent.SPAWN_SHIP):
-                ship_id: str = event.payload["ship_id"]
-                position: Collection[str] = event.payload["position"]
-                self.add_ship(client_nickname, position, ship_id)
-            case GameEvent(type=ClientGameEvent.FIRE):
-                position: Collection[str] = event.payload["position"]  # type: ignore[no-redef]
-                self.fire(position)
-            case GameEvent(type=ClientGameEvent.CANCEL_GAME):
-                self.send_game_cancelled(reason="quit", by_player=client_nickname)
-                self.stop()
-            case _:
-                logger.warning("Unknown event {event}", event=event)
+        try:
+            match event:
+                case GameEvent(type=ClientGameEvent.SPAWN_SHIP):
+                    ship_id: str = event.payload["ship_id"]
+                    position: Collection[str] = event.payload["position"]
+                    self.add_ship(client_nickname, position, ship_id)
+                case GameEvent(type=ClientGameEvent.FIRE):
+                    position: Collection[str] = event.payload["position"]  # type: ignore[no-redef]
+                    self.fire(position)
+                case GameEvent(type=ClientGameEvent.CANCEL_GAME):
+                    self.send_game_cancelled(reason="quit", by_player=client_nickname)
+                    self.stop()
+                case _:
+                    logger.warning("Unknown event {event}", event=event)
+        except Exception:  # noqa
+            self.send_game_cancelled(reason="error")
+            logger.exception(
+                "An exception occured while handling a game event. Session ID {session_id}",
+                session_id=self.session_id,
+            )
 
     async def handle_host_event(self, message: Message[GameEvent]) -> None:
         self.handle_client_event(self.host.nickname, message)

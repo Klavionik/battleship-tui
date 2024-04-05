@@ -37,7 +37,11 @@ def convert_from_coordinate(coordinate: str) -> Coordinate:
     return Coordinate(row - 1, ord(column) - 1 - 64)
 
 
-CANCEL_MSG = {"quit": "%s has quit the game", "disconnect": "%s disconnected from the server"}
+CANCEL_MSG = {
+    "quit": "%s has quit the game",
+    "disconnect": "%s disconnected from the server",
+    "error": "An error occured during the game",
+}
 
 
 class Game(Screen[None]):
@@ -224,11 +228,21 @@ class Game(Screen[None]):
         self.query_one(Announcement).update_phase(text)
         self._strategy.unsubscribe()
 
-    def on_game_cancelled(self, reason: Literal["quit", "disconnect"]) -> None:
-        msg = CANCEL_MSG[reason] % self._enemy_name
-        self.app.pop_screen()
-        self.app.notify(msg, title="Game cancelled", severity="warning")
+    def on_game_cancelled(self, reason: Literal["quit", "disconnect", "error"]) -> None:
         self._strategy.unsubscribe()
+        self.app.pop_screen()
+
+        msg = CANCEL_MSG[reason]
+
+        try:
+            msg = msg % self._enemy_name
+        except TypeError:
+            msg = msg
+
+        if reason == "error":
+            self.app.notify(msg, title="Game error", severity="error")
+        else:
+            self.app.notify(msg, title="Game cancelled", severity="warning")
 
     @on(Board.CellShot)
     def fire(self, event: Board.CellShot) -> None:
