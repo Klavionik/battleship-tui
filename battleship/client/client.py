@@ -425,7 +425,7 @@ class Client:
                 exc = t.exception()
                 if exc:
                     raise exc
-            except asyncio.InvalidStateError:
+            except (asyncio.InvalidStateError, asyncio.CancelledError):
                 pass
             except Exception:
                 logger.exception("Exception caught in events worker.")
