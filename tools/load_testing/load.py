@@ -17,11 +17,11 @@ import asyncio
 import csv
 import functools
 import io
+import itertools
 import random
 import time
 from collections.abc import Awaitable, Iterator
 from dataclasses import dataclass
-from itertools import cycle
 from typing import Sequence
 
 from rich.console import Console
@@ -62,8 +62,14 @@ def virtual_user(string: str) -> VirtualUser:
     return VirtualUser(nickname, password)
 
 
-def parse_users_file(file: io.TextIOWrapper) -> list[tuple[VirtualUser, VirtualUser]]:
+def parse_users_file(
+    file: io.TextIOWrapper, max_sessions: int
+) -> list[tuple[VirtualUser, VirtualUser]]:
     reader = csv.reader(file)
+
+    if max_sessions:
+        reader = itertools.islice(csv.reader(file), max_sessions)  # type: ignore[assignment]
+
     return [(virtual_user(pair[0]), virtual_user(pair[1])) for pair in reader]
 
 
@@ -76,6 +82,7 @@ parser.add_argument(
     default="http://localhost:8000",
     help="Target server URL",
 )
+parser.add_argument("--max-sessions", default=0, type=int, help="Number of sessions to run")
 
 group = parser.add_mutually_exclusive_group(required=True)
 group.add_argument(
@@ -292,6 +299,8 @@ async def load(
 
     session_id = await create_session(host)
     await join_game(player, session_id)
+    await sessions_unsubscribe(player)
+    await sessions_unsubscribe(host)
 
     await delay()
 
@@ -327,10 +336,10 @@ async def load(
 
     if first_shooter == host.nickname:
         targets = zip(HOST_TARGETS, PLAYER_TARGETS)
-        clients = cycle((host, player))
+        clients = itertools.cycle((host, player))
     else:
         targets = zip(PLAYER_TARGETS, HOST_TARGETS)
-        clients = cycle((player, host))
+        clients = itertools.cycle((player, host))
 
     def iterate_moves() -> Iterator[tuple[Client, str]]:
         for target, next_target in targets:
@@ -396,7 +405,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if users_file := args.users_file:
-        users = parse_users_file(users_file)
+        users = parse_users_file(users_file, args.max_sessions)
     else:
         users = args.users
 
