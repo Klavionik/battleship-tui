@@ -19,7 +19,10 @@ class Timeout:
     """
 
     def __init__(self, deadline: float | None, loop: asyncio.AbstractEventLoop):
-        self._timeout = _Timeout(deadline, loop)
+        if sys.version_info >= (3, 11):
+            self._timeout = _Timeout(deadline)
+        else:
+            self._timeout = _Timeout(deadline, loop)
 
     def reschedule(self, delay: float | None) -> None:
         if hasattr(self._timeout, "reschedule"):
