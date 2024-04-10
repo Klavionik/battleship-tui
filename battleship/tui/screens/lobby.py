@@ -110,16 +110,20 @@ class Lobby(Screen[None]):
         try:
             count = await self._client.fetch_players_online()
         except ClientError as exc:
-            logger.exception("Cannot fetch online players count. {exc}", exc=exc)
+            logger.warning("Cannot fetch online players count. {exc}", exc=exc)
         else:
             await self.update_online_count(count.total)
             await self.update_ingame_count(count.ingame)
 
     async def subscribe_to_player_count(self) -> None:
-        subscription = await self._client.players_subscribe()
-        subscription.on_online_changed(self.update_online_count)
-        subscription.on_ingame_changed(self.update_ingame_count)
-        self._player_subscription = subscription
+        try:
+            subscription = await self._client.players_subscribe()
+        except ClientError as exc:
+            logger.warning("Cannot subscribe to players updates. {exc}", exc=exc)
+        else:
+            subscription.on_online_changed(self.update_online_count)
+            subscription.on_ingame_changed(self.update_ingame_count)
+            self._player_subscription = subscription
 
     async def unsubscribe_from_player_count(self) -> None:
         try:

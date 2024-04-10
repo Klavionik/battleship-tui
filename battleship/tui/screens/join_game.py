@@ -88,16 +88,22 @@ class JoinGame(Screen[None]):
             await self.fetch_sessions()
 
     async def fetch_sessions(self) -> None:
-        sessions = await self._client.fetch_sessions()
-
-        for session in sessions:
-            await self.add_session(session)
+        try:
+            sessions = await self._client.fetch_sessions()
+        except ClientError as exc:
+            logger.warning("Cannot fetch sessions. {exc}", exc=exc)
+        else:
+            for session in sessions:
+                await self.add_session(session)
 
     async def subscribe_to_updates(self) -> None:
-        self._subscription = await self._client.sessions_subscribe()
-        self._subscription.on_add(self.add_session)
-        self._subscription.on_remove(self.remove_session)
-        self._subscription.on_start(self.remove_session)
+        try:
+            self._subscription = await self._client.sessions_subscribe()
+            self._subscription.on_add(self.add_session)
+            self._subscription.on_remove(self.remove_session)
+            self._subscription.on_start(self.remove_session)
+        except ClientError as exc:
+            logger.warning("Cannot subscribe to session updates. {exc}", exc=exc)
 
     async def unsubscribe_from_updates(self) -> None:
         try:
