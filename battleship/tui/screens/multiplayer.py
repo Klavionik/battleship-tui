@@ -11,8 +11,14 @@ from textual.screen import Screen
 from textual.validation import Length
 from textual.widgets import Button, Input, Markdown, Rule
 
-from battleship.client import Client, ConnectionImpossible, RequestFailed, Unauthorized
-from battleship.client.client import LoginRequired, ServerUnavailable
+from battleship.client.client import (
+    Client,
+    LoginRequired,
+    RequestFailed,
+    ServerUnavailable,
+    Unauthorized,
+)
+from battleship.client.websocket import ConnectionImpossible, ConnectionRejected
 from battleship.tui import resources, screens
 from battleship.tui.widgets import AppFooter
 
@@ -82,6 +88,18 @@ class Multiplayer(Screen[None]):
     async def connect(self, return_to_main_menu: bool = True) -> None:
         try:
             await self._client.connect()
+        except ConnectionRejected:
+            self.loading = False  # noqa
+
+            if return_to_main_menu:
+                await self.app.switch_screen(screens.MainMenu())
+
+            self.notify(
+                "You are already logged in from another client.",
+                title="Connection rejected",
+                severity="warning",
+                timeout=5,
+            )
         except ConnectionImpossible:
             self.loading = False  # noqa
 

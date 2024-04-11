@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Annotated
 
 import typer
@@ -11,7 +12,9 @@ app.add_typer(account.app, name="account")
 app.add_typer(play.app, name="play")
 app.add_typer(settings.app, name="settings")
 
-DEFAULT_LOG_SINK = data_home / "client.log"
+
+def make_log_sink() -> str:
+    return str(data_home / f"client-{datetime.now()}.log")
 
 
 @app.callback(invoke_without_command=True)
@@ -48,7 +51,7 @@ def main(
     ctx.ensure_object(dict)
     ctx.obj["server_url"] = server_url
 
-    logging.configure_logger(str(DEFAULT_LOG_SINK))
+    logging.configure_logger(make_log_sink())
     config = tui.Config(
         server_url=server_url,
         credentials_provider=credentials_provider,

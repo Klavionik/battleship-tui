@@ -1951,6 +1951,21 @@ files = [
 pytest = ">=7.0.0,<9.0.0"
 
 [[package]]
+name = "tenacity"
+version = "8.2.3"
+description = "Retry code until it succeeds"
+category = "main"
+optional = true
+python-versions = ">=3.7"
+files = [
+    {file = "tenacity-8.2.3-py3-none-any.whl", hash = "sha256:ce510e327a630c9e1beaf17d42e6ffacc88185044ad85cf74c0a8887c6a0f88c"},
+    {file = "tenacity-8.2.3.tar.gz", hash = "sha256:5398ef0d78e63f40007c1fb4c0bff96e1911394d2fa8d194f77619c05ff6cc8a"},
+]
+
+[package.extras]
+doc = ["reno", "sphinx", "tornado (>=4.5)"]
+
+[[package]]
 name = "textual"
 version = "0.52.1"
 description = "Modern Text User Interface framework"
@@ -2390,11 +2405,11 @@ idna = ">=2.0"
 multidict = ">=4.0"
 
 [extras]
-client = ["async-timeout", "copykitten", "inject", "textual", "typer"]
+client = ["async-timeout", "copykitten", "inject", "tenacity", "textual", "typer"]
 dev = ["textual-dev"]
 server = ["aioprometheus", "auth0-python", "blacksheep", "pyjwt", "redis", "sentry-sdk", "uvicorn", "uvloop"]
 
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.13"
-content-hash = "7bcf07badf5f080b2c62903bc49a67527a9edb215f117038002237139ca06fb3"
+content-hash = "c028a9b9da25488769d461935392d20f73794cbc846faffd22c76782913b55db"

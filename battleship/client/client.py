@@ -11,12 +11,17 @@ from loguru import logger
 from pyee.asyncio import AsyncIOEventEmitter
 
 # noinspection PyProtectedMember
-from websockets.client import WebSocketClientProtocol, connect
+from websockets.client import WebSocketClientProtocol
 
 from battleship import get_client_version
 from battleship.client.auth import IDTokenAuth
 from battleship.client.credentials import Credentials, CredentialsProvider
 from battleship.client.subscriptions import PlayerSubscription, SessionSubscription
+from battleship.client.websocket import (
+    ConnectionImpossible,
+    ConnectionRejected,
+    connect,
+)
 from battleship.shared.compat import StrEnum
 from battleship.shared.compat import async_timeout as timeout
 from battleship.shared.events import (
@@ -44,13 +49,10 @@ class ConnectionEvent(StrEnum):
     CONNECTION_LOST = auto()
     CONNECTION_ESTABLISHED = auto()
     CONNECTION_IMPOSSIBLE = auto()
+    CONNECTION_REJECTED = auto()
 
 
 class ClientError(Exception):
-    pass
-
-
-class WebSocketConnectionTimeout(ClientError):
     pass
 
 
@@ -67,10 +69,6 @@ class Unauthorized(ClientError):
 
 
 class LoginRequired(ClientError):
-    pass
-
-
-class ConnectionImpossible(ClientError):
     pass
 
 
@@ -101,7 +99,7 @@ class Client:
         credentials_provider: CredentialsProvider,
         refresh_interval: int = 20,
         http_timeout: int = 20,
-        ws_timeout: int = 30,
+        ws_timeout: int = 15,
     ) -> None:
         parsed_url = urlparse(server_url)
         self._netloc = parsed_url.netloc
@@ -111,6 +109,7 @@ class Client:
         self._ws_timeout = ws_timeout
         self._emitter = AsyncIOEventEmitter()
         self._events_worker_task: Task[None] | None = None
+        self._rejected = False
         self.credentials: Credentials | None = None
         self.auth = IDTokenAuth()
         self._session = AsyncClient(
@@ -159,7 +158,10 @@ class Client:
             async with timeout(self._ws_timeout):
                 await self._ws_connected.wait()
         except TimeoutError:
-            raise ConnectionImpossible("Connection attempt timed out.")
+            if self._rejected:
+                raise ConnectionRejected
+            else:
+                raise ConnectionImpossible
 
     async def connect(self) -> None:
         if self.credentials is None:
@@ -366,19 +368,22 @@ class Client:
     async def _connect_with_retry(self) -> AsyncIterator[WebSocketClientProtocol]:
         assert self.credentials
 
+        self._rejected = False
+
         try:
-            async with timeout(self._ws_timeout) as tm:
-                async for connection in connect(
-                    self.base_url_ws + "/ws",
-                    extra_headers={
-                        "Authorization": f"Bearer {self.credentials.id_token}",
-                        "X-Client-Version": get_client_version(),
-                    },
-                ):
-                    tm.reschedule(None)
-                    yield connection
-                    tm.reschedule(asyncio.get_running_loop().time() + self._ws_timeout)
-        except TimeoutError:
+            async for connection in connect(
+                self.base_url_ws + "/ws",
+                extra_headers={
+                    "Authorization": f"Bearer {self.credentials.id_token}",
+                    "X-Client-Version": get_client_version(),
+                },
+                timeout=self._ws_timeout,
+            ):
+                yield connection
+        except ConnectionRejected:
+            logger.warning("Connection rejected")
+            self._rejected = True
+        except ConnectionImpossible:
             logger.warning("Cannot establish WebSocket connection.")
             self._emitter.emit(ConnectionEvent.CONNECTION_IMPOSSIBLE)
 
@@ -408,14 +413,17 @@ class Client:
                             continue
                         case _:
                             logger.warning("Unknown message.")
-            except websockets.ConnectionClosed:
-                self._cleanup_ws_connection()
+            except websockets.ConnectionClosed as exc:
+                logger.warning("Connection closed: {exc}", exc=exc)
+                await self._cleanup_ws_connection()
                 logger.warning("Server closed the WebSocket connection, acquire a new one.")
                 self._emitter.emit(ConnectionEvent.CONNECTION_LOST)
                 continue
 
-    def _cleanup_ws_connection(self) -> None:
+    async def _cleanup_ws_connection(self) -> None:
+        assert self._ws, "Trying to cleanup with no connection"
         logger.debug("WebSocket connection cleanup.")
+        await self._ws.close()
         self._ws = None
         self._ws_connected.clear()
 
@@ -430,7 +438,7 @@ class Client:
             except Exception:
                 logger.exception("Exception caught in events worker.")
 
-            self._cleanup_ws_connection()
+            asyncio.create_task(self._cleanup_ws_connection())
             self._events_worker_task = None
 
         task = asyncio.create_task(self._events_worker())
@@ -461,8 +469,8 @@ class Client:
         try:
             response = await self._session.request(method, url, json=json)
             response.raise_for_status()
-        except httpx.TransportError as exc:
-            logger.error("HTTP transport error occured: {exc}", exc=repr(exc))
+        except httpx.RequestError as exc:
+            logger.error("HTTP request error occured: {exc}", exc=repr(exc))
             raise RequestFailed
         except httpx.HTTPStatusError as exc:
             match exc.response.status_code:

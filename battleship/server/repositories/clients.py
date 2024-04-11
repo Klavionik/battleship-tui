@@ -12,6 +12,10 @@ class ClientNotFound(Exception):
     pass
 
 
+class ClientAlreadyExists(Exception):
+    pass
+
+
 class ClientRepository(Observable, abc.ABC):
     entity = "client"
 
@@ -43,6 +47,10 @@ class ClientRepository(Observable, abc.ABC):
 
     @abc.abstractmethod
     async def count(self) -> int:
+        pass
+
+    @abc.abstractmethod
+    async def exists(self, client_id: str) -> bool:
         pass
 
 
@@ -88,6 +96,9 @@ class InMemoryClientRepository(ClientRepository):
     async def count(self) -> int:
         return len(self._clients)
 
+    async def exists(self, client_id: str) -> bool:
+        return client_id in self._clients
+
 
 class RedisClientRepository(ClientRepository):
     key = "clients"
@@ -101,6 +112,7 @@ class RedisClientRepository(ClientRepository):
     ) -> None:
         super().__init__(message_bus)
         self._client = client
+        self._lock = asyncio.Lock()
 
     def get_key(self, client_id: str) -> str:
         return f"{self.namespace}{client_id}"
@@ -112,9 +124,13 @@ class RedisClientRepository(ClientRepository):
         return key.removeprefix(self.namespace)
 
     async def add(self, client_id: str, nickname: str, guest: bool, version: str) -> Client:
-        client = Client(id=client_id, nickname=nickname, guest=guest, version=version)
-        await self._save(client)
-        return client
+        async with self._lock:
+            if await self.exists(client_id):
+                raise ClientAlreadyExists(f"Client {client_id=} already exists.")
+
+            client = Client(id=client_id, nickname=nickname, guest=guest, version=version)
+            await self._save(client)
+            return client
 
     async def get(self, client_id: str) -> Client:
         data = await self._client.get(self.get_key(client_id))
@@ -145,6 +161,9 @@ class RedisClientRepository(ClientRepository):
     async def count(self) -> int:
         keys = await self._client.keys(self.pattern)
         return len(keys)
+
+    async def exists(self, client_id: str) -> bool:
+        return bool(await self._client.exists(self.get_key(client_id)))
 
     async def _save(self, client: Client) -> bool:
         model = Client(
