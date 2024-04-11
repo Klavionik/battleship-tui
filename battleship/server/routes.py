@@ -1,5 +1,3 @@
-import asyncio
-
 from blacksheep import (
     FromJSON,
     Request,
@@ -18,7 +16,7 @@ from guardpost.authentication import Identity
 from loguru import logger
 
 from battleship.engine import roster
-from battleship.server import context, metrics
+from battleship.server import context, metrics, services
 from battleship.server.auth import AuthManager, InvalidSignup, WrongCredentials
 from battleship.server.bus import MessageBus
 from battleship.server.repositories import (
@@ -26,21 +24,15 @@ from battleship.server.repositories import (
     SessionRepository,
     StatisticsRepository,
 )
-from battleship.server.repositories.statistics import StatisticsNotFound
 from battleship.server.repositories.subscriptions import SubscriptionRepository
 from battleship.server.websocket import Connection
-from battleship.shared.events import (
-    ClientDisconnectedEvent,
-    GameEvent,
-    Message,
-    ServerGameEvent,
-    Subscription,
-)
+from battleship.shared.events import ClientDisconnectedEvent, Message, Subscription
 from battleship.shared.models import (
     IDToken,
     LoginCredentials,
     LoginData,
     PlayerCount,
+    PlayerStatistics,
     RefreshToken,
     Roster,
     Session,
@@ -130,16 +122,12 @@ async def join_session(
     client_repository: ClientRepository,
     message_bus: MessageBus,
 ) -> None:
-    guest_id = identity.claims["sub"]
-    session = await session_repository.get(session_id)
-    players = await asyncio.gather(
-        client_repository.get(session.host_id), client_repository.get(guest_id)
-    )
-    host, guest = players
-    await session_repository.update(session.id, guest_id=guest.id, started=True)
-    await message_bus.emit(
-        "games",
-        Message(event=GameEvent(type=ServerGameEvent.START_GAME, session_id=session_id)),
+    await services.join_game_session(
+        identity.claims["sub"],
+        session_id,
+        session_repository,
+        client_repository,
+        message_bus,
     )
 
 
@@ -147,11 +135,7 @@ async def join_session(
 async def get_players_online(
     client_repository: ClientRepository, session_repository: SessionRepository
 ) -> PlayerCount:
-    players = await client_repository.count()
-    sessions = await session_repository.list()
-    started_sessions = [s for s in sessions if s.started]
-    players_ingame = len(started_sessions) * 2
-    return PlayerCount(total=players, ingame=players_ingame)
+    return await services.count_players(client_repository, session_repository)
 
 
 @router.post("/players/subscribe")
@@ -228,20 +212,13 @@ async def health() -> Response:
 @router.get("/statistics/{player}")
 async def get_player_statistics(
     identity: Identity, player: str, statistics_repository: StatisticsRepository
-) -> Response:
+) -> PlayerStatistics | Response:
     nickname = identity["nickname"]
 
     if nickname != player:
         return forbidden()
 
-    user_id = identity["sub"]
-
-    try:
-        statistics = await statistics_repository.get(user_id)
-    except StatisticsNotFound:
-        statistics = await statistics_repository.create(user_id)
-
-    return ok(statistics.to_dict())
+    return await services.get_player_statistics(identity["sub"], statistics_repository)
 
 
 @router.get("/metrics")
