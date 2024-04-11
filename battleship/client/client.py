@@ -1,4 +1,5 @@
 import asyncio
+import json
 from asyncio import Task
 from enum import auto, unique
 from typing import Any, AsyncIterator, Callable, Collection, Optional
@@ -507,9 +508,17 @@ class Client:
 
 
 async def log_request(request: Request) -> None:
+    content = None
+
+    if request.headers.get("Content-Type") == "application/json":
+        content = json.loads(request.content)
+
+        if isinstance(content, dict) and "password" in content:
+            content["password"] = "[REDACTED]"
+
     logger.debug(
         "Make {method} request to {path} with content {content}.",
         method=request.method,
         path=request.url.path,
-        content=request.content.decode() if request.method in ["POST"] else None,
+        content=content,
     )
