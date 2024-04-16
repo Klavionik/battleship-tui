@@ -245,11 +245,12 @@ class Game:
                 case _:
                     logger.warning("Unknown event {event}", event=event)
         except Exception:  # noqa
-            self.send_game_cancelled(reason="error")
             logger.exception(
                 "An exception occured while handling a game event. Session ID {session_id}",
                 session_id=self.session_id,
             )
+            self.send_game_cancelled(reason="error")
+            self.stop()
 
     async def handle_host_event(self, message: Message[GameEvent]) -> None:
         self.handle_client_event(self.host.nickname, message)
