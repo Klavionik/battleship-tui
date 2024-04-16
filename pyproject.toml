@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "battleship-tui"
-version = "0.12.1"
+version = "0.12.2"
 description = "Battleship TUI is an implementation of the popular paper-and-pen Battleship game for your terminal."
 authors = ["Roman Vlasenko <klavionik@gmail.com>"]
 readme = "README.md"
