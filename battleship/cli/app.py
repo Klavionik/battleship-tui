@@ -15,7 +15,7 @@ app.add_typer(settings.app, name="settings")
 
 def make_log_sink() -> str:
     now = datetime.now(tz=timezone.utc)
-    return str(data_home / f"client_{now:%Y-%m-%d_%H:%M:%S}.log")
+    return str(data_home / f"client_{now:%Y-%m-%d_%H-%M-%S}.log")
 
 
 @app.callback(invoke_without_command=True)

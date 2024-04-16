@@ -22,7 +22,7 @@ from battleship.tui.widgets.modals import WaitingModal
 def save_crash_report() -> None:
     version = get_client_version()
     now = datetime.now(tz=timezone.utc)
-    filename = f"crash_report_{now:%Y-%m-%d_%H:%M:%S}_v{version}.txt"
+    filename = f"crash_report_{now:%Y-%m-%d_%H-%M-%S}_v{version}.txt"
     report_path = data_home / filename
 
     with report_path.open(mode="w") as fh:
