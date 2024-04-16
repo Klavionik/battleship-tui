@@ -316,7 +316,10 @@ class Board(Widget):
             logger.warning("Trying to select target w/o a cursor.")
             return
 
-        if self.is_cell_hit(self._cursor_coordinate):
+        cell_targeted = self._cursor_coordinate in self._target_coordinates
+        cell_hit = self.is_cell_hit(self._cursor_coordinate)
+
+        if cell_hit or cell_targeted:
             return
 
         self._target_coordinates.append(self._cursor_coordinate)
