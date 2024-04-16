@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Annotated
 
 import typer
@@ -14,7 +14,8 @@ app.add_typer(settings.app, name="settings")
 
 
 def make_log_sink() -> str:
-    return str(data_home / f"client-{datetime.now()}.log")
+    now = datetime.now(tz=timezone.utc)
+    return str(data_home / f"client_{now:%Y-%m-%d_%H:%M:%S}.log")
 
 
 @app.callback(invoke_without_command=True)
