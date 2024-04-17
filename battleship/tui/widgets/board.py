@@ -16,7 +16,7 @@ from textual.app import ComposeResult
 from textual.coordinate import Coordinate
 from textual.events import Click, Mount, MouseMove
 from textual.message import Message
-from textual.reactive import var
+from textual.reactive import reactive, var
 from textual.widget import Widget
 from textual.widgets import DataTable, Label
 
@@ -123,6 +123,24 @@ class Grid(DataTable[Cell]):
         self.post_message(self.GridLeave())
 
 
+class PlayerName(Label):
+    show_fire: reactive[bool] = reactive(False)
+
+    def __init__(self, *args: Any, value: str, **kwargs: Any):
+        super().__init__(*args, **kwargs)
+        self._value = value
+
+    def watch_show_fire(self, value: bool) -> None:
+        self.log.warning(f"{value=}")
+
+        if value:
+            name = f"{self._value} [red bold blink]FIRE[/]"
+        else:
+            name = self._value
+
+        self.update(f"{MAN} {name}")
+
+
 class Board(Widget):
     class Mode(StrEnum):
         DISPLAY = auto()
@@ -131,6 +149,7 @@ class Board(Widget):
 
     min_targets: var[int] = var(1)
     mode: var[Mode] = var(Mode.DISPLAY, init=False)
+    under_attack: reactive[bool] = reactive(False)
 
     class ShipPlaced(Message):
         def __init__(self, ship: ShipToPlace, coordinates: list[Coordinate]):
@@ -253,7 +272,7 @@ class Board(Widget):
         return (row + column) % 2 == 0
 
     def compose(self) -> ComposeResult:
-        yield Label(f"{MAN} {self.player_name}")
+        yield PlayerName(value=self.player_name).data_bind(show_fire=Board.under_attack)
         yield self._grid
 
     def move_crosshair(self, coordinate: Coordinate | None) -> None:

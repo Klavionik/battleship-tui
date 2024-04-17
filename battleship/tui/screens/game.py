@@ -177,7 +177,10 @@ class Game(Screen[None]):
             self.query_one(Announcement).update_phase(text)
 
     def on_awaiting_move(self, actor: str, subject: str) -> None:
-        self.board_map[actor].mode = Board.Mode.DISPLAY
+        if (actor_board := self.board_map[actor]) is self.player_board:
+            actor_board.under_attack = True
+
+        actor_board.mode = Board.Mode.DISPLAY
 
         if (subject_board := self.board_map[subject]) != self.player_board:
             subject_board.mode = Board.Mode.TARGET
@@ -247,6 +250,7 @@ class Game(Screen[None]):
     @on(Board.CellShot)
     def fire(self, event: Board.CellShot) -> None:
         self.enemy_board.mode = Board.Mode.DISPLAY
+        self.player_board.under_attack = False
         position = [convert_to_coordinate(c) for c in event.coordinates]
         self._strategy.fire(position=position)
 
