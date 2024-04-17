@@ -27,7 +27,7 @@ def save_crash_report() -> None:
 
     with report_path.open(mode="w") as fh:
         console = Console(file=fh)
-        tb = Traceback(show_locals=True, width=150, suppress=[rich])
+        tb = Traceback(width=150, suppress=[rich])
         console.print(tb)
 
 
