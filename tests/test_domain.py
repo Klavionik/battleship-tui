@@ -1,5 +1,4 @@
 import random
-from unittest.mock import Mock, call
 
 import pytest
 
@@ -251,7 +250,7 @@ def test_game_fleet_not_ready():
     player_b = domain.Player(name="player_b")
     game = domain.Game(player_a, player_b, roster.get_roster("test"))
 
-    assert not game.is_fleet_ready(player_a)
+    assert not game._is_fleet_ready(player_a)
 
 
 def test_game_fleet_ready(test_roster):
@@ -261,13 +260,13 @@ def test_game_fleet_ready(test_roster):
     [item_1, item_2] = double_test_roster
     game = domain.Game(player_a, player_b, double_test_roster)
 
-    game.add_ship(player_a, position=["A2", "A3"], roster_id=item_1.id)
+    fleet_ready = game.add_ship(player_a, position=["A2", "A3"], roster_id=item_1.id)
 
-    assert not game.is_fleet_ready(player_a)
+    assert not fleet_ready
 
-    game.add_ship(player_a, position=["B2", "B3"], roster_id=item_2.id)
+    fleet_ready = game.add_ship(player_a, position=["B2", "B3"], roster_id=item_2.id)
 
-    assert game.is_fleet_ready(player_a)
+    assert fleet_ready
 
 
 def test_game_ready_if_both_fleets_ready(test_roster):
@@ -512,49 +511,3 @@ def test_board_gets_adjacent_cell():
     assert down.coordinate == "B2"
     assert right.coordinate == "C1"
     assert left.coordinate == "A1"
-
-
-def test_game_calls_hooks(test_roster, test_game):
-    [item] = test_roster
-    game = test_game
-    ship_added_hook = Mock()
-    fleet_ready_hook = Mock()
-    next_move_hook = Mock()
-    ended_hook = Mock()
-    game.register_hook(domain.Hook.SHIP_ADDED, ship_added_hook)
-    game.register_hook(domain.Hook.FLEET_READY, fleet_ready_hook)
-    game.register_hook(domain.Hook.NEXT_MOVE, next_move_hook)
-    game.register_hook(domain.Hook.GAME_ENDED, ended_hook)
-
-    game.add_ship(game.player_a, position=["A2", "A3"], roster_id=item.id)
-
-    assert ship_added_hook.call_count == 1
-    assert ship_added_hook.call_args == call(game.player_a, item.id, ["A2", "A3"])
-    assert fleet_ready_hook.call_count == 1
-    assert fleet_ready_hook.call_args == call(game.player_a)
-
-    game.add_ship(game.player_b, position=["A2", "A3"], roster_id=item.id)
-
-    assert ship_added_hook.call_count == 2
-    assert ship_added_hook.call_args == call(game.player_b, item.id, ["A2", "A3"])
-    assert fleet_ready_hook.call_count == 2
-    assert fleet_ready_hook.call_args == call(game.player_b)
-
-    assert next_move_hook.call_count == 1
-    assert next_move_hook.call_args == call(game)
-
-    game.turn(game.fire(["A2"]))
-
-    assert next_move_hook.call_count == 2
-    assert next_move_hook.call_args == call(game)
-
-    game.turn(game.fire(["A2"]))
-
-    assert next_move_hook.call_count == 3
-    assert next_move_hook.call_args == call(game)
-
-    game.turn(game.fire(["A3"]))
-
-    assert next_move_hook.call_count == 3
-    assert ended_hook.call_count == 1
-    assert ended_hook.call_args == call(game)

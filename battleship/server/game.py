@@ -52,11 +52,6 @@ class Game:
             self.game.player_b.name: self.game.player_b,
         }
 
-        self.game.register_hook(domain.Hook.SHIP_ADDED, self.send_ship_spawned)
-        self.game.register_hook(domain.Hook.FLEET_READY, self.send_fleet_ready)
-        self.game.register_hook(domain.Hook.NEXT_MOVE, self.send_awaiting_move)
-        self.game.register_hook(domain.Hook.GAME_ENDED, self.send_winner)
-
         self._event_queue: asyncio.Queue[Message[GameEvent]] = asyncio.Queue()
         self._background_tasks = [
             self._run_broadcaster(),
@@ -88,8 +83,8 @@ class Game:
     def broadcast(self, msg: Message[GameEvent]) -> None:
         self._event_queue.put_nowait(msg)
 
-    def send_awaiting_move(self, game: domain.Game) -> None:
-        payload = dict(actor=game.current_player.name, subject=game.player_under_attack.name)
+    def send_awaiting_move(self, actor: domain.Player, subject: domain.Player) -> None:
+        payload = dict(actor=actor.name, subject=subject.name)
 
         self.broadcast(
             Message(
@@ -114,14 +109,13 @@ class Game:
         )
         self.broadcast(msg)
 
-    def send_winner(self, game: domain.Game) -> None:
-        assert game.winner
-        self.summary.finalize(game.winner, start=self.start, end=time())
+    def send_winner(self, winner: domain.Player) -> None:
+        self.summary.finalize(winner, start=self.start, end=time())
 
         msg = Message[GameEvent](
             event=GameEvent(
                 type=ServerGameEvent.GAME_ENDED,
-                payload=dict(winner=game.winner.name, summary=self.summary.to_json()),
+                payload=dict(winner=winner.name, summary=self.summary.to_json()),
             )
         )
         self.broadcast(msg)
@@ -213,18 +207,32 @@ class Game:
             except IndexError:
                 break
 
-        self.game.clear_hooks()
         self.disconnect_event_handlers()
 
     def fire(self, position: Collection[str]) -> None:
         salvo = self.game.fire(position)
         self.summary.update_shots(salvo)
         self.send_salvo(salvo)
-        self.game.turn(salvo)
+
+        outcome = self.game.turn(salvo)
+
+        match outcome:
+            case domain.NextMove():
+                self.send_awaiting_move(outcome.actor, outcome.subject)
+            case domain.GameEnded():
+                self.send_winner(outcome.winner)
 
     def add_ship(self, nickname: str, position: Collection[str], ship_id: str) -> None:
         player = self.players[nickname]
-        self.game.add_ship(player, position, ship_id)
+        fleet_ready = self.game.add_ship(player, position, ship_id)
+
+        self.send_ship_spawned(player, ship_id, position)
+
+        if fleet_ready:
+            self.send_fleet_ready(player)
+
+        if self.game.ready:
+            self.send_awaiting_move(self.game.current_player, self.game.player_under_attack)
 
     def handle_client_event(self, client_nickname: str, message: Message[GameEvent]) -> None:
         logger.debug("Received message {message}", message=message)

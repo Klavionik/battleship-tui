@@ -229,11 +229,6 @@ class SingleplayerStrategy(GameStrategy):
 
         self._spawn_bot_fleet()
 
-        game.register_hook(domain.Hook.SHIP_ADDED, self._ship_added_hook)
-        game.register_hook(domain.Hook.FLEET_READY, self._fleet_ready_hook)
-        game.register_hook(domain.Hook.NEXT_MOVE, self._next_move_hook)
-        game.register_hook(domain.Hook.GAME_ENDED, self._game_ended_hook)
-
     @property
     def player(self) -> str:
         return self._human_player.name
@@ -259,36 +254,23 @@ class SingleplayerStrategy(GameStrategy):
         if self._game.winner:
             return self._game.winner.name
 
-    def _next_move_hook(self, game: domain.Game) -> None:
-        self.emit_awaiting_move(
-            actor=game.current_player.name, subject=game.player_under_attack.name
-        )
-
-        if game.current_player is self._bot_player:
-            target = self._call_bot_target()
-            self.fire(target)
-
-    def _game_ended_hook(self, game: domain.Game) -> None:
-        assert game.winner
-        self._summary.finalize(game.winner, start=self._start, end=time())
-        self.emit_game_ended(game.winner.name, self._summary)
-
-    def _ship_added_hook(
-        self,
-        player: domain.Player,
-        ship_id: str,
-        position: Collection[str],
-    ) -> None:
-        self.emit_ship_spawned(player.name, ship_id, position)
-
-    def _fleet_ready_hook(self, player: domain.Player) -> None:
-        self.emit_fleet_ready(player.name)
-
-        # When player's fleet is ready, emit ready for bot fleet.
-        self.emit_fleet_ready(self._bot_player.name)
-
     def spawn_ship(self, ship_id: str, position: Collection[str]) -> None:
-        self._game.add_ship(self._game.player_a, position, ship_id)
+        fleet_ready = self._game.add_ship(self._human_player, position, ship_id)
+        self.emit_ship_spawned(self._human_player.name, ship_id, position)
+
+        if fleet_ready:
+            self.emit_fleet_ready(self._human_player.name)
+            # When player's fleet is ready, emit ready for bot fleet.
+            self.emit_fleet_ready(self._bot_player.name)
+
+        if self._game.ready:
+            self.emit_awaiting_move(
+                actor=self._game.current_player.name, subject=self._game.player_under_attack.name
+            )
+
+            if self._game.current_player is self._bot_player:
+                target = self._call_bot_target()
+                self.fire(target)
 
     def fire(self, position: Collection[str]) -> None:
         salvo = self._game.fire(position)
@@ -298,7 +280,18 @@ class SingleplayerStrategy(GameStrategy):
         if salvo.actor is self._bot_player:
             self._target_caller.provide_feedback(salvo.shots)
 
-        self._game.turn(salvo)
+        outcome = self._game.turn(salvo)
+
+        match outcome:
+            case domain.NextMove():
+                self.emit_awaiting_move(actor=outcome.actor.name, subject=outcome.subject.name)
+
+                if outcome.actor is self._bot_player:
+                    target = self._call_bot_target()
+                    self.fire(target)
+            case domain.GameEnded():
+                self._summary.finalize(outcome.winner, start=self._start, end=time())
+                self.emit_game_ended(outcome.winner.name, self._summary)
 
     def cancel(self) -> None:
         pass
@@ -315,4 +308,6 @@ class SingleplayerStrategy(GameStrategy):
     def _spawn_bot_fleet(self) -> None:
         for item in self._game.roster:
             position = self._autoplacer.place(item.type)
+            # Do not send fleet_ready message yet, the screen might be not ready
+            # to display a message.
             self._game.add_ship(self._bot_player, position, item.id)

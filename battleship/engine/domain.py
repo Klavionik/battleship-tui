@@ -5,7 +5,7 @@ import random
 import string
 from functools import cached_property
 from itertools import cycle
-from typing import Any, Callable, Collection, Iterable, Iterator
+from typing import Collection, Iterable, Iterator
 
 from battleship.engine import errors, roster
 
@@ -248,11 +248,18 @@ class Salvo:
         return iter(self.shots)
 
 
-class Hook(str, enum.Enum):
-    SHIP_ADDED = "ship_added"
-    FLEET_READY = "fleet_ready"
-    NEXT_MOVE = "next_move"
-    GAME_ENDED = "game_ended"
+@dataclasses.dataclass
+class GameEnded:
+    winner: Player
+
+
+@dataclasses.dataclass
+class NextMove:
+    actor: Player
+    subject: Player
+
+
+Outcome = GameEnded | NextMove
 
 
 class Game:
@@ -273,50 +280,11 @@ class Game:
         self._players = {player_a, player_b}
         self._player_cycle = cycle(random.sample([player_a, player_b], k=2))
         self._current_player = next(self._player_cycle)
-        self._started = False
         self._winner: Player | None = None
-        self._hooks: dict[Hook, Callable[..., Any] | None] = dict.fromkeys(Hook, None)
-        self._make_turn = False
+        self._can_make_turn = False
 
     def __str__(self) -> str:
         return f"Game <{self.player_a} vs {self.player_b}> <Winner: {self._winner}>"
-
-    def add_ship(self, player: Player, position: Collection[str], roster_id: roster.ShipId) -> None:
-        if player.get_ship(roster_id) is None:
-            ship = self._build_ship(roster_id)
-            player.add_ship(position, ship)
-        else:
-            raise errors.ShipLimitExceeded(
-                f"Player {player.name} already has a ship with roster id {roster_id}."
-            )
-
-        if ship_added_hook := self._hooks[Hook.SHIP_ADDED]:
-            ship_added_hook(player, roster_id, position)
-
-        if self.is_fleet_ready(player) and (fleet_ready_hook := self._hooks[Hook.FLEET_READY]):
-            fleet_ready_hook(player)
-
-        if self.ready and (next_move_hook := self._hooks[Hook.NEXT_MOVE]):
-            next_move_hook(self)
-
-    def register_hook(self, name: Hook, hook: Callable[..., Any]) -> None:
-        if not callable(hook):
-            raise TypeError("Hook must be a callable.")
-
-        self._hooks[name] = hook
-
-    def clear_hooks(self) -> None:
-        self._hooks.clear()
-
-    def is_fleet_ready(self, player: Player) -> bool:
-        return {ship.id for ship in player.ships} == {item.id for item in self.roster}
-
-    def _build_ship(self, ship_id: roster.ShipId) -> Ship:
-        try:
-            item = self.roster[ship_id]
-            return Ship(*item)
-        except KeyError:
-            raise errors.ShipNotFound(f"No ship with ID {ship_id} in the roster.")
 
     @property
     def current_player(self) -> Player:
@@ -332,7 +300,18 @@ class Game:
 
     @property
     def ready(self) -> bool:
-        return self.is_fleet_ready(self.player_a) and self.is_fleet_ready(self.player_b)
+        return self._is_fleet_ready(self.player_a) and self._is_fleet_ready(self.player_b)
+
+    def add_ship(self, player: Player, position: Collection[str], roster_id: roster.ShipId) -> bool:
+        if player.get_ship(roster_id) is None:
+            ship = self._build_ship(roster_id)
+            player.add_ship(position, ship)
+        else:
+            raise errors.ShipLimitExceeded(
+                f"Player {player.name} already has a ship with roster id {roster_id}."
+            )
+
+        return bool(self._is_fleet_ready(player))
 
     def fire(self, coordinates: Collection[str]) -> Salvo:
         if not self.ready:
@@ -364,18 +343,19 @@ class Game:
             )
             salvo.add_shot(shot)
 
-        self._make_turn = True
+        self._can_make_turn = True
         return salvo
 
-    def turn(self, salvo: Salvo) -> None:
-        if not self._make_turn:
+    def turn(self, salvo: Salvo) -> Outcome:
+        if not self._can_make_turn:
             raise RuntimeError("Cannot make turn at this time. Try calling fire() before.")
+
+        self._can_make_turn = False
 
         if self.player_under_attack.ships_alive == 0:
             self._winner = self.current_player
 
-            if ended_hook := self._hooks[Hook.GAME_ENDED]:
-                ended_hook(self)
+            return GameEnded(winner=self.current_player)
         else:
             if (
                 self.firing_order == FiringOrder.ALTERNATELY
@@ -384,7 +364,14 @@ class Game:
             ):
                 self._current_player = next(self._player_cycle)
 
-            if next_move_hook := self._hooks[Hook.NEXT_MOVE]:
-                next_move_hook(self)
+            return NextMove(actor=self.current_player, subject=self.player_under_attack)
 
-        self._make_turn = False
+    def _is_fleet_ready(self, player: Player) -> bool:
+        return {ship.id for ship in player.ships} == {item.id for item in self.roster}
+
+    def _build_ship(self, ship_id: roster.ShipId) -> Ship:
+        try:
+            item = self.roster[ship_id]
+            return Ship(*item)
+        except KeyError:
+            raise errors.ShipNotFound(f"No ship with ID {ship_id} in the roster.")
