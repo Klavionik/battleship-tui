@@ -52,6 +52,10 @@ class Game:
             self.game.player_b.name: self.game.player_b,
         }
 
+        self.game.on(domain.ShipSpawned, self.on_ship_spawned)
+        self.game.on(domain.NextMove, self.on_next_move)
+        self.game.on(domain.GameEnded, self.on_game_ended)
+
         self._event_queue: asyncio.Queue[Message[GameEvent]] = asyncio.Queue()
         self._background_tasks = [
             self._run_broadcaster(),
@@ -83,8 +87,8 @@ class Game:
     def broadcast(self, msg: Message[GameEvent]) -> None:
         self._event_queue.put_nowait(msg)
 
-    def send_awaiting_move(self, actor: domain.Player, subject: domain.Player) -> None:
-        payload = dict(actor=actor.name, subject=subject.name)
+    def on_next_move(self, event: domain.NextMove) -> None:
+        payload = dict(actor=event.actor.name, subject=event.subject.name)
 
         self.broadcast(
             Message(
@@ -95,13 +99,6 @@ class Game:
             )
         )
 
-    def send_fleet_ready(self, player: domain.Player) -> None:
-        self.broadcast(
-            Message(
-                event=GameEvent(type=ServerGameEvent.FLEET_READY, payload=dict(player=player.name))
-            )
-        )
-
     def send_salvo(self, salvo: domain.Salvo) -> None:
         model = salvo_to_model(salvo)
         msg = Message[GameEvent](
@@ -109,30 +106,37 @@ class Game:
         )
         self.broadcast(msg)
 
-    def send_winner(self, winner: domain.Player) -> None:
-        self.summary.finalize(winner, start=self.start, end=time())
+    def on_game_ended(self, event: domain.GameEnded) -> None:
+        self.summary.finalize(event.winner, start=self.start, end=time())
 
         msg = Message[GameEvent](
             event=GameEvent(
                 type=ServerGameEvent.GAME_ENDED,
-                payload=dict(winner=winner.name, summary=self.summary.to_json()),
+                payload=dict(winner=event.winner.name, summary=self.summary.to_json()),
             )
         )
         self.broadcast(msg)
         self.stop()
 
-    def send_ship_spawned(
+    def on_ship_spawned(
         self,
-        player: domain.Player,
-        ship_id: str,
-        position: Collection[str],
+        event: domain.ShipSpawned,
     ) -> None:
-        payload = dict(player=player.name, ship_id=ship_id, position=position)
+        payload = dict(player=event.player.name, ship_id=event.ship_id, position=event.position)
         msg = Message[GameEvent](
             event=GameEvent(type=ServerGameEvent.SHIP_SPAWNED, payload=payload)
         )
-        client = self.clients[player.name]
+        client = self.clients[event.player.name]
         asyncio.create_task(self.message_bus.emit(f"clients.out.{client.id}", msg))
+
+        if event.fleet_ready:
+            self.broadcast(
+                Message(
+                    event=GameEvent(
+                        type=ServerGameEvent.FLEET_READY, payload=dict(player=event.player.name)
+                    )
+                )
+            )
 
     def send_game_cancelled(
         self,
@@ -213,26 +217,11 @@ class Game:
         salvo = self.game.fire(position)
         self.summary.update_shots(salvo)
         self.send_salvo(salvo)
-
-        outcome = self.game.turn(salvo)
-
-        match outcome:
-            case domain.NextMove():
-                self.send_awaiting_move(outcome.actor, outcome.subject)
-            case domain.GameEnded():
-                self.send_winner(outcome.winner)
+        self.game.turn(salvo)
 
     def add_ship(self, nickname: str, position: Collection[str], ship_id: str) -> None:
         player = self.players[nickname]
-        fleet_ready = self.game.add_ship(player, position, ship_id)
-
-        self.send_ship_spawned(player, ship_id, position)
-
-        if fleet_ready:
-            self.send_fleet_ready(player)
-
-        if self.game.ready:
-            self.send_awaiting_move(self.game.current_player, self.game.player_under_attack)
+        self.game.add_ship(player, position, ship_id)
 
     def handle_client_event(self, client_nickname: str, message: Message[GameEvent]) -> None:
         logger.debug("Received message {message}", message=message)

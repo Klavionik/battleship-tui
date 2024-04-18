@@ -229,6 +229,10 @@ class SingleplayerStrategy(GameStrategy):
 
         self._spawn_bot_fleet()
 
+        game.on(domain.ShipSpawned, self.on_ship_spawned)
+        game.on(domain.NextMove, self.on_next_move)
+        game.on(domain.GameEnded, self.on_game_ended)
+
     @property
     def player(self) -> str:
         return self._human_player.name
@@ -254,23 +258,27 @@ class SingleplayerStrategy(GameStrategy):
         if self._game.winner:
             return self._game.winner.name
 
-    def spawn_ship(self, ship_id: str, position: Collection[str]) -> None:
-        fleet_ready = self._game.add_ship(self._human_player, position, ship_id)
-        self.emit_ship_spawned(self._human_player.name, ship_id, position)
+    def on_ship_spawned(self, event: domain.ShipSpawned) -> None:
+        self.emit_ship_spawned(event.player.name, event.ship_id, event.position)
 
-        if fleet_ready:
+        if event.fleet_ready:
+            # Both fleets are ready.
             self.emit_fleet_ready(self._human_player.name)
-            # When player's fleet is ready, emit ready for bot fleet.
             self.emit_fleet_ready(self._bot_player.name)
 
-        if self._game.ready:
-            self.emit_awaiting_move(
-                actor=self._game.current_player.name, subject=self._game.player_under_attack.name
-            )
+    def on_next_move(self, event: domain.NextMove) -> None:
+        self.emit_awaiting_move(actor=event.actor.name, subject=event.subject.name)
 
-            if self._game.current_player is self._bot_player:
-                target = self._call_bot_target()
-                self.fire(target)
+        if event.actor is self._bot_player:
+            target = self._call_bot_target()
+            self.fire(target)
+
+    def on_game_ended(self, event: domain.GameEnded) -> None:
+        self._summary.finalize(event.winner, start=self._start, end=time())
+        self.emit_game_ended(event.winner.name, self._summary)
+
+    def spawn_ship(self, ship_id: str, position: Collection[str]) -> None:
+        self._game.add_ship(self._human_player, position, ship_id)
 
     def fire(self, position: Collection[str]) -> None:
         salvo = self._game.fire(position)
@@ -280,18 +288,7 @@ class SingleplayerStrategy(GameStrategy):
         if salvo.actor is self._bot_player:
             self._target_caller.provide_feedback(salvo.shots)
 
-        outcome = self._game.turn(salvo)
-
-        match outcome:
-            case domain.NextMove():
-                self.emit_awaiting_move(actor=outcome.actor.name, subject=outcome.subject.name)
-
-                if outcome.actor is self._bot_player:
-                    target = self._call_bot_target()
-                    self.fire(target)
-            case domain.GameEnded():
-                self._summary.finalize(outcome.winner, start=self._start, end=time())
-                self.emit_game_ended(outcome.winner.name, self._summary)
+        self._game.turn(salvo)
 
     def cancel(self) -> None:
         pass

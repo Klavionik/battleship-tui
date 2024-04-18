@@ -233,8 +233,9 @@ class BattleshipApp(App[None]):
     def _fatal_error(self) -> None:
         if self._enable_crash_report:
             save_crash_report()
-
-        self._close_messages_no_wait()
+            self._close_messages_no_wait()
+        else:
+            super()._fatal_error()
 
 
 def run(app: BattleshipApp | None = None) -> None:

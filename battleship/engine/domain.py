@@ -3,9 +3,12 @@ import enum
 import itertools
 import random
 import string
+from collections.abc import Callable
 from functools import cached_property
-from itertools import cycle
-from typing import Collection, Iterable, Iterator
+from itertools import cycle, pairwise
+from typing import Any, Collection, Iterable, Iterator, TypeVar
+
+from pymitter import EventEmitter  # type: ignore[import-untyped]
 
 from battleship.engine import errors, roster
 
@@ -248,18 +251,38 @@ class Salvo:
         return iter(self.shots)
 
 
-@dataclasses.dataclass
-class GameEnded:
-    winner: Player
+class GameEvent:
+    pass
 
 
 @dataclasses.dataclass
-class NextMove:
+class NextMove(GameEvent):
     actor: Player
     subject: Player
 
 
-Outcome = GameEnded | NextMove
+@dataclasses.dataclass
+class ShipSpawned(GameEvent):
+    player: Player
+    ship_id: str
+    position: Collection[str]
+    fleet_ready: bool
+
+
+@dataclasses.dataclass
+class GameEnded(GameEvent):
+    winner: Player
+
+
+@enum.unique
+class GameState(enum.StrEnum):
+    ARRANGE_FLEET = enum.auto()
+    BATTLE = enum.auto()
+    END = enum.auto()
+
+
+Handler = Callable[[GameEvent], Any]
+Event = TypeVar("Event", bound=GameEvent)
 
 
 class Game:
@@ -277,32 +300,39 @@ class Game:
         self.firing_order = firing_order
         self.salvo_mode = salvo_mode
 
-        self._players = {player_a, player_b}
-        self._player_cycle = cycle(random.sample([player_a, player_b], k=2))
-        self._current_player = next(self._player_cycle)
+        self._player_cycle = pairwise(cycle(random.sample([player_a, player_b], k=2)))
+        self._actor, self._subject = next(self._player_cycle)
         self._winner: Player | None = None
         self._can_make_turn = False
+        self._state = GameState.ARRANGE_FLEET
+        self._ee = EventEmitter()
 
     def __str__(self) -> str:
         return f"Game <{self.player_a} vs {self.player_b}> <Winner: {self._winner}>"
 
     @property
-    def current_player(self) -> Player:
-        return self._current_player
+    def actor(self) -> Player:
+        return self._actor
 
     @property
-    def player_under_attack(self) -> Player:
-        return (self._players - {self.current_player}).pop()
+    def subject(self) -> Player:
+        return self._subject
+
+    @property
+    def state(self) -> GameState:
+        return self._state
 
     @property
     def winner(self) -> Player | None:
         return self._winner
 
-    @property
-    def ready(self) -> bool:
-        return self._is_fleet_ready(self.player_a) and self._is_fleet_ready(self.player_b)
+    def on(self, event: type[Event], func: Callable[[Event], None]) -> None:
+        self._ee.on(event.__name__, func)
 
-    def add_ship(self, player: Player, position: Collection[str], roster_id: roster.ShipId) -> bool:
+    def add_ship(self, player: Player, position: Collection[str], roster_id: roster.ShipId) -> None:
+        if self._state != GameState.ARRANGE_FLEET:
+            raise RuntimeError(f"Cannot add a new ship, incorrect game state {self._state}.")
+
         if player.get_ship(roster_id) is None:
             ship = self._build_ship(roster_id)
             player.add_ship(position, ship)
@@ -311,31 +341,38 @@ class Game:
                 f"Player {player.name} already has a ship with roster id {roster_id}."
             )
 
-        return bool(self._is_fleet_ready(player))
+        self._emit(
+            ShipSpawned(
+                player=player,
+                fleet_ready=self._is_fleet_ready(player),
+                ship_id=roster_id,
+                position=position,
+            )
+        )
+        self._check_game_ready()
 
     def fire(self, coordinates: Collection[str]) -> Salvo:
-        if not self.ready:
+        if self._state == GameState.ARRANGE_FLEET:
             raise errors.GameNotReady("Place all ships before firing.")
 
-        if self.winner:
+        if self._state == GameState.END:
             raise errors.GameEnded(f"{self.winner} won this game.")
 
         if len(coordinates) > 1 and not self.salvo_mode:
             raise errors.TooManyShots("Multiple shots in one turn permitted only in salvo mode.")
 
-        if self.salvo_mode and (len(coordinates) != self.current_player.ships_alive):
+        assert self._actor, "No actor"
+
+        if self.salvo_mode and (len(coordinates) != self._actor.ships_alive):
             raise errors.IncorrectShots(
                 f"Number of shots {len(coordinates)} must be equal "
-                f"to the number of alive ships {self.current_player.ships_alive}."
+                f"to the number of alive ships {self._actor.ships_alive}."
             )
 
-        salvo = Salvo(
-            actor=self.current_player,
-            subject=self.player_under_attack,
-        )
+        salvo = Salvo(actor=self._actor, subject=self._subject)
 
         for coordinate in coordinates:
-            maybe_ship = self.player_under_attack.attack(coordinate)
+            maybe_ship = self._subject.attack(coordinate)
             shot = Shot(
                 coordinate=coordinate,
                 hit=maybe_ship is not None,
@@ -346,25 +383,26 @@ class Game:
         self._can_make_turn = True
         return salvo
 
-    def turn(self, salvo: Salvo) -> Outcome:
+    def turn(self, salvo: Salvo) -> None:
         if not self._can_make_turn:
             raise RuntimeError("Cannot make turn at this time. Try calling fire() before.")
 
         self._can_make_turn = False
 
-        if self.player_under_attack.ships_alive == 0:
-            self._winner = self.current_player
-
-            return GameEnded(winner=self.current_player)
+        if salvo.subject.ships_alive == 0:
+            self._winner = salvo.actor
+            self._state = GameState.END
+            self._emit(GameEnded(winner=salvo.actor))
+            self._ee.off_all()
         else:
             if (
                 self.firing_order == FiringOrder.ALTERNATELY
                 or self.firing_order == FiringOrder.UNTIL_MISS
                 and salvo.miss
             ):
-                self._current_player = next(self._player_cycle)
+                self._cycle_players()
 
-            return NextMove(actor=self.current_player, subject=self.player_under_attack)
+            self._emit(NextMove(actor=self._actor, subject=self._subject))
 
     def _is_fleet_ready(self, player: Player) -> bool:
         return {ship.id for ship in player.ships} == {item.id for item in self.roster}
@@ -375,3 +413,14 @@ class Game:
             return Ship(*item)
         except KeyError:
             raise errors.ShipNotFound(f"No ship with ID {ship_id} in the roster.")
+
+    def _check_game_ready(self) -> None:
+        if self._is_fleet_ready(self.player_a) and self._is_fleet_ready(self.player_b):
+            self._state = GameState.BATTLE
+            self._emit(NextMove(self._actor, self._subject))
+
+    def _cycle_players(self) -> None:
+        self._actor, self._subject = next(self._player_cycle)
+
+    def _emit(self, event: GameEvent) -> None:
+        self._ee.emit_future(event.__class__.__name__, event)
