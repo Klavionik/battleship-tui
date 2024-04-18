@@ -15,7 +15,7 @@ from blacksheep.server.authorization import allow_anonymous
 from guardpost.authentication import Identity
 from loguru import logger
 
-from battleship.engine import roster
+from battleship.engine import rosters
 from battleship.server import context, metrics, services
 from battleship.server.auth import AuthManager, InvalidSignup, WrongCredentials
 from battleship.server.bus import MessageBus
@@ -161,7 +161,7 @@ async def unsubscribe_from_player_count_updates(
 @router.get("/rosters/{name}")
 async def get_roster(name: str) -> Roster | Response:
     try:
-        roster_ = roster.get_roster(name)
+        roster_ = rosters.get_roster(name)
     except KeyError:
         return not_found()
     else:

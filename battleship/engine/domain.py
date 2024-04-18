@@ -10,7 +10,7 @@ from typing import Any, Collection, Iterable, Iterator, TypeVar
 
 from pymitter import EventEmitter  # type: ignore[import-untyped]
 
-from battleship.engine import errors, roster
+from battleship.engine import errors, rosters
 
 DEFAULT_BOARD_SIZE = 10
 
@@ -198,7 +198,7 @@ class Player:
     def attack(self, coordinate: str) -> Ship | None:
         return self.board.hit_cell(coordinate)
 
-    def count_ships(self, ship_type: roster.ShipType) -> int:
+    def count_ships(self, ship_type: rosters.ShipType) -> int:
         return len([ship for ship in self.board.ships if ship.type == ship_type])
 
     def get_ship(self, ship_id: str) -> Ship | None:
@@ -290,7 +290,7 @@ class Game:
         self,
         player_a: Player,
         player_b: Player,
-        roster: roster.Roster,
+        roster: rosters.Roster,
         firing_order: FiringOrder = FiringOrder.ALTERNATELY,
         salvo_mode: bool = False,
     ) -> None:
@@ -329,7 +329,9 @@ class Game:
     def on(self, event: type[Event], func: Callable[[Event], None]) -> None:
         self._ee.on(event.__name__, func)
 
-    def add_ship(self, player: Player, position: Collection[str], roster_id: roster.ShipId) -> None:
+    def add_ship(
+        self, player: Player, position: Collection[str], roster_id: rosters.ShipId
+    ) -> None:
         if self._state != GameState.ARRANGE_FLEET:
             raise RuntimeError(f"Cannot add a new ship, incorrect game state {self._state}.")
 
@@ -407,7 +409,7 @@ class Game:
     def _is_fleet_ready(self, player: Player) -> bool:
         return {ship.id for ship in player.ships} == {item.id for item in self.roster}
 
-    def _build_ship(self, ship_id: roster.ShipId) -> Ship:
+    def _build_ship(self, ship_id: rosters.ShipId) -> Ship:
         try:
             item = self.roster[ship_id]
             return Ship(*item)

@@ -5,7 +5,7 @@ from typing import Collection, Literal
 from loguru import logger
 
 from battleship.engine import create_game, domain
-from battleship.engine.roster import get_roster
+from battleship.engine.rosters import get_roster
 from battleship.server import metrics
 from battleship.server.bus import MessageBus
 from battleship.server.repositories import (

@@ -2,7 +2,7 @@ import random
 
 import pytest
 
-from battleship.engine import ai, domain, errors, roster
+from battleship.engine import ai, domain, errors, rosters
 
 
 def test_target_caller_calls_correct_amount_of_targets():
@@ -45,20 +45,20 @@ def test_target_caller_targets_adjacent_cells_after_hit_until_all_tried():
     assert caller.call_out(count=4) == ["B4", "C3", "A3", "C9"]
 
 
-@pytest.mark.parametrize("ship", [*roster.get_roster("classic")])
+@pytest.mark.parametrize("ship", [*rosters.get_roster("classic")])
 def test_autoplacer_position_matches_ship_hp(ship):
     board = domain.Board()
-    autoplacer = ai.Autoplacer(board, roster.get_roster("classic"))
+    autoplacer = ai.Autoplacer(board, rosters.get_roster("classic"))
 
     position = autoplacer.place(ship_type=ship.type)
 
     assert len(position) == ship.hp
 
 
-@pytest.mark.parametrize("ship", [*roster.get_roster("classic")])
+@pytest.mark.parametrize("ship", [*rosters.get_roster("classic")])
 def test_autoplacer_position_is_valid(ship):
     board = domain.Board()
-    autoplacer = ai.Autoplacer(board, roster.get_roster("classic"))
+    autoplacer = ai.Autoplacer(board, rosters.get_roster("classic"))
 
     position = autoplacer.place(ship_type=ship.type)
 
@@ -67,7 +67,7 @@ def test_autoplacer_position_is_valid(ship):
 
 def test_autoplacer_raises_error_if_no_place_for_ship():
     board = domain.Board(size=4)
-    autoplacer = ai.Autoplacer(board, roster.get_roster("classic"))
+    autoplacer = ai.Autoplacer(board, rosters.get_roster("classic"))
 
     with pytest.raises(errors.CannotPlaceShip):
         autoplacer.place("carrier")

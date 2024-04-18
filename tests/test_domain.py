@@ -3,7 +3,7 @@ import random
 import pytest
 
 from battleship.engine import domain, errors
-from battleship.engine import roster as rosters
+from battleship.engine import rosters as rosters
 
 
 @rosters.register

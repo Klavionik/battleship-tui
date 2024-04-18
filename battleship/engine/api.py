@@ -1,7 +1,7 @@
 from typing import cast
 
 from battleship.engine.domain import FiringOrder, Game, Player
-from battleship.engine.roster import Roster
+from battleship.engine.rosters import Roster
 
 
 def is_firing_order(value: str) -> bool:

@@ -6,7 +6,7 @@ from typing import Any, TypeAlias, TypeVar
 from pydantic import BaseModel as _BaseModel
 from pydantic import EmailStr, Field, computed_field
 
-from battleship.engine import domain, roster
+from battleship.engine import domain, rosters
 from battleship.shared.compat import StrEnum
 
 SessionID: TypeAlias = str
@@ -248,7 +248,7 @@ class Roster(BaseModel):
     items: list[RosterItem]
 
     @classmethod
-    def from_domain(cls, obj: roster.Roster) -> "Roster":
+    def from_domain(cls, obj: rosters.Roster) -> "Roster":
         items = [RosterItem(id=item.id, type=item.type, hp=item.hp) for item in obj.items]
         return cls(name=obj.name, items=items)
 

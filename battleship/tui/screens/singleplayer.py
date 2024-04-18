@@ -8,7 +8,7 @@ from textual.screen import Screen
 from textual.widgets import Markdown
 
 from battleship.engine import create_game
-from battleship.engine.roster import get_roster
+from battleship.engine.rosters import get_roster
 from battleship.tui import resources, screens, strategies
 from battleship.tui.settings import SettingsProvider
 from battleship.tui.widgets import AppFooter

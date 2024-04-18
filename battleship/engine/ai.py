@@ -2,7 +2,7 @@ import random
 from collections import deque
 from typing import Iterable
 
-from battleship.engine import domain, errors, roster
+from battleship.engine import domain, errors, rosters
 
 
 class TargetCaller:
@@ -51,13 +51,13 @@ class TargetCaller:
 
 
 class Autoplacer:
-    def __init__(self, board: domain.Board, ship_suite: roster.Roster):
+    def __init__(self, board: domain.Board, ship_suite: rosters.Roster):
         self.board = board
-        self.ship_hp_map: dict[roster.ShipType, roster.ShipHitpoints] = dict(
+        self.ship_hp_map: dict[rosters.ShipType, rosters.ShipHitpoints] = dict(
             (item.type, item.hp) for item in ship_suite
         )
 
-    def place(self, ship_type: roster.ShipType) -> list[str]:
+    def place(self, ship_type: rosters.ShipType) -> list[str]:
         ship_hp = self.ship_hp_map[ship_type]
         position: list[str] = []
         empty_cells = [cell for cell in self.board.cells if cell.ship is None]

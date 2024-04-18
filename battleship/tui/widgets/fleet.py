@@ -9,7 +9,7 @@ from textual.reactive import var
 from textual.widget import Widget
 from textual.widgets import Static
 
-from battleship.engine.roster import Roster
+from battleship.engine.rosters import Roster
 from battleship.tui.widgets.board import CellFactory
 
 
