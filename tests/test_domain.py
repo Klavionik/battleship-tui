@@ -600,3 +600,21 @@ def test_game_emits_game_ended_when_player_wins(game, roster):
     game.turn(game.fire(["A3"]))
 
     assert events == [domain.GameEnded(game.winner)]
+
+
+def test_location_builds_from_text_repr():
+    text = "A1"
+    loc = domain.Coordinate.from_text(text)
+
+    assert loc.letter == "A"
+    assert loc.number == 1
+    assert loc.x == 0
+    assert loc.y == 0
+
+    text = "C12"
+    loc = domain.Coordinate.from_text(text)
+
+    assert loc.letter == "C"
+    assert loc.number == 12
+    assert loc.x == 2
+    assert loc.y == 11

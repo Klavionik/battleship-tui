@@ -6,7 +6,7 @@ import string
 from collections.abc import Callable
 from functools import cached_property
 from itertools import cycle, pairwise
-from typing import Any, Collection, Iterable, Iterator, TypeVar
+from typing import Any, ClassVar, Collection, Iterable, Iterator, TypeVar
 
 from pymitter import EventEmitter  # type: ignore[import-untyped]
 
@@ -70,9 +70,33 @@ class Cell:
         return f"{self.col}{self.row}"
 
 
+@dataclasses.dataclass
+class Coordinate:
+    UNICODE_LATIN_ALPHABET_OFFSET: ClassVar[int] = 64
+
+    x: int
+    y: int
+
+    def __str__(self) -> str:
+        return f"Coordinate <{self.letter}{self.number}>"
+
+    @property
+    def letter(self) -> str:
+        return chr(self.x + 1 + self.UNICODE_LATIN_ALPHABET_OFFSET)
+
+    @property
+    def number(self) -> int:
+        return self.y + 1
+
+    @classmethod
+    def from_text(cls, loc: str) -> "Coordinate":
+        col, row = parse_coordinate(loc)
+        return cls(ord(col) - cls.UNICODE_LATIN_ALPHABET_OFFSET - 1, row - 1)
+
+
 def parse_coordinate(coordinate: str) -> tuple[str, int]:
     try:
-        col, row = coordinate[0], int("".join(coordinate[1:]))
+        col, row = coordinate[0], int(coordinate[1:])
     except (IndexError, TypeError, ValueError):
         raise errors.IncorrectCoordinate(f"Cannot parse coordinate {coordinate}.")
 
