@@ -3,6 +3,7 @@ from typing import Any, AsyncGenerator, AsyncIterator
 from blacksheep import WebSocket, WebSocketDisconnectError
 from loguru import logger
 
+from battleship.server import metrics
 from battleship.server.bus import MessageBus
 from battleship.server.repositories import SubscriptionRepository
 from battleship.shared.events import GameEvent, Message, NotificationEvent
@@ -75,9 +76,15 @@ class Connection:
         async for ws_message in self.messages():
             message: ClientMessage = Message.from_raw(ws_message)
             await self._message_bus.emit(f"clients.in.{self.connection_id}", message)
+            metrics.websocket_messages_in.inc(
+                {"client": self.nickname, "connection_id": self.connection_id}
+            )
 
     async def send_event(self, event: ClientMessage) -> None:
         await self._websocket.send_text(event.to_json())
+        metrics.websocket_messages_out.inc(
+            {"client": self.nickname, "connection_id": self.connection_id}
+        )
 
     async def _handle_notification_event(self, message: Message[NotificationEvent]) -> None:
         event = message.unwrap()

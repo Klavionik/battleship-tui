@@ -1,4 +1,3 @@
-from socket import gethostname
 from typing import Any
 
 from aioprometheus.asgi.middleware import EXCLUDE_PATHS
@@ -9,32 +8,33 @@ from aioprometheus.renderer import render
 from blacksheep import Request, Router
 from guardpost import AuthenticationHandler, Identity
 
-hostname_label = {"hostname": gethostname()}
-
 websocket_connections = Gauge(
     "websocket_connections",
     doc="Active WebSocket connections",
-    const_labels=hostname_label,
+)
+websocket_messages_in = Counter(
+    "websocket_messages_in_total",
+    doc="Inbound WebSocket messages amount",
+)
+websocket_messages_out = Counter(
+    "websocket_messages_out_total",
+    doc="Outbound WebSocket messages amount",
 )
 games_started_total = Counter(
     "games_started_total",
     doc="Started games amount",
-    const_labels=hostname_label,
 )
 games_finished_total = Counter(
     "games_finished_total",
     doc="Finished games amount",
-    const_labels=hostname_label,
 )
 games_cancelled_total = Counter(
     "games_cancelled_total",
     doc="Cancelled games amount",
-    const_labels=hostname_label,
 )
 games_now = Gauge(
     "games_now",
     doc="Amount of games in-progress",
-    const_labels=hostname_label,
 )
 
 
