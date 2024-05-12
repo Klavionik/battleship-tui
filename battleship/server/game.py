@@ -288,6 +288,9 @@ class GameManager:
             metrics.games_now.inc({})
             summary = await game.play()
         finally:
+            await self._sessions.delete(game.session_id)
+            self._games.pop(game.session_id, None)
+            logger.trace("Game {session_id} is cleaned up.", session_id=game.session_id)
             metrics.games_now.dec({})
 
         await self.save_game_summary(game, summary)
@@ -318,13 +321,6 @@ class GameManager:
         game = Game(host, guest, session, self._message_bus)
         await self._sessions.update(session.id, guest_id=guest.id, started=True)
         task = asyncio.create_task(self.run_game(game))
-
-        def cleanup(_: asyncio.Task[None]) -> None:
-            self._games.pop(session.id, None)
-            asyncio.create_task(self._sessions.delete(session.id))
-            logger.trace("Game {session_id} is cleaned up.", session_id=session.id)
-
-        task.add_done_callback(cleanup)
         self._games[session.id] = (game, task)
 
     def cancel_game(self, session_id: str) -> None:
