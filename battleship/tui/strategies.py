@@ -257,6 +257,7 @@ class SingleplayerStrategy(GameStrategy):
     def winner(self) -> str | None:
         if self._game.winner:
             return self._game.winner.name
+        return None
 
     def on_ship_spawned(self, event: domain.ShipSpawned) -> None:
         self.emit_ship_spawned(event.player.name, event.ship_id, event.position)

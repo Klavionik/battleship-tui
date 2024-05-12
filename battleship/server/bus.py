@@ -1,8 +1,7 @@
 import abc
 from collections.abc import Awaitable, Callable
-from typing import Any
 
-import pyee.asyncio as pyee
+from pymitter import EventEmitter  # type: ignore[import-untyped]
 
 from battleship.shared.events import AnyMessage
 
@@ -13,23 +12,23 @@ class MessageBus(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def subscribe(self, event: str, func: Callable[[...], Awaitable[None]]) -> Callable[[...], Any]:
+    def subscribe(self, event: str, func: Callable[..., Awaitable[None]]) -> None:
         pass
 
     @abc.abstractmethod
-    def unsubscribe(self, event: str, func: Callable[[...], Awaitable[None]]) -> None:
+    def unsubscribe(self, event: str, func: Callable[..., Awaitable[None]]) -> None:
         pass
 
 
-class PyeeMessageBus(MessageBus):
-    def __init__(self, emitter: pyee.AsyncIOEventEmitter | None = None):
-        self._ee = emitter or pyee.AsyncIOEventEmitter()
+class InMemoryMessageBus(MessageBus):
+    def __init__(self, emitter: EventEmitter | None = None):
+        self._ee = emitter or EventEmitter()
 
     async def emit(self, event: str, message: AnyMessage) -> None:
-        self._ee.emit(event, message)
+        self._ee.emit_future(event, message)
 
-    def subscribe(self, event: str, func: Callable[[...], Awaitable[None]]) -> Callable[[...], Any]:
-        return self._ee.on(event, func)
+    def subscribe(self, event: str, func: Callable[..., Awaitable[None]]) -> None:
+        self._ee.on(event, func)
 
-    def unsubscribe(self, event: str, func: Callable[[...], Awaitable[None]]) -> None:
-        self._ee.remove_listener(event, func)
+    def unsubscribe(self, event: str, func: Callable[..., Awaitable[None]]) -> None:
+        self._ee.off(event, func)

@@ -2,7 +2,7 @@ from redis.asyncio import Redis
 from rodi import Container
 
 from battleship.server.auth import Auth0AuthManager, AuthManager
-from battleship.server.bus import MessageBus, PyeeMessageBus
+from battleship.server.bus import InMemoryMessageBus, MessageBus
 from battleship.server.config import Config, get_config
 from battleship.server.game import GameManager
 from battleship.server.handlers import (
@@ -38,7 +38,7 @@ def build_container() -> Container:
     config = get_config()
     redis = Redis.from_url(str(config.REDIS_URL))
     container.add_instance(redis, Redis)
-    message_bus = PyeeMessageBus()
+    message_bus = InMemoryMessageBus()
 
     container.add_singleton_by_factory(get_config, Config)
     container.add_instance(message_bus, MessageBus)
