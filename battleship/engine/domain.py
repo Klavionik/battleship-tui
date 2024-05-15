@@ -11,18 +11,19 @@ from typing import Any, Collection, Iterable, Iterator, TypeVar
 from pymitter import EventEmitter  # type: ignore[import-untyped]
 
 from battleship.engine import errors, rosters
+from battleship.shared.compat import StrEnum
 
 DEFAULT_BOARD_SIZE = 10
 
 
-class Direction(str, enum.Enum):
+class Direction(StrEnum):
     UP = "up"
     DOWN = "down"
     RIGHT = "right"
     LEFT = "left"
 
 
-class FiringOrder(str, enum.Enum):
+class FiringOrder(StrEnum):
     ALTERNATELY = "alternately"
     UNTIL_MISS = "until_miss"
 
@@ -275,7 +276,7 @@ class GameEnded(GameEvent):
 
 
 @enum.unique
-class GameState(enum.StrEnum):
+class GameState(StrEnum):
     ARRANGE_FLEET = enum.auto()
     BATTLE = enum.auto()
     END = enum.auto()
