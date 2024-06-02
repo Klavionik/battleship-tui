@@ -1,34 +1,19 @@
 import asyncio
-from datetime import datetime, timezone
+import sys
 from typing import Any, cast
 
 import inject
-import rich
 from loguru import logger
-from rich.console import Console
-from rich.traceback import Traceback
+from sentry_sdk import capture_exception
 from textual import on, work
 from textual.app import App
 from textual.events import Mount, Unmount
 from textual.screen import Screen
 
-from battleship import data_home, get_client_version
 from battleship.client import Client, ClientError, ConnectionEvent, ConnectionImpossible
 from battleship.tui import screens, strategies
 from battleship.tui.widgets import modals
 from battleship.tui.widgets.modals import WaitingModal
-
-
-def save_crash_report() -> None:
-    version = get_client_version()
-    now = datetime.now(tz=timezone.utc)
-    filename = f"crash_report_{now:%Y-%m-%d_%H-%M-%S}_v{version}.txt"
-    report_path = data_home / filename
-
-    with report_path.open(mode="w") as fh:
-        console = Console(file=fh)
-        tb = Traceback(width=150, suppress=[rich])
-        console.print(tb)
 
 
 class BattleshipError(Exception):
@@ -46,14 +31,15 @@ class BattleshipApp(App[None]):
         self,
         *args: Any,
         mount_screen: Screen[Any] | None = None,
-        enable_crash_report: bool = True,
         client: Client,
+        debug: bool = False,
         **kwargs: Any,
     ) -> None:
         super().__init__(*args, **kwargs)
         self._mount_screen = mount_screen or screens.MainMenu()
         self._client = client
-        self._enable_crash_report = enable_crash_report
+        self._debug = debug
+        self.error_text = ""
 
         self._client.add_listener(ConnectionEvent.CONNECTION_LOST, self._handle_connection_lost)
 
@@ -231,18 +217,22 @@ class BattleshipApp(App[None]):
             )
 
     def _fatal_error(self) -> None:
-        if self._enable_crash_report:
-            save_crash_report()
+        _, exc_value, _ = sys.exc_info()
+
+        if not self._debug:
+            event_id = capture_exception()
+            error_text = "Oops, an unexpected error occured in Battleship TUI: %s. Event ID: %s."
+            self.error_text = error_text % (str(exc_value), event_id)
             self._close_messages_no_wait()
         else:
             super()._fatal_error()
 
 
-def run(app: BattleshipApp | None = None) -> None:
+def run(app: BattleshipApp | None = None, debug: bool = False) -> None:
     if app is None:
-        app = BattleshipApp()
+        app = BattleshipApp(debug=debug)
 
     app.run()
 
     if app.return_code != 0:
-        raise BattleshipError
+        raise BattleshipError(app.error_text)

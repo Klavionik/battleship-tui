@@ -12,6 +12,8 @@ app.add_typer(account.app, name="account")
 app.add_typer(play.app, name="play")
 app.add_typer(settings.app, name="settings")
 
+SENTRY_DSN = "https://e2b5c0eacebf1c8465e440575e4151d1@o579215.ingest.us.sentry.io/4507262636654592"
+
 
 def make_log_sink() -> str:
     now = datetime.now(tz=timezone.utc)
@@ -42,6 +44,9 @@ def main(
         typer.Option(envvar="BATTLESHIP_SERVER_URL", show_envvar=False, help="Set server URL."),
     ] = "https://battleship.klavionik.dev",
     version: Annotated[bool, typer.Option("--version", help="Show version and exit.")] = False,
+    debug: Annotated[
+        bool, typer.Option(envvar="BATTLESHIP_DEBUG", show_envvar=False, help="Enable debug mode.")
+    ] = False,
 ) -> None:
     """
     Battleship TUI is an implementation of the popular paper-and-pen Battleship game for
@@ -51,8 +56,10 @@ def main(
 
     ctx.ensure_object(dict)
     ctx.obj["server_url"] = server_url
+    ctx.obj["debug"] = debug
 
     logging.configure_logger(make_log_sink())
+    logging.configure_sentry(SENTRY_DSN)
     config = tui.Config(
         server_url=server_url,
         credentials_provider=credentials_provider,
@@ -65,11 +72,11 @@ def main(
         raise typer.Exit
 
     if ctx.invoked_subcommand is None:
-        tui.run()
+        tui.run(debug=debug)
 
 
 def run() -> None:
     try:
         app()
-    except tui.BattleshipError:
-        raise SystemExit("Oops! An unexpected error occured. Crash report saved.")
+    except tui.BattleshipError as exc:
+        raise SystemExit(str(exc))

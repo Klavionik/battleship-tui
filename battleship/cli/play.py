@@ -23,6 +23,7 @@ class Roster(StrEnum):
 
 @app.command(help="Start a singleplayer session.")
 def single(
+    ctx: typer.Context,
     roster: Annotated[
         Roster, typer.Option(help="Choose ships that make up a fleet.")
     ] = Roster.CLASSIC,
@@ -33,11 +34,12 @@ def single(
 ) -> None:
     tui_app = tui.BattleshipApp.singleplayer(roster, firing_order, salvo_mode)
 
-    tui.run(tui_app)
+    tui.run(tui_app, ctx.obj["debug"])
 
 
 @multiplayer_app.command(help="Create a new multiplayer session.")
 def new(
+    ctx: typer.Context,
     game_name: Annotated[
         str, typer.Option(help="Specify game name (leave blank for default).")
     ] = "",
@@ -61,11 +63,11 @@ def new(
 
     tui_app = tui.BattleshipApp.multiplayer_new(game_name, roster, firing_order, salvo_mode)
 
-    tui.run(tui_app)
+    tui.run(tui_app, ctx.obj["debug"])
 
 
 @multiplayer_app.command(help="Join a multiplayer session.")
-def join(game_code: str) -> None:
+def join(ctx: typer.Context, game_code: str) -> None:
     credentials_provider: CredentialsProvider = inject.instance(CredentialsProvider)
     credentials = credentials_provider.load()
 
@@ -78,4 +80,4 @@ def join(game_code: str) -> None:
 
     tui_app = tui.BattleshipApp.multiplayer_join(game_code)
 
-    tui.run(tui_app)
+    tui.run(tui_app, ctx.obj["debug"])
