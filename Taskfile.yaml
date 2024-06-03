@@ -14,9 +14,11 @@ tasks:
   server:dev: poetry run uvicorn --reload --factory battleship.server:create_app
   server:export: poetry export --output requirements-server.txt --only=main --extras=server --without-hashes
   client:dev: poetry run textual run --dev battleship.cli:run
-  client:release:
+  client:release-*:
+    vars:
+      part: "{{index .MATCH 0}}"
     cmds:
-      - poetry version {{.CLI_ARGS}}
+      - poetry version --dry-run {{.part}}
       - git add pyproject.toml
       - git commit -m "Bump client version to $(poetry version --short)"
       - git tag "client/$(poetry version --short)"
