@@ -44,7 +44,7 @@ inject = { version = "^5.1.0", optional = true }
 redis = { version = "^5.0.1", optional = true }
 textual = { version = "^0.52.0", optional = true }
 textual-dev = { version = "^1.5.0", optional = true }
-async-timeout = { version = "^4.0.3", optional = true, markers = "python_version < '3.11'" }
+async-timeout = { version = "^4.0.3", markers = "python_version < '3.11'" }
 backports-strenum = { version = "^1.2.8", markers = "python_version < '3.11'" }
 sentry-sdk = "^2.2.1"
 aioprometheus = {version = "^23.3.0", optional = true}
@@ -56,7 +56,7 @@ sentry-offline-transport = { version = "^1.0.0", optional = true }
 
 [tool.poetry.extras]
 server = ["blacksheep", "uvicorn", "auth0-python", "pyjwt", "uvloop", "redis", "aioprometheus"]
-client = ["textual", "typer", "async-timeout", "inject", "copykitten", "tenacity", "sentry-offline-transport"]
+client = ["textual", "typer", "inject", "copykitten", "tenacity", "sentry-offline-transport"]
 dev = ["textual-dev"]
 
 [tool.poetry.scripts]
