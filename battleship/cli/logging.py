@@ -13,5 +13,7 @@ def configure_logger(sink: str, log_size: str = "1 MB", level: str = "DEBUG") ->
 
 def configure_sentry(dsn: str) -> None:
     sentry_sdk.init(
-        dsn, transport=make_offline_transport(storage_path=data_home), release=get_client_version()
+        dsn,
+        transport=make_offline_transport(storage_path=data_home / "sentry_events"),
+        release=get_client_version(),
     )
