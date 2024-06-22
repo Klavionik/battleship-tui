@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Annotated
 
 import typer
@@ -15,9 +16,14 @@ app.add_typer(settings.app, name="settings")
 SENTRY_DSN = "https://e2b5c0eacebf1c8465e440575e4151d1@o579215.ingest.us.sentry.io/4507262636654592"
 
 
-def make_log_sink() -> str:
+def make_log_sink(debug: bool) -> str:
     now = datetime.now(tz=timezone.utc)
-    return str(data_home / f"client_{now:%Y-%m-%d_%H-%M-%S}.log")
+
+    if debug:
+        log_home = Path()
+    else:
+        log_home = data_home
+    return str(log_home / f"client_{now:%Y-%m-%d_%H-%M-%S}.log")
 
 
 @app.callback(invoke_without_command=True)
@@ -58,7 +64,7 @@ def main(
     ctx.obj["server_url"] = server_url
     ctx.obj["debug"] = debug
 
-    logging.configure_logger(make_log_sink())
+    logging.configure_logger(make_log_sink(debug))
     logging.configure_sentry(SENTRY_DSN)
     config = tui.Config(
         server_url=server_url,
