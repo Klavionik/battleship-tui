@@ -3,3 +3,4 @@ __pycache__
 /dist
 snapshot_report.html
 *.csv
+*.log

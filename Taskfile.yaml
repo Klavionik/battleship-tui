@@ -29,4 +29,10 @@ tasks:
       - git commit -m "Bump client version to $(poetry version --short)"
       - git tag "client/$(poetry version --short)"
       - task: install
+  client:logs:
+    vars:
+      source:
+        # Get the filename of the latest client log.
+        sh: ls -r | grep -e client_.*\.log | head -n 1
+    cmd: tail -f {{.source}}
   load: poetry run python tools/load_testing/load.py --server-url http://0.0.0.0:9090 --users-file {{.CLI_ARGS}}
