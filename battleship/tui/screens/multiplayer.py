@@ -38,26 +38,25 @@ class Multiplayer(Screen[None]):
             self.help = fh.read()
 
     def compose(self) -> ComposeResult:
-        with Container():
-            with Container(classes="main"):
-                with VerticalScroll():
-                    yield Markdown(self.help, classes="screen-help")
+        with Container(classes="container"):
+            with VerticalScroll():
+                yield Markdown(self.help, classes="screen-help")
 
-                with Container(classes="screen-content"):
-                    yield Input(
-                        placeholder="Nickname",
-                        id="nickname",
-                        validators=[Length(minimum=7, maximum=20)],
-                    )
-                    yield Input(
-                        placeholder="Password",
-                        id="password",
-                        password=True,
-                        validators=[Length(minimum=9)],
-                    )
-                    yield Button("Connect", variant="primary", id="connect-user", disabled=True)
-                    yield Rule(line_style="heavy")
-                    yield Button("Connect as guest", id="connect-guest")
+            with Container(classes="screen-content"):
+                yield Input(
+                    placeholder="Nickname",
+                    id="nickname",
+                    validators=[Length(minimum=7, maximum=20)],
+                )
+                yield Input(
+                    placeholder="Password",
+                    id="password",
+                    password=True,
+                    validators=[Length(minimum=9)],
+                )
+                yield Button("Connect", variant="primary", id="connect-user", disabled=True)
+                yield Rule(line_style="heavy")
+                yield Button("Connect as guest", id="connect-guest")
 
         yield AppFooter()
 

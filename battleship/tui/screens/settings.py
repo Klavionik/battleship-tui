@@ -36,46 +36,45 @@ class Settings(Screen[None]):
             self.help = fh.read()
 
     def compose(self) -> ComposeResult:
-        with Container():
-            with Container(classes="main"):
-                with VerticalScroll():
-                    yield Markdown(self.help, classes="screen-help")
+        with Container(classes="container"):
+            with VerticalScroll():
+                yield Markdown(self.help, classes="screen-help")
 
-                with Container(classes="screen-content"):
-                    yield Label("Player name")
-                    yield Input(
-                        value=self.current.player_name,
-                        id="player_name",
-                        validators=[Length(minimum=1, maximum=19)],
-                    )
+            with Container(classes="screen-content"):
+                yield Label("Player name")
+                yield Input(
+                    value=self.current.player_name,
+                    id="player_name",
+                    validators=[Length(minimum=1, maximum=19)],
+                )
 
-                    yield Label("Your fleet color")
-                    yield Input(
-                        value=self.current.fleet_color,
-                        id="fleet_color",
-                        restrict=hex_color.pattern,
-                        validators=[HexColor()],
-                    )
+                yield Label("Your fleet color")
+                yield Input(
+                    value=self.current.fleet_color,
+                    id="fleet_color",
+                    restrict=hex_color.pattern,
+                    validators=[HexColor()],
+                )
 
-                    yield Label("Enemy fleet color")
-                    yield Input(
-                        value=self.current.enemy_fleet_color,
-                        id="enemy_fleet_color",
-                        restrict=hex_color.pattern,
-                        validators=[HexColor()],
-                    )
+                yield Label("Enemy fleet color")
+                yield Input(
+                    value=self.current.enemy_fleet_color,
+                    id="enemy_fleet_color",
+                    restrict=hex_color.pattern,
+                    validators=[HexColor()],
+                )
 
-                    yield Label("Language")
-                    yield Select.from_values(
-                        self.current.language_options,
-                        allow_blank=False,
-                        value=self.current.language,
-                        id="language",
-                    )
+                yield Label("Language")
+                yield Select.from_values(
+                    self.current.language_options,
+                    allow_blank=False,
+                    value=self.current.language,
+                    id="language",
+                )
 
-                    with Horizontal():
-                        yield Button("Reset to defaults", variant="error", id="reset")
-                        yield Button("Save", variant="primary", id="save")
+                with Horizontal():
+                    yield Button("Reset to defaults", variant="error", id="reset")
+                    yield Button("Save", variant="primary", id="save")
 
         yield AppFooter()
 

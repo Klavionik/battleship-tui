@@ -20,14 +20,13 @@ via network.
 
 class MainMenu(Screen[None]):
     def compose(self) -> ComposeResult:
-        with Container():
-            with Container(classes="main"):
-                yield Markdown(WELCOME_TEXT, classes="screen-help middle")
+        with Container(classes="container middle"):
+            yield Markdown(WELCOME_TEXT)
 
-                with ListView(classes="screen-content middle"):
-                    yield ListItem(Label(":robot: Singleplayer"), id="singleplayer")
-                    yield ListItem(Label(":man: Multiplayer"), id="multiplayer")
-                    yield ListItem(Label(":wrench: Settings"), id="settings")
+            with ListView():
+                yield ListItem(Label(":robot: Singleplayer"), id="singleplayer")
+                yield ListItem(Label(":man: Multiplayer"), id="multiplayer")
+                yield ListItem(Label(":wrench: Settings"), id="settings")
 
         yield AppFooter()
 

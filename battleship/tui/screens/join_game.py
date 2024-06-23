@@ -58,7 +58,7 @@ class JoinGame(Screen[None]):
         self._subscription: SessionSubscription | None = None
 
     def compose(self) -> ComposeResult:
-        with Container(classes="main"):
+        with Container(classes="container"):
             yield Static("Select a game", id="title")
             yield self._session_list
 

@@ -26,7 +26,7 @@ class Statistics(Screen[None]):
             self.help = fh.read()
 
     def compose(self) -> ComposeResult:
-        with Container(classes="main"):
+        with Container(classes="container"):
             with VerticalScroll():
                 yield Markdown(self.help, classes="screen-help")
 

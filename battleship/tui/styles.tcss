@@ -2,23 +2,16 @@ $option-border: tall $secondary;
 
 /* Reusable classes */
 
-.main {
+.container {
   layout: grid;
   grid-size: 2;
+  grid-columns: 1fr 1fr;
   grid-gutter: 4;
-  margin: 0 4;
+  margin: 1 4;
 }
 
 .middle {
   align-vertical: middle;
-}
-
-.screen-help {
-  height: 1fr;
-}
-
-.screen-content {
-  margin-top: 1;  /* Compensate for the markdown's header top border. */
 }
 
 .options-panel {
@@ -35,9 +28,8 @@ Markdown {
 }
 
 MarkdownH1 {
-  margin: 0;
+  margin-bottom: 1;
   background: $accent-darken-2;
-  border: wide $background;
   content-align: center middle;
   padding: 1;
   text-style: bold;
@@ -68,6 +60,10 @@ Version {
 MainMenu ListItem {
   align-horizontal: center;
   padding: 1;
+}
+
+MainMenu ListView {
+   height: auto; /* Allow vertical alignment. */
 }
 
 
@@ -167,13 +163,12 @@ NewGame Button {
 
 /* JoinGame screen */
 
-JoinGame .main {
+JoinGame .container {
   layout: vertical;
 }
 
 JoinGame #title {
   text-style: bold;
-  margin: 1 0;
   text-align: center;
   background: $primary;
 }
