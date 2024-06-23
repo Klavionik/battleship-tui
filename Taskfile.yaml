@@ -24,7 +24,7 @@ tasks:
     vars:
       part: "{{index .MATCH 0}}"
     cmds:
-      - poetry version --dry-run {{.part}}
+      - poetry version {{.part}}
       - git add pyproject.toml
       - git commit -m "Bump client version to $(poetry version --short)"
       - git tag "client/$(poetry version --short)"
