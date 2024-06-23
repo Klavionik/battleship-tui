@@ -13,5 +13,8 @@ class Version(Widget):
 
 class AppFooter(Widget):
     def compose(self) -> ComposeResult:
-        yield Footer()
+        footer = Footer()
+        footer.upper_case_keys = True
+        footer.ctrl_to_caret = False
+        yield footer
         yield Version()

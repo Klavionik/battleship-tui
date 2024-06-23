@@ -3,22 +3,22 @@ $option-border: tall $secondary;
 /* Reusable classes */
 
 .main {
-  layout: horizontal;
+  layout: grid;
+  grid-size: 2;
+  grid-gutter: 4;
   margin: 0 4;
-  align: center middle;
+}
+
+.middle {
+  align-vertical: middle;
 }
 
 .screen-help {
-  width: 1fr;
-  margin: 0;
-  margin-right: 4;
+  height: 1fr;
 }
 
 .screen-content {
-  width: 1fr;
-  height: auto;
-  margin-top: 1;
-  margin-left: 4;
+  margin-top: 1;  /* Compensate for the markdown's header top border. */
 }
 
 .options-panel {
@@ -30,6 +30,20 @@ $option-border: tall $secondary;
 
 /* Common */
 
+Markdown {
+  margin: 0;
+}
+
+MarkdownH1 {
+  margin: 0;
+  background: $accent-darken-2;
+  border: wide $background;
+  content-align: center middle;
+  padding: 1;
+  text-style: bold;
+  color: $text;
+}
+
 Tooltip {
   padding: 0 1;
 }
@@ -37,7 +51,9 @@ Tooltip {
 AppFooter {
   layout: horizontal;
   height: 1;
-  background: $accent;
+  color: $secondary;
+  background: $panel;
+  text-style: bold;
 }
 
 Version {

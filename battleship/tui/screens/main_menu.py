@@ -22,9 +22,9 @@ class MainMenu(Screen[None]):
     def compose(self) -> ComposeResult:
         with Container():
             with Container(classes="main"):
-                yield Markdown(WELCOME_TEXT, classes="screen-help")
+                yield Markdown(WELCOME_TEXT, classes="screen-help middle")
 
-                with ListView(classes="screen-content"):
+                with ListView(classes="screen-content middle"):
                     yield ListItem(Label(":robot: Singleplayer"), id="singleplayer")
                     yield ListItem(Label(":man: Multiplayer"), id="multiplayer")
                     yield ListItem(Label(":wrench: Settings"), id="settings")
