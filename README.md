@@ -1,5 +1,5 @@
 ![Battle](screenshots/battle.png)
-[![PyPI - Version](https://img.shields.io/pypi/v/sentry-offline-transport)](https://pypi.org/project/sentry-offline-transport)
+[![PyPI - Version](https://img.shields.io/pypi/v/battleship-tui)](https://pypi.org/project/battleship-tui)
 ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/battleship-tui)
 [<img src="https://uptime.klavionik.dev/api/badge/1/status?upLabel=online&downLabel=offline">](https://uptime.klavionik.dev/status/battleship)
 
