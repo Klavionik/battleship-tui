@@ -13,7 +13,7 @@ WELCOME_TEXT = """
 Battleship TUI is an implementation of the classic Battleship game
 for your terminal.
 
-You can play against the AI or against a real player
+You can play against the computer or against a real player
 via network.
 """
 

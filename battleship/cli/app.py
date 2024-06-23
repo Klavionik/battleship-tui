@@ -23,7 +23,7 @@ def make_log_sink(debug: bool) -> str:
         log_home = Path()
     else:
         log_home = data_home
-    return str(log_home / f"client_{now:%Y-%m-%d_%H-%M-%S}.log")
+    return str(log_home / f"client_{now:%Y-%m-%d_%H-%M-%S}.log")  # noqa: E231
 
 
 @app.callback(invoke_without_command=True)
@@ -56,7 +56,7 @@ def main(
 ) -> None:
     """
     Battleship TUI is an implementation of the popular paper-and-pen Battleship game for
-    your terminal. You can play against the AI or a real player via the Internet,
+    your terminal. You can play against the computer or a real player via the Internet,
     customize game options and appearance, keep track of your achievements, and more.
     """
 

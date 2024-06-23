@@ -5,7 +5,7 @@
 
 # Battleship TUI
 Battleship TUI is an implementation of the popular paper-and-pen Battleship game for 
-your terminal. You can play against the AI or a real player via the Internet, 
+your terminal. You can play against the computer or a real player via the Internet, 
 customize game options and appearance, keep track of your achievements, and more.
 
 ## Features
