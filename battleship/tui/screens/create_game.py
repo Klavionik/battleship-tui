@@ -36,9 +36,11 @@ class CreateGame(Screen[None]):
     def compose(self) -> ComposeResult:
         with Container(classes="container"):
             with VerticalScroll():
-                yield Markdown(self.help, classes="screen-help")
+                yield Markdown(
+                    self.help,
+                )
 
-            with Container(classes="screen-content"):
+            with Container():
                 yield NewGame(with_name=True)
 
         yield AppFooter()
