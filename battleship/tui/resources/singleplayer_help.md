@@ -1,5 +1,5 @@
 # Help
-In Singleplayer mode you play against the AI. You can configure options before the game starts.
+In Singleplayer mode you play against the computer. You can configure options before the game starts.
 
 **Roster**  
 Choose ship types that will be present on the battlefield.
