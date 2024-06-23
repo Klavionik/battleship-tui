@@ -37,11 +37,17 @@ async def connect(
                 )
 
                 with attempt:
-                    connection = await websockets.connect(url, extra_headers=extra_headers)
+                    connection = await websockets.connect(
+                        url,
+                        extra_headers=extra_headers,
+                        close_timeout=1,
+                        ping_timeout=2,
+                        ping_interval=5,
+                    )
 
             yield connection
         except RetryError:
-            logger.warning("Cannot connect after {timeout} s.", timeout=timeout)
+            logger.warning("Cannot connect after {timeout} s.", timeout=retrier.statistics)
             raise ConnectionImpossible
         except websockets.InvalidStatusCode:
             logger.warning("Connection rejected, another client is already connected.")

@@ -172,7 +172,7 @@ name = "async-timeout"
 version = "4.0.3"
 description = "Timeout context manager for asyncio programs"
 category = "main"
-optional = true
+optional = false
 python-versions = ">=3.7"
 files = [
     {file = "async-timeout-4.0.3.tar.gz", hash = "sha256:4640d96be84d82d02ed59ea2b7105a0f7b33abe8703703cd0ab0bf87c427522f"},
@@ -2440,11 +2440,11 @@ idna = ">=2.0"
 multidict = ">=4.0"
 
 [extras]
-client = ["async-timeout", "copykitten", "inject", "sentry-offline-transport", "tenacity", "textual", "typer"]
+client = ["copykitten", "inject", "sentry-offline-transport", "tenacity", "textual", "typer"]
 dev = ["textual-dev"]
 server = ["aioprometheus", "auth0-python", "blacksheep", "pyjwt", "redis", "uvicorn", "uvloop"]
 
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.13"
-content-hash = "512b3847509949a64def597feb2d23b2ecc8ec92f3c1f5d34469aa33781130e1"
+content-hash = "88c825d477475b854cacf49194f8043f94f315d3c0037245ce13cda2f227e026"

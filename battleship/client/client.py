@@ -109,7 +109,6 @@ class Client:
         self._ws_connected = asyncio.Event()
         self._ws_timeout = ws_timeout
         self._emitter = AsyncIOEventEmitter()
-        self._events_worker_task: Task[None] | None = None
         self._rejected = False
         self.credentials: Credentials | None = None
         self.auth = IDTokenAuth()
@@ -125,7 +124,8 @@ class Client:
         self._refresh_interval = refresh_interval
         self._refresh_event = RefreshEvent()
         self._refresh_event.done()  # TODO: Replace with asyncio.Event?
-        self._credentials_worker: Task[None] | None = None
+        self._events_worker_task: Task[None] | None = None
+        self._credentials_worker_task: Task[None] | None = None
 
     @property
     def base_url(self) -> str:
@@ -168,14 +168,13 @@ class Client:
         if self.credentials is None:
             raise RuntimeError("Must log in before trying to establish a WS connection.")
 
-        self._run_credentials_worker()
-        self._events_worker_task = self._run_events_worker()
+        self._credentials_worker_task = asyncio.create_task(self._credentials_worker())
+        self._events_worker_task = asyncio.create_task(self._events_worker())
 
         await self.await_connection()
 
     async def disconnect(self) -> None:
         if self._events_worker_task:
-            logger.debug("Disconnect: cancel events worker.")
             self._events_worker_task.cancel()
 
         self._stop_credentials_worker()
@@ -363,8 +362,8 @@ class Client:
         await self._send(message)
 
     def _stop_credentials_worker(self) -> None:
-        if self._credentials_worker:
-            self._credentials_worker.cancel()
+        if self._credentials_worker_task:
+            self._credentials_worker_task.cancel()
 
     async def _connect_with_retry(self) -> AsyncIterator[WebSocketClientProtocol]:
         assert self.credentials
@@ -382,73 +381,61 @@ class Client:
             ):
                 yield connection
         except ConnectionRejected:
-            logger.warning("Connection rejected")
+            logger.warning("Connection rejected.")
             self._rejected = True
         except ConnectionImpossible:
             logger.warning("Cannot establish WebSocket connection.")
             self._emitter.emit(ConnectionEvent.CONNECTION_IMPOSSIBLE)
 
     async def _events_worker(self) -> None:
-        logger.debug("Run events worker.")
+        logger.debug("Start events worker.")
 
-        async for connection in self._connect_with_retry():
-            logger.debug("Acquired new WebSocket connection.")
-            self._emitter.emit(ConnectionEvent.CONNECTION_ESTABLISHED)
-            self._ws = connection
-            self._ws_connected.set()
+        try:
+            logger.debug("Try to acquire a WebSocket connection.")
+            async for connection in self._connect_with_retry():
+                logger.debug("Acquired new WebSocket connection.")
+                self._emitter.emit(ConnectionEvent.CONNECTION_ESTABLISHED)
+                self._ws = connection
+                self._ws_connected.set()
 
-            try:
-                async for ws_message in connection:
-                    message: Message[GameEvent] | Message[NotificationEvent] = Message.from_raw(
-                        ws_message
-                    )
-                    logger.debug("Received WebSocket message: {message}.", message=message)
-                    event: GameEvent | NotificationEvent = message.unwrap()
+                try:
+                    async for ws_message in connection:
+                        message: Message[GameEvent] | Message[NotificationEvent] = Message.from_raw(
+                            ws_message
+                        )
+                        logger.debug("Received WebSocket message: {message}.", message=message)
+                        event: GameEvent | NotificationEvent = message.unwrap()
 
-                    match event:
-                        case NotificationEvent():
-                            self._emitter.emit(str(event.subscription), event.payload)
-                            continue
-                        case GameEvent():
-                            self._emitter.emit(event.type, event.payload)
-                            continue
-                        case _:
-                            logger.warning("Unknown message.")
-            except websockets.ConnectionClosed as exc:
-                logger.warning("Connection closed: {exc}", exc=exc)
-                await self._cleanup_ws_connection()
-                logger.warning("Server closed the WebSocket connection, acquire a new one.")
-                self._emitter.emit(ConnectionEvent.CONNECTION_LOST)
-                continue
+                        match event:
+                            case NotificationEvent():
+                                self._emitter.emit(str(event.subscription), event.payload)
+                                continue
+                            case GameEvent():
+                                self._emitter.emit(event.type, event.payload)
+                                continue
+                            case _:
+                                logger.warning("Unknown message.")
+                except websockets.ConnectionClosed as exc:
+                    logger.warning("Connection closed due to: {exc}", exc=exc)
+                    self._ws_connected.clear()
+                    self._emitter.emit(ConnectionEvent.CONNECTION_LOST)
+                    continue
+        except Exception:
+            logger.exception("Exception caught in events worker.")
+        except asyncio.CancelledError:
+            logger.debug("Stop events worker.")
+            raise
+        finally:
+            logger.debug("WebSocket connection cleanup.")
 
-    async def _cleanup_ws_connection(self) -> None:
-        assert self._ws, "Trying to cleanup with no connection"
-        logger.debug("WebSocket connection cleanup.")
-        await self._ws.close()
-        self._ws = None
-        self._ws_connected.clear()
+            if self._ws is not None:
+                await self._ws.close()
 
-    def _run_events_worker(self) -> Task[None]:
-        def cleanup(t: Task[None]) -> None:
-            try:
-                exc = t.exception()
-                if exc:
-                    raise exc
-            except (asyncio.InvalidStateError, asyncio.CancelledError):
-                pass
-            except Exception:
-                logger.exception("Exception caught in events worker.")
-
-            asyncio.create_task(self._cleanup_ws_connection())
-            self._events_worker_task = None
-
-        task = asyncio.create_task(self._events_worker())
-        task.add_done_callback(cleanup)
-        return task
+            self._ws = None
+            self._ws_connected.clear()
 
     async def _send(self, message: AnyMessage) -> None:
-        if self._ws is None:
-            raise RuntimeError("Cannot send a message, no connection.")
+        assert self._ws, "No WebSocket connection"
 
         if self._ws.closed:
             logger.warning("Trying to send a message, but connection is closed.")
@@ -484,27 +471,24 @@ class Client:
         else:
             return response
 
-    def _run_credentials_worker(self) -> None:
-        async def credentials_worker() -> None:
-            logger.debug("Start credentials worker.")
+    async def _credentials_worker(self) -> None:
+        logger.debug("Start credentials worker.")
 
-            try:
-                while True:
-                    if self.credentials and self.credentials.is_expired():
-                        self._refresh_event.refreshing()
-                        logger.debug("Credentials expired, refresh.")
-                        fresh_credentials = await self.refresh_id_token(
-                            self.credentials.refresh_token
-                        )
-                        self.update_credentials(fresh_credentials)
-                        self._refresh_event.done()
+        try:
+            while True:
+                if self.credentials and self.credentials.is_expired():
+                    self._refresh_event.refreshing()
+                    logger.debug("Credentials expired, refresh.")
+                    fresh_credentials = await self.refresh_id_token(self.credentials.refresh_token)
+                    self.update_credentials(fresh_credentials)
+                    self._refresh_event.done()
 
-                    await asyncio.sleep(self._refresh_interval)
-            except asyncio.CancelledError:
-                logger.debug("Stop credentials worker.")
-                raise
-
-        self._credentials_worker = asyncio.create_task(credentials_worker())
+                await asyncio.sleep(self._refresh_interval)
+        except Exception:
+            logger.exception("Exception caught in credentials worker.")
+        except asyncio.CancelledError:
+            logger.debug("Stop credentials worker.")
+            raise
 
 
 async def log_request(request: Request) -> None:

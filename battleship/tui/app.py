@@ -10,7 +10,8 @@ from textual.app import App
 from textual.events import Mount, Unmount
 from textual.screen import Screen
 
-from battleship.client import Client, ClientError, ConnectionEvent, ConnectionImpossible
+from battleship.client import Client, ClientError, ConnectionEvent
+from battleship.client.websocket import ConnectionImpossible, ConnectionRejected
 from battleship.tui import screens, strategies
 from battleship.tui.widgets import modals
 from battleship.tui.widgets.modals import WaitingModal
@@ -197,7 +198,7 @@ class BattleshipApp(App[None]):
             logger.debug("Connection restored.")
             modal.dismiss()
             cancel_active_game()
-        except ConnectionImpossible:
+        except (ConnectionImpossible, ConnectionRejected):
             modal.dismiss()
             cancel_active_game()
 
