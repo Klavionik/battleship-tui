@@ -47,7 +47,7 @@ async def connect(
 
             yield connection
         except RetryError:
-            logger.warning("Cannot connect after {timeout} s.", timeout=retrier.statistics)
+            logger.warning("Cannot connect after {idle} s.", idle=retrier.statistics["idle_for"])
             raise ConnectionImpossible
         except websockets.InvalidStatusCode:
             logger.warning("Connection rejected, another client is already connected.")

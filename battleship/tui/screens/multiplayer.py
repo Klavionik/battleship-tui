@@ -13,12 +13,12 @@ from textual.widgets import Button, Input, Markdown, Rule
 
 from battleship.client.client import (
     Client,
+    ConnectionEvent,
     LoginRequired,
     RequestFailed,
     ServerUnavailable,
     Unauthorized,
 )
-from battleship.client.websocket import ConnectionImpossible, ConnectionRejected
 from battleship.tui import resources, screens
 from battleship.tui.widgets import AppFooter
 
@@ -83,23 +83,17 @@ class Multiplayer(Screen[None]):
             self.loading = False  # noqa
             self.query_one("#nickname", Input).focus()
 
-    @work
-    async def connect(self, return_to_main_menu: bool = True) -> None:
-        try:
-            await self._client.connect()
-        except ConnectionRejected:
-            self.loading = False  # noqa
-
-            if return_to_main_menu:
-                await self.app.switch_screen(screens.MainMenu())
-
-            self.notify(
-                "You are already logged in from another client.",
-                title="Connection rejected",
-                severity="warning",
-                timeout=5,
+    def connect(self, return_to_main_menu: bool = True) -> None:
+        async def handle_connection_established() -> None:
+            await self.app.switch_screen(screens.Lobby(nickname=self._client.nickname))
+            self._client.remove_listener(
+                ConnectionEvent.CONNECTION_IMPOSSIBLE, handle_connection_impossible
             )
-        except ConnectionImpossible:
+            self._client.remove_listener(
+                ConnectionEvent.CONNECTION_REJECTED, handle_connection_rejected
+            )
+
+        async def handle_connection_impossible() -> None:
             self.loading = False  # noqa
 
             if return_to_main_menu:
@@ -111,8 +105,46 @@ class Multiplayer(Screen[None]):
                 severity="warning",
                 timeout=5,
             )
-        else:
-            await self.app.switch_screen(screens.Lobby(nickname=self._client.nickname))
+
+            self._client.remove_listener(
+                ConnectionEvent.CONNECTION_ESTABLISHED, handle_connection_established
+            )
+            self._client.remove_listener(
+                ConnectionEvent.CONNECTION_REJECTED, handle_connection_rejected
+            )
+
+        async def handle_connection_rejected() -> None:
+            self.loading = False  # noqa
+
+            if return_to_main_menu:
+                await self.app.switch_screen(screens.MainMenu())
+
+            self.notify(
+                "You are already logged in from another client.",
+                title="Connection rejected",
+                severity="warning",
+                timeout=5,
+            )
+
+            self._client.remove_listener(
+                ConnectionEvent.CONNECTION_ESTABLISHED, handle_connection_established
+            )
+            self._client.remove_listener(
+                ConnectionEvent.CONNECTION_IMPOSSIBLE, handle_connection_impossible
+            )
+
+        self._client.add_listener(
+            ConnectionEvent.CONNECTION_IMPOSSIBLE, handle_connection_impossible, once=True
+        )
+        self._client.add_listener(
+            ConnectionEvent.CONNECTION_REJECTED, handle_connection_rejected, once=True
+        )
+        self._client.add_listener(
+            ConnectionEvent.CONNECTION_ESTABLISHED, handle_connection_established, once=True
+        )
+
+        # The actual connection happens in the background task.
+        self._client.connect()
 
     def compute_is_input_valid(self) -> bool:
         return self.is_password_valid and self.is_nickname_valid

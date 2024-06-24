@@ -23,7 +23,7 @@ def make_log_sink(debug: bool) -> str:
         log_home = Path()
     else:
         log_home = data_home
-    return str(log_home / f"client_{now:%Y-%m-%d_%H-%M-%S}.log")  # noqa: E231
+    return str(log_home / f"client_{now:%Y-%m-%d_%H-%M-%S}.log")
 
 
 @app.callback(invoke_without_command=True)

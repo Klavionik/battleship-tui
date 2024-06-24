@@ -22,7 +22,7 @@ import random
 import time
 from collections.abc import Awaitable, Iterator
 from dataclasses import dataclass
-from typing import Sequence
+from typing import Any, Sequence
 
 from rich.console import Console
 from rich.progress import (
@@ -34,7 +34,7 @@ from rich.progress import (
     TextColumn,
 )
 
-from battleship.client import Client
+from battleship.client import Client, ConnectionEvent
 from battleship.client.credentials import DummyCredentialsProvider
 from battleship.shared.events import ServerGameEvent
 
@@ -201,7 +201,7 @@ async def login(client: Client, nickname: str, password: str) -> None:
 
 
 async def connect(client: Client) -> None:
-    await client.connect()
+    client.connect()
 
 
 async def disconnect(client: Client) -> None:
@@ -255,7 +255,7 @@ async def fire(client: Client, position: Sequence[str]) -> None:
     await client.fire(position)
 
 
-async def wait_sequence(sequence: Sequence[Awaitable[None]]) -> None:
+async def wait_sequence(sequence: Sequence[Awaitable[Any]]) -> None:
     for awaitable in sequence:
         await awaitable
 
@@ -265,10 +265,20 @@ async def load(
 ) -> None:
     player = Client(server_url=server_url, credentials_provider=DummyCredentialsProvider())
     host = Client(server_url=server_url, credentials_provider=DummyCredentialsProvider())
+    player_connected = asyncio.Event()
+    host_connected = asyncio.Event()
+
+    player.add_listener(
+        ConnectionEvent.CONNECTION_ESTABLISHED, lambda: player_connected.set(), once=True
+    )
+    host.add_listener(
+        ConnectionEvent.CONNECTION_ESTABLISHED, lambda: host_connected.set(), once=True
+    )
 
     pre_host = [
         login(host, nickname=host_user.nickname, password=host_user.password),
         connect(host),
+        host_connected.wait(),
         delay(1),
         players_subscribe(host),
         fetch_players_online(host),
@@ -279,6 +289,7 @@ async def load(
     pre_player = [
         login(player, nickname=player_user.nickname, password=player_user.password),
         connect(player),
+        player_connected.wait(),
         delay(1),
         players_subscribe(player),
         fetch_players_online(player),

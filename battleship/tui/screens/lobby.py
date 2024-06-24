@@ -9,13 +9,7 @@ from textual.events import Mount, ScreenResume, ScreenSuspend, Unmount
 from textual.screen import Screen
 from textual.widgets import Label, ListItem, ListView, Markdown
 
-from battleship.client import (
-    Client,
-    ClientError,
-    ConnectionEvent,
-    ConnectionImpossible,
-    PlayerSubscription,
-)
+from battleship.client import Client, ClientError, ConnectionEvent, PlayerSubscription
 from battleship.tui import resources, screens
 from battleship.tui.widgets import AppFooter, LobbyHeader
 
@@ -60,14 +54,15 @@ class Lobby(Screen[None]):
 
     @on(ScreenSuspend)
     async def unsubscribe(self) -> None:
-        try:
-            await self.unsubscribe_from_player_count()
-        except ClientError:
-            logger.warning("Cannot unsubscribe from player count.")
+        await self.unsubscribe_from_player_count()
+
+        self._player_subscription = None
+        self._client.remove_listener(ConnectionEvent.CONNECTION_LOST, self.handle_connection_lost)
 
     @on(ScreenResume)
     async def update_players_count(self) -> None:
         await self._setup_player_count_updates()
+        self._client.add_listener(ConnectionEvent.CONNECTION_LOST, self.handle_connection_lost)
 
     @on(Unmount)
     async def disconnect_ws(self) -> None:
@@ -132,18 +127,28 @@ class Lobby(Screen[None]):
         except ClientError as exc:
             logger.warning("Cannot unsubscribe from online count. {exc}", exc=exc)
 
-        self._player_subscription = None
-        self._client.remove_listener(ConnectionEvent.CONNECTION_LOST, self.resubscribe)
-
-    async def resubscribe(self) -> None:
-        try:
-            await self._client.await_connection()
-        except ConnectionImpossible:
-            logger.warning("Resubscription impossible.")
-        else:
+    def handle_connection_lost(self) -> None:
+        async def handle_connection_established() -> None:
+            logger.debug("Connection restored, resubscribe to player count updates..")
+            self._client.remove_listener(
+                ConnectionEvent.CONNECTION_IMPOSSIBLE, handle_connection_impossible
+            )
             await self._setup_player_count_updates()
+
+        def handle_connection_impossible() -> None:
+            logger.debug("Resubscription to player count updates is impossible.")
+            self._client.remove_listener(
+                ConnectionEvent.CONNECTION_ESTABLISHED, handle_connection_established
+            )
+
+        logger.debug("Connection lost, setup handlers in case it is restored (or lost forever).")
+        self._client.add_listener(
+            ConnectionEvent.CONNECTION_ESTABLISHED, handle_connection_established, once=True
+        )
+        self._client.add_listener(
+            ConnectionEvent.CONNECTION_IMPOSSIBLE, handle_connection_impossible, once=True
+        )
 
     async def _setup_player_count_updates(self) -> None:
         await self.subscribe_to_player_count()
         await self.fetch_player_count()
-        self._client.add_listener(ConnectionEvent.CONNECTION_LOST, self.resubscribe)

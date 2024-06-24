@@ -11,13 +11,7 @@ from textual.message import Message
 from textual.screen import Screen
 from textual.widgets import Label, ListItem, ListView, Static
 
-from battleship.client import (
-    Client,
-    ClientError,
-    ConnectionEvent,
-    ConnectionImpossible,
-    SessionSubscription,
-)
+from battleship.client import Client, ClientError, ConnectionEvent, SessionSubscription
 from battleship.shared.models import Session, SessionID
 from battleship.tui.format import format_session
 from battleship.tui.widgets import AppFooter
@@ -71,21 +65,38 @@ class JoinGame(Screen[None]):
     async def subscribe(self) -> None:
         await self.subscribe_to_updates()
         await self.fetch_sessions()
-        self._client.add_listener(ConnectionEvent.CONNECTION_LOST, self.resubscribe)
+        self._client.add_listener(ConnectionEvent.CONNECTION_LOST, self.handle_connection_lost)
 
     @on(Unmount)
     async def unsubscribe(self) -> None:
         await self.unsubscribe_from_updates()
+        self._subscription = None
+        self._client.remove_listener(ConnectionEvent.CONNECTION_LOST, self.handle_connection_lost)
 
-    async def resubscribe(self) -> None:
-        try:
-            await self._client.await_connection()
-        except ConnectionImpossible:
-            logger.warning("Resubscription impossible.")
-        else:
+    def handle_connection_lost(self) -> None:
+        async def handle_connection_established() -> None:
+            logger.debug("Connection restored, resubscribe to session updates.")
             await self._session_list.query(SessionItem).remove()
             await self.subscribe_to_updates()
             await self.fetch_sessions()
+
+            self._client.remove_listener(
+                ConnectionEvent.CONNECTION_IMPOSSIBLE, handle_connection_impossible
+            )
+
+        async def handle_connection_impossible() -> None:
+            logger.debug("Resubscription to session updates is impossible.")
+            self._client.remove_listener(
+                ConnectionEvent.CONNECTION_ESTABLISHED, handle_connection_established
+            )
+
+        logger.debug("Connection lost, setup handlers in case it is restored (or lost forever).")
+        self._client.add_listener(
+            ConnectionEvent.CONNECTION_ESTABLISHED, handle_connection_established, once=True
+        )
+        self._client.add_listener(
+            ConnectionEvent.CONNECTION_IMPOSSIBLE, handle_connection_impossible, once=True
+        )
 
     async def fetch_sessions(self) -> None:
         try:
@@ -110,9 +121,6 @@ class JoinGame(Screen[None]):
             await self._client.sessions_unsubscribe()
         except ClientError as exc:
             logger.warning("Cannot unsubscribe from sessions. {exc}", exc=exc)
-
-        self._subscription = None
-        self._client.remove_listener(ConnectionEvent.CONNECTION_LOST, self.resubscribe)
 
     @on(ListView.Selected)
     async def join_from_event(self, event: ListView.Selected) -> None:

@@ -11,7 +11,6 @@ from textual.events import Mount, Unmount
 from textual.screen import Screen
 
 from battleship.client import Client, ClientError, ConnectionEvent
-from battleship.client.websocket import ConnectionImpossible, ConnectionRejected
 from battleship.tui import screens, strategies
 from battleship.tui.widgets import modals
 from battleship.tui.widgets.modals import WaitingModal
@@ -183,7 +182,10 @@ class BattleshipApp(App[None]):
                     timeout=5,
                 )
 
-        logger.warning("Connection lost, trying to re-establish.")
+        logger.debug(
+            "Handle connection loss: show the modal, "
+            "setup handlers in case it is restored (or lost forever)."
+        )
         modal = modals.ConnectionLostModal()
 
         # Not a very clean way of dismissing this waiting modal, probably.
@@ -194,29 +196,41 @@ class BattleshipApp(App[None]):
 
         await self.push_screen(modal)
 
-        try:
-            await self._client.await_connection()
+        def handle_connection_established() -> None:
             logger.debug("Connection restored.")
-            modal.dismiss()
-            cancel_active_game()
-        except (ConnectionImpossible, ConnectionRejected):
+            self._client.remove_listener(
+                ConnectionEvent.CONNECTION_IMPOSSIBLE, handle_connection_impossible
+            )
             modal.dismiss()
             cancel_active_game()
 
-            logger.warning("Unable to restore connection, return to the main menu.")
+        def handle_connection_impossible() -> None:
+            logger.debug("Unable to restore connection, return to the main menu.")
+            self._client.remove_listener(
+                ConnectionEvent.CONNECTION_ESTABLISHED, handle_connection_established
+            )
+            modal.dismiss()
+            cancel_active_game()
 
             # Keep only the default screen, just in case.
             for _ in self.screen_stack[1:]:
                 self.pop_screen()
 
             # Now return to the main menu.
-            await self.push_screen(screens.MainMenu())
+            self.push_screen(screens.MainMenu())
             self.notify(
                 "Unable to re-establish connection.",
                 title="Connection lost",
                 severity="warning",
                 timeout=5,
             )
+
+        self._client.add_listener(
+            ConnectionEvent.CONNECTION_IMPOSSIBLE, handle_connection_impossible, once=True
+        )
+        self._client.add_listener(
+            ConnectionEvent.CONNECTION_ESTABLISHED, handle_connection_established, once=True
+        )
 
     def _fatal_error(self) -> None:
         _, exc_value, _ = sys.exc_info()

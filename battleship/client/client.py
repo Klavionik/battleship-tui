@@ -24,7 +24,6 @@ from battleship.client.websocket import (
     connect,
 )
 from battleship.shared.compat import StrEnum
-from battleship.shared.compat import async_timeout as timeout
 from battleship.shared.events import (
     AnyMessage,
     ClientGameEvent,
@@ -106,10 +105,8 @@ class Client:
         self._netloc = parsed_url.netloc
         self._scheme = parsed_url.scheme
         self._ws: Optional[WebSocketClientProtocol] = None
-        self._ws_connected = asyncio.Event()
         self._ws_timeout = ws_timeout
         self._emitter = AsyncIOEventEmitter()
-        self._rejected = False
         self.credentials: Credentials | None = None
         self.auth = IDTokenAuth()
         self._session = AsyncClient(
@@ -154,24 +151,12 @@ class Client:
 
         return self.credentials.user_id
 
-    async def await_connection(self) -> None:
-        try:
-            async with timeout(self._ws_timeout):
-                await self._ws_connected.wait()
-        except TimeoutError:
-            if self._rejected:
-                raise ConnectionRejected
-            else:
-                raise ConnectionImpossible
-
-    async def connect(self) -> None:
+    def connect(self) -> None:
         if self.credentials is None:
             raise RuntimeError("Must log in before trying to establish a WS connection.")
 
         self._credentials_worker_task = asyncio.create_task(self._credentials_worker())
         self._events_worker_task = asyncio.create_task(self._events_worker())
-
-        await self.await_connection()
 
     async def disconnect(self) -> None:
         if self._events_worker_task:
@@ -368,8 +353,6 @@ class Client:
     async def _connect_with_retry(self) -> AsyncIterator[WebSocketClientProtocol]:
         assert self.credentials
 
-        self._rejected = False
-
         try:
             async for connection in connect(
                 self.base_url_ws + "/ws",
@@ -381,10 +364,8 @@ class Client:
             ):
                 yield connection
         except ConnectionRejected:
-            logger.warning("Connection rejected.")
-            self._rejected = True
+            self._emitter.emit(ConnectionEvent.CONNECTION_REJECTED)
         except ConnectionImpossible:
-            logger.warning("Cannot establish WebSocket connection.")
             self._emitter.emit(ConnectionEvent.CONNECTION_IMPOSSIBLE)
 
     async def _events_worker(self) -> None:
@@ -396,7 +377,6 @@ class Client:
                 logger.debug("Acquired new WebSocket connection.")
                 self._emitter.emit(ConnectionEvent.CONNECTION_ESTABLISHED)
                 self._ws = connection
-                self._ws_connected.set()
 
                 try:
                     async for ws_message in connection:
@@ -417,7 +397,6 @@ class Client:
                                 logger.warning("Unknown message.")
                 except websockets.ConnectionClosed as exc:
                     logger.warning("Connection closed due to: {exc}", exc=exc)
-                    self._ws_connected.clear()
                     self._emitter.emit(ConnectionEvent.CONNECTION_LOST)
                     continue
         except Exception:
@@ -432,7 +411,6 @@ class Client:
                 await self._ws.close()
 
             self._ws = None
-            self._ws_connected.clear()
 
     async def _send(self, message: AnyMessage) -> None:
         assert self._ws, "No WebSocket connection"
@@ -458,7 +436,7 @@ class Client:
             response = await self._session.request(method, url, json=json)
             response.raise_for_status()
         except httpx.RequestError as exc:
-            logger.error("HTTP request error occured: {exc}", exc=repr(exc))
+            logger.warning("HTTP request error occured: {exc}", exc=repr(exc))
             raise RequestFailed
         except httpx.HTTPStatusError as exc:
             match exc.response.status_code:
