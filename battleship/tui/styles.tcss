@@ -171,6 +171,7 @@ JoinGame #title {
   text-style: bold;
   text-align: center;
   background: $primary;
+  margin-bottom: 1;
 }
 
 JoinGame ListItem {
