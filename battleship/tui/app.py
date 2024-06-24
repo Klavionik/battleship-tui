@@ -26,6 +26,7 @@ class BattleshipApp(App[None]):
     TITLE = "Battleship"
     SUB_TITLE = "The Game"
     CSS_PATH = "styles.tcss"
+    ENABLE_COMMAND_PALETTE = False
 
     @inject.param("client", Client)
     def __init__(
