@@ -144,9 +144,9 @@ class BattleshipApp(App[None]):
                 severity="warning",
                 timeout=5,
             )
-            waiting_modal.dismiss(False)
+            await waiting_modal.dismiss(False)
         else:
-            waiting_modal.dismiss(True)
+            await waiting_modal.dismiss(True)
 
     @on(screens.JoinGame.JoinMultiplayerSession)
     async def join_from_event(self, event: screens.JoinGame.JoinMultiplayerSession) -> None:
