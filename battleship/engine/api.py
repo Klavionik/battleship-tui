@@ -9,7 +9,12 @@ def is_firing_order(value: str) -> bool:
 
 
 def create_game(
-    player_a: str, player_b: str, roster: Roster, firing_order: str, salvo_mode: bool
+    player_a: str,
+    player_b: str,
+    roster: Roster,
+    firing_order: str,
+    salvo_mode: bool,
+    disallow_ships_touch: bool,
 ) -> Game:
     if not is_firing_order(firing_order):
         raise TypeError(f"Firing order {firing_order} is invalid.")
@@ -22,4 +27,5 @@ def create_game(
         roster=roster,
         firing_order=firing_order,
         salvo_mode=salvo_mode,
+        disallow_ships_touch=disallow_ships_touch,
     )

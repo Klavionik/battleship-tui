@@ -2,7 +2,6 @@ import dataclasses
 import enum
 import itertools
 import random
-import string
 from collections.abc import Callable
 from functools import cached_property
 from itertools import cycle, pairwise
@@ -14,6 +13,7 @@ from battleship.engine import errors, rosters
 from battleship.shared.compat import StrEnum
 
 DEFAULT_BOARD_SIZE = 10
+ASCII_OFFSET = 64
 
 
 class Direction(StrEnum):
@@ -33,7 +33,7 @@ class Ship:
     id: str
     type: str
     hp: int
-    cells: list[str] = dataclasses.field(default_factory=list, compare=False)
+    cells: list["Coordinate"] = dataclasses.field(default_factory=list, compare=False)
 
     @property
     def destroyed(self) -> bool:
@@ -45,11 +45,56 @@ class Ship:
 
 
 @dataclasses.dataclass
+class Coordinate:
+    x: int
+    y: int
+
+    def __eq__(self, other: object) -> bool:
+        if isinstance(other, str):
+            return self.to_human() == other
+
+        if isinstance(other, Coordinate):
+            return (self.x, self.y) == (other.x, other.y)
+
+        raise NotImplementedError(f"Cannot compare Coordinate to {other.__class__.__name__}.")
+
+    def up(self) -> "Coordinate":
+        return Coordinate(self.x, self.y - 1)
+
+    def right(self) -> "Coordinate":
+        return Coordinate(self.x + 1, self.y)
+
+    def down(self) -> "Coordinate":
+        return Coordinate(self.x, self.y + 1)
+
+    def left(self) -> "Coordinate":
+        return Coordinate(self.x - 1, self.y)
+
+    @property
+    def col(self) -> str:
+        return chr(self.x + ASCII_OFFSET + 1)
+
+    @property
+    def row(self) -> int:
+        return self.y + 1
+
+    @classmethod
+    def from_human(cls, coordinate: str) -> "Coordinate":
+        col, row = parse_coordinate(coordinate)
+        return Coordinate(ord(col) - ASCII_OFFSET - 1, row - 1)
+
+    def to_human(self) -> str:
+        return f"{self.col}{self.row}"
+
+
+@dataclasses.dataclass
 class Cell:
-    col: str
-    row: int
+    coordinate: Coordinate
     ship: Ship | None = None
     is_shot: bool = False
+
+    def __repr__(self) -> str:
+        return f"Cell {self.coordinate.to_human()}"
 
     def hit(self) -> None:
         if self.is_shot:
@@ -67,8 +112,12 @@ class Cell:
         self.ship = ship
 
     @property
-    def coordinate(self) -> str:
-        return f"{self.col}{self.row}"
+    def col(self) -> str:
+        return self.coordinate.col
+
+    @property
+    def row(self) -> int:
+        return self.coordinate.row
 
 
 def parse_coordinate(coordinate: str) -> tuple[str, int]:
@@ -80,7 +129,7 @@ def parse_coordinate(coordinate: str) -> tuple[str, int]:
     return col, row
 
 
-def is_valid_position(coordinates: Iterable[str]) -> None:
+def is_valid_position(coordinates: Iterable[Coordinate]) -> None:
     """
     Validates that given coordinates make up either a
     horizontal or a vertical line with no gaps in between.
@@ -89,98 +138,109 @@ def is_valid_position(coordinates: Iterable[str]) -> None:
         A2, A3, A4 is valid. A2, A4, A5 is not.
         B3, C3, D3 is valid. B3, C3, E3 is not.
     """
-    parsed_coordinates = [parse_coordinate(coord) for coord in coordinates]
-    sorted_coordinates = sorted(parsed_coordinates)
+    sorted_coordinates = sorted(coordinates, key=lambda coord: (coord.x, coord.y))
 
     for curr, next_ in itertools.pairwise(sorted_coordinates):
-        curr_col, curr_row = curr
-        col_codepoint = ord(curr_col)
-        next_valid_hor = chr(col_codepoint + 1), curr_row
-        next_valid_ver = chr(col_codepoint), curr_row + 1
-
-        if next_ not in [next_valid_hor, next_valid_ver]:
+        if next_ not in [curr.right(), curr.down()]:
             raise errors.InvalidPosition(f"Position {coordinates} is invalid.")
+
+
+def position_to_coordinates(position: Collection[str]) -> list[Coordinate]:
+    return list(map(Coordinate.from_human, position))
 
 
 class Board:
     def __init__(self, size: int = DEFAULT_BOARD_SIZE) -> None:
         self.size = size
-        self._letters = string.ascii_uppercase[:size]
-        self._numbers = tuple(range(1, size + 1))
-        self.grid = [[Cell(col, row) for col in self._letters] for row in self._numbers]
+        self.grid = [
+            [Cell(Coordinate(col, row)) for col in range(self.size)] for row in range(self.size)
+        ]
         self.ships: list[Ship] = []
 
     def __repr__(self) -> str:
         return f"<Board {self.size}x{self.size}, {len(self.ships)} ships>"
-
-    def __getitem__(self, coordinate: str) -> Cell:
-        return self.get_cell(coordinate)
-
-    def _coordinate_to_index(self, coordinate: str) -> tuple[int, int]:
-        """
-        Coordinate is a string where the zero element is
-        a letter in range of the board size and the other elements
-        are integers that make up a number in range of the board size.
-
-        :param coordinate: Cell coordinate (like A1, B12, H4 etc.).
-        :return: Cell cols index and cell row index.
-        """
-        col, row = parse_coordinate(coordinate)
-
-        try:
-            col_index = self._letters.index(col)
-        except ValueError:
-            raise errors.CellOutOfRange(f"No column {col} in range {self._letters}.")
-
-        try:
-            row_index = self._numbers.index(row)
-        except ValueError:
-            raise errors.CellOutOfRange(f"No row {row} in range {self._numbers}.")
-
-        return col_index, row_index
 
     @cached_property
     def cells(self) -> list[Cell]:
         return [cell for row in self.grid for cell in row]
 
     def get_adjacent_cell(self, cell: Cell, direction: Direction) -> Cell | None:
-        coordinate = ""
-
         match direction:
             case Direction.UP:
-                coordinate = f"{cell.col}{cell.row - 1}"
+                coordinate = cell.coordinate.up()
             case Direction.DOWN:
-                coordinate = f"{cell.col}{cell.row + 1}"
+                coordinate = cell.coordinate.down()
             case Direction.RIGHT:
-                coordinate = f"{chr(ord(cell.col) + 1)}{cell.row}"
+                coordinate = cell.coordinate.right()
             case Direction.LEFT:
-                coordinate = f"{chr(ord(cell.col) - 1)}{cell.row}"
+                coordinate = cell.coordinate.left()
+            case _:
+                raise ValueError(f"Invalid direction {direction}.")
 
-        try:
-            return self.get_cell(coordinate)
-        except errors.CellOutOfRange:
+        return self.get_cell(coordinate)
+
+    def get_cell(self, coordinate: Coordinate) -> Cell | None:
+        if not (0 <= coordinate.x < self.size and 0 <= coordinate.y < self.size):
             return None
 
-    def get_cell(self, coordinate: str) -> Cell:
-        col, row = self._coordinate_to_index(coordinate)
-        return self.grid[row][col]
+        return self.grid[coordinate.y][coordinate.x]
 
-    def place_ship(self, position: Collection[str], ship: Ship) -> None:
-        if len(position) != ship.hp:
+    def has_adjacent_ship(self, coordinate: Coordinate) -> bool:
+        cell = self.get_cell(coordinate)
+
+        if not cell:
+            raise errors.CellOutOfRange(f"Cell at {coordinate=} does not exist.")
+
+        adjacent_coordinates = [
+            cell.coordinate.up(),
+            cell.coordinate.right(),
+            cell.coordinate.down(),
+            cell.coordinate.left(),
+        ]
+        diagonals = [
+            adjacent_coordinates[1].up(),
+            adjacent_coordinates[1].down(),
+            adjacent_coordinates[3].up(),
+            adjacent_coordinates[3].down(),
+        ]
+        adjacent_coordinates.extend(diagonals)
+
+        cells = [self.get_cell(coor) for coor in adjacent_coordinates]
+
+        return any([cell is not None and cell.ship is not None for cell in cells])
+
+    def place_ship(
+        self, coordinates: Collection[Coordinate], ship: Ship, disallow_ships_touch: bool = False
+    ) -> None:
+        if len(coordinates) != ship.hp:
             raise errors.ShipDoesntFitCells(
-                f"Cannot place {ship.hp} HP ship onto {len(position)} cells."
+                f"Cannot place {ship.hp} HP ship onto {len(coordinates)} cells."
             )
 
-        is_valid_position(position)
+        is_valid_position(coordinates)
 
-        for coordinate in position:
-            self.get_cell(coordinate).set_ship(ship)
+        if disallow_ships_touch:
+            for coordinate in coordinates:
+                if self.has_adjacent_ship(coordinate):
+                    raise errors.CannotPlaceShip(f"Coordinate {coordinate} has an adjacent ship.")
+
+        for coordinate in coordinates:
+            cell = self.get_cell(coordinate)
+
+            if cell is None:
+                raise errors.CellOutOfRange(f"Cell at {coordinate} doesn't exist.")
+
+            cell.set_ship(ship)
 
         self.ships.append(ship)
-        ship.cells.extend(position)
+        ship.cells.extend(coordinates)
 
-    def hit_cell(self, coordinate: str) -> Ship | None:
+    def hit_cell(self, coordinate: Coordinate) -> Ship | None:
         cell = self.get_cell(coordinate)
+
+        if cell is None:
+            raise errors.CellOutOfRange(f"Cell at {coordinate} doesn't exist.")
+
         cell.hit()
         return cell.ship
 
@@ -193,10 +253,12 @@ class Player:
     def __repr__(self) -> str:
         return self.name
 
-    def add_ship(self, position: Collection[str], ship: Ship) -> None:
-        self.board.place_ship(position, ship)
+    def add_ship(
+        self, position: Collection[Coordinate], ship: Ship, disallow_ships_touch: bool = False
+    ) -> None:
+        self.board.place_ship(position, ship, disallow_ships_touch)
 
-    def attack(self, coordinate: str) -> Ship | None:
+    def attack(self, coordinate: Coordinate) -> Ship | None:
         return self.board.hit_cell(coordinate)
 
     def count_ships(self, ship_type: rosters.ShipType) -> int:
@@ -219,7 +281,7 @@ class Player:
 
 @dataclasses.dataclass
 class Shot:
-    coordinate: str
+    coordinate: Coordinate
     hit: bool
     ship: Ship | None
 
@@ -294,12 +356,14 @@ class Game:
         roster: rosters.Roster,
         firing_order: FiringOrder = FiringOrder.ALTERNATELY,
         salvo_mode: bool = False,
+        disallow_ships_touch: bool = False,
     ) -> None:
         self.player_a = player_a
         self.player_b = player_b
         self.roster = roster
         self.firing_order = firing_order
         self.salvo_mode = salvo_mode
+        self.disallow_ships_touch = disallow_ships_touch
 
         self._player_cycle = pairwise(cycle(random.sample([player_a, player_b], k=2)))
         self._actor, self._subject = next(self._player_cycle)
@@ -336,9 +400,11 @@ class Game:
         if self._state != GameState.ARRANGE_FLEET:
             raise RuntimeError(f"Cannot add a new ship, incorrect game state {self._state}.")
 
+        coordinates = [Coordinate.from_human(point) for point in position]
+
         if player.get_ship(roster_id) is None:
             ship = self._build_ship(roster_id)
-            player.add_ship(position, ship)
+            player.add_ship(coordinates, ship, self.disallow_ships_touch)
         else:
             raise errors.ShipLimitExceeded(
                 f"Player {player.name} already has a ship with roster id {roster_id}."
@@ -354,28 +420,29 @@ class Game:
         )
         self._check_game_ready()
 
-    def fire(self, coordinates: Collection[str]) -> Salvo:
+    def fire(self, position: Collection[str]) -> Salvo:
         if self._state == GameState.ARRANGE_FLEET:
             raise errors.GameNotReady("Place all ships before firing.")
 
         if self._state == GameState.END:
             raise errors.GameEnded(f"{self.winner} won this game.")
 
-        if len(coordinates) > 1 and not self.salvo_mode:
+        if len(position) > 1 and not self.salvo_mode:
             raise errors.TooManyShots("Multiple shots in one turn permitted only in salvo mode.")
 
         assert self._actor, "No actor"
 
-        if self.salvo_mode and (len(coordinates) != self._actor.ships_alive):
+        if self.salvo_mode and (len(position) != self._actor.ships_alive):
             raise errors.IncorrectShots(
-                f"Number of shots {len(coordinates)} must be equal "
+                f"Number of shots {len(position)} must be equal "
                 f"to the number of alive ships {self._actor.ships_alive}."
             )
 
-        salvo = Salvo(actor=self._actor, subject=self._subject)
+        salvo = Salvo(actor=self.actor, subject=self.subject)
 
-        for coordinate in coordinates:
-            maybe_ship = self._subject.attack(coordinate)
+        for point in position:
+            coordinate = Coordinate.from_human(point)
+            maybe_ship = self.subject.attack(coordinate)
             shot = Shot(
                 coordinate=coordinate,
                 hit=maybe_ship is not None,

@@ -55,6 +55,11 @@ class GameStrategy(abc.ABC):
 
     @property
     @abc.abstractmethod
+    def disallow_ships_touch(self) -> bool:
+        pass
+
+    @property
+    @abc.abstractmethod
     def winner(self) -> str | None:
         pass
 
@@ -102,6 +107,7 @@ class MultiplayerStrategy(GameStrategy):
         self._roster: Roster | None = None
         self._firing_order: str | None = None
         self._salvo_mode: bool | None = None
+        self._disallow_ships_touch: bool | None = None
         self._winner = None
         self._client = client
 
@@ -137,6 +143,11 @@ class MultiplayerStrategy(GameStrategy):
     def salvo_mode(self) -> bool:
         assert self._salvo_mode is not None
         return self._salvo_mode
+
+    @property
+    def disallow_ships_touch(self) -> bool:
+        assert self._disallow_ships_touch is not None
+        return self._disallow_ships_touch
 
     @property
     def winner(self) -> str | None:
@@ -202,6 +213,7 @@ class MultiplayerStrategy(GameStrategy):
         enemy_nickname = payload["enemy"]
         firing_order = payload["firing_order"]
         salvo_mode = payload["salvo_mode"]
+        disallow_ships_touch = payload["disallow_ships_touch"]
         roster_data = payload["roster"]
         roster = Roster(
             name=roster_data["name"],
@@ -211,6 +223,7 @@ class MultiplayerStrategy(GameStrategy):
         self._enemy = enemy_nickname
         self._firing_order = firing_order
         self._salvo_mode = salvo_mode
+        self._disallow_ships_touch = disallow_ships_touch
         self._roster = roster
 
         self._game_started.set()
@@ -223,7 +236,9 @@ class SingleplayerStrategy(GameStrategy):
         self._human_player = game.player_a
         self._bot_player = game.player_b
         self._target_caller = ai.TargetCaller(self._human_player.board)
-        self._autoplacer = ai.Autoplacer(self._bot_player.board, self._game.roster)
+        self._autoplacer = ai.Autoplacer(
+            self._bot_player.board, self._game.roster, self._game.disallow_ships_touch
+        )
         self._start = time()
         self._summary = models.GameSummary()
 
@@ -252,6 +267,10 @@ class SingleplayerStrategy(GameStrategy):
     @property
     def salvo_mode(self) -> bool:
         return self._game.salvo_mode
+
+    @property
+    def disallow_ships_touch(self) -> bool:
+        return self._game.disallow_ships_touch
 
     @property
     def winner(self) -> str | None:
@@ -305,7 +324,9 @@ class SingleplayerStrategy(GameStrategy):
 
     def _spawn_bot_fleet(self) -> None:
         for item in self._game.roster:
-            position = self._autoplacer.place(item.type)
+            coordinates = self._autoplacer.place(item.type)
             # Do not send fleet_ready message yet, the screen might be not ready
             # to display a message.
-            self._game.add_ship(self._bot_player, position, item.id)
+            self._game.add_ship(
+                self._bot_player, [coor.to_human() for coor in coordinates], item.id
+            )

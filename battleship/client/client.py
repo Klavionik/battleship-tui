@@ -248,12 +248,14 @@ class Client:
         roster: str,
         firing_order: str,
         salvo_mode: bool,
+        disallow_ships_touch: bool,
     ) -> Session:
         payload = dict(
             name=name,
             roster=roster,
             firing_order=firing_order,
             salvo_mode=salvo_mode,
+            disallow_ships_touch=disallow_ships_touch,
         )
         response = await self._request("POST", "/sessions", json=payload)
         return Session(**response.json())

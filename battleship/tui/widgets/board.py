@@ -13,6 +13,7 @@ from rich.style import Style
 from rich.text import Text
 from textual import on
 from textual.app import ComposeResult
+from textual.color import Color
 from textual.coordinate import Coordinate
 from textual.events import Click, Mount, MouseMove
 from textual.message import Message
@@ -82,6 +83,11 @@ class CellFactory:
     def ship(self) -> "Cell":
         return Cell(self.empty_value, self.ship_bg, Cell.Type.SHIP)
 
+    def ship_preview(self) -> "Cell":
+        return Cell(
+            self.empty_value, Color.parse(self.ship_bg).lighten(0.1).hex, Cell.Type.SHIP_PREVIEW
+        )
+
     def forbidden(self) -> "Cell":
         return Cell(self.empty_value, self.forbidden_bg, Cell.Type.FORBIDDEN)
 
@@ -95,6 +101,7 @@ class Cell:
         EMPTY = auto()
         FORBIDDEN = auto()
         SHIP = auto()
+        SHIP_PREVIEW = auto()
         CROSSHAIR = auto()
         MISS = auto()
         SHIP_DAMAGED = auto()
@@ -163,11 +170,18 @@ class Board(Widget):
             self.coordinates = coordinates
 
     def __init__(
-        self, *args: Any, player_name: str, size: int, cell_factory: CellFactory, **kwargs: Any
+        self,
+        *args: Any,
+        player_name: str,
+        size: int,
+        cell_factory: CellFactory,
+        disallow_ships_touch: bool,
+        **kwargs: Any,
     ) -> None:
         super().__init__(*args, **kwargs)
         self.player_name = player_name
         self.board_size = size
+        self.disallow_ships_touch = disallow_ships_touch
         self._cell_factory = cell_factory
         # 1. Disable cursor to make Click events bubble up.
         # 2. Disable cell padding to make cells square.
@@ -365,6 +379,10 @@ class Board(Widget):
         for coor in coordinates:
             self._grid.update_cell_at(coor, self._cell_factory.ship())
 
+    def paint_preview(self, coordinates: Iterable[Coordinate]) -> None:
+        for coor in coordinates:
+            self._grid.update_cell_at(coor, self._cell_factory.ship_preview())
+
     def paint_forbidden(self, coordinates: Iterable[Coordinate]) -> None:
         for coor in coordinates:
             self._grid.update_cell_at(coor, self._cell_factory.forbidden())
@@ -378,6 +396,9 @@ class Board(Widget):
     def paint_ship_preview(self, row: int, column: int) -> None:
         if self.mode != self.Mode.ARRANGE:
             return
+
+        enough_space = True
+        too_close = False
 
         start = Coordinate(row, column)
 
@@ -398,16 +419,34 @@ class Board(Widget):
                     return
 
             if not self.is_cell_exist(next_cell) or self.is_cell_ship(next_cell):
+                enough_space = False
                 break
 
             self._preview_coordinates.append(next_cell)
             start = next_cell
-        else:
-            self._place_forbidden = False
-            self.paint_ship(self._preview_coordinates)
-            return
 
-        self.paint_forbidden(self._preview_coordinates)
+        if self.disallow_ships_touch and enough_space:
+            for i, cell in enumerate(self._preview_coordinates):
+                adjacent = [cell.up(), cell.right(), cell.down(), cell.left()]
+
+                if i == 0 or i == len(self._preview_coordinates) - 1:
+                    diagonals = [
+                        adjacent[1].up(),
+                        adjacent[1].down(),
+                        adjacent[3].up(),
+                        adjacent[3].down(),
+                    ]
+                    adjacent.extend(diagonals)
+
+                if any([self.is_cell_exist(cell) and self.is_cell_ship(cell) for cell in adjacent]):
+                    too_close = True
+                    break
+
+        if enough_space and not too_close:
+            self._place_forbidden = False
+            self.paint_preview(self._preview_coordinates)
+        else:
+            self.paint_forbidden(self._preview_coordinates)
 
     def place_ship(self) -> None:
         if self._place_forbidden:

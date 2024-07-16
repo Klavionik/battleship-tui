@@ -42,7 +42,9 @@ class Singleplayer(Screen[None]):
     def action_back(self) -> None:
         self.app.switch_screen(screens.MainMenu())
 
-    def start_game(self, roster_name: str, firing_order: str, salvo_mode: bool) -> None:
+    def start_game(
+        self, roster_name: str, firing_order: str, salvo_mode: bool, disallow_ships_touch: bool
+    ) -> None:
         roster = get_roster(roster_name)
         game = create_game(
             self._settings.player_name,
@@ -50,9 +52,12 @@ class Singleplayer(Screen[None]):
             roster=roster,
             firing_order=firing_order,
             salvo_mode=salvo_mode,
+            disallow_ships_touch=disallow_ships_touch,
         )
         self.app.push_screen(screens.Game(strategy=strategies.SingleplayerStrategy(game)))
 
     @on(NewGame.PlayPressed)
     def start_game_from_event(self, event: NewGame.PlayPressed) -> None:
-        self.start_game(event.roster, event.firing_order, event.salvo_mode)
+        self.start_game(
+            event.roster, event.firing_order, event.salvo_mode, event.disallow_ships_touch
+        )

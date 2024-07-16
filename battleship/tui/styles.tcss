@@ -152,7 +152,7 @@ NewGame > * {
   margin-bottom: 1;
 }
 
-NewGame #salvo_mode {
+NewGame #salvo_mode, NewGame #disallow_touch {
   width: 100%;
   border: $option-border;
 }

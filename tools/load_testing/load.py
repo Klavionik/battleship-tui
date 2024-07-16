@@ -234,8 +234,9 @@ async def create_session(
     roster: str = "classic",
     firing_order: str = "alternately",
     salvo: bool = False,
+    disallow_ships_touch: bool = False,
 ) -> str:
-    session = await client.create_session(name, roster, firing_order, salvo)
+    session = await client.create_session(name, roster, firing_order, salvo, disallow_ships_touch)
     return session.id
 
 

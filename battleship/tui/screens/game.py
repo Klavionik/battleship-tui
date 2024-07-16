@@ -70,12 +70,14 @@ class Game(Screen[None]):
             size=domain.DEFAULT_BOARD_SIZE,
             cell_factory=player_cell_factory,
             classes="player",
+            disallow_ships_touch=strategy.disallow_ships_touch,
         )
         self.enemy_board = Board(
             player_name=strategy.enemy,
             size=domain.DEFAULT_BOARD_SIZE,
             cell_factory=enemy_cell_factory,
             classes="enemy",
+            disallow_ships_touch=strategy.disallow_ships_touch,
         )
 
         self.player_fleet = Fleet(
@@ -278,9 +280,11 @@ class Game(Screen[None]):
 
     def _format_rules(self, template: str) -> str:
         salvo_mode = "Yes" if self._strategy.salvo_mode else "No"
+        touch_edges = "Yes" if not self._strategy.disallow_ships_touch else "No"
         firing_order = self._strategy.firing_order.replace("_", " ").capitalize()
         return Template(template).substitute(
             salvo_mode=salvo_mode,
             firing_order=firing_order,
             roster=self._strategy.roster.name.capitalize(),
+            touch_edges=touch_edges,
         )

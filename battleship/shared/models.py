@@ -40,6 +40,7 @@ class SessionCreate(BaseModel):
     roster: str
     firing_order: str
     salvo_mode: bool
+    disallow_ships_touch: bool
 
 
 class Session(SessionCreate):
@@ -119,13 +120,20 @@ def salvo_to_model(salvo: domain.Salvo) -> Salvo:
         if ship is None:
             return None
 
-        return Ship(id=ship.id, type=ship.type, destroyed=ship.destroyed, cells=ship.cells)
+        return Ship(
+            id=ship.id,
+            type=ship.type,
+            destroyed=ship.destroyed,
+            cells=[coor.to_human() for coor in ship.cells],
+        )
 
     def serialize_player(player: domain.Player) -> Player:
         return Player(name=player.name, ships_alive=player.ships_alive)
 
     def serialize_shot(shot: domain.Shot) -> Shot:
-        return Shot(coordinate=shot.coordinate, hit=shot.hit, ship=serialize_ship(shot.ship))
+        return Shot(
+            coordinate=shot.coordinate.to_human(), hit=shot.hit, ship=serialize_ship(shot.ship)
+        )
 
     return Salvo(
         actor=serialize_player(salvo.actor),

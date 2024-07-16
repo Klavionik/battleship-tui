@@ -24,23 +24,26 @@ def test_target_caller_doesnt_target_shot_cells():
     # Request 4 targets, but only 2 cells are not shot yet.
     targets = caller.call_out(count=4)
 
-    assert targets == [board.grid[1][0].coordinate, board.grid[1][1].coordinate]
+    assert targets == [
+        board.grid[1][0].coordinate.to_human(),
+        board.grid[1][1].coordinate.to_human(),
+    ]
 
 
 def test_target_caller_targets_adjacent_cells_after_hit_until_all_tried():
     random.seed(42)
     board = domain.Board()
     ship = domain.Ship("id", "ship", 4)
-    board.place_ship(["B2", "B3", "B4", "B5"], ship)
-    board.hit_cell("B3")
-    shot = domain.Shot("B3", hit=True, ship=ship)
+    board.place_ship(domain.position_to_coordinates(["B2", "B3", "B4", "B5"]), ship)
+    board.hit_cell(domain.Coordinate.from_human("B3"))
+    shot = domain.Shot(domain.Coordinate.from_human("B3"), hit=True, ship=ship)
     caller = ai.TargetCaller(board)
 
     caller.provide_feedback([shot])  # Adds 4 adjacent cells to next targets.
 
-    assert [t.coordinate for t in caller.next_targets] == ["B2", "B4", "C3", "A3"]
+    assert [t.coordinate.to_human() for t in caller.next_targets] == ["B2", "B4", "C3", "A3"]
     assert caller.call_out() == ["B2"]
-    assert [t.coordinate for t in caller.next_targets] == ["B4", "C3", "A3"]
+    assert [t.coordinate.to_human() for t in caller.next_targets] == ["B4", "C3", "A3"]
     # When all next targets are called out, caller starts mixing in random cells.
     assert caller.call_out(count=4) == ["B4", "C3", "A3", "C9"]
 
@@ -48,7 +51,7 @@ def test_target_caller_targets_adjacent_cells_after_hit_until_all_tried():
 @pytest.mark.parametrize("ship", [*rosters.get_roster("classic")])
 def test_autoplacer_position_matches_ship_hp(ship):
     board = domain.Board()
-    autoplacer = ai.Autoplacer(board, rosters.get_roster("classic"))
+    autoplacer = ai.Autoplacer(board, rosters.get_roster("classic"), disallow_ships_touch=False)
 
     position = autoplacer.place(ship_type=ship.type)
 
@@ -58,7 +61,7 @@ def test_autoplacer_position_matches_ship_hp(ship):
 @pytest.mark.parametrize("ship", [*rosters.get_roster("classic")])
 def test_autoplacer_position_is_valid(ship):
     board = domain.Board()
-    autoplacer = ai.Autoplacer(board, rosters.get_roster("classic"))
+    autoplacer = ai.Autoplacer(board, rosters.get_roster("classic"), disallow_ships_touch=False)
 
     position = autoplacer.place(ship_type=ship.type)
 
@@ -67,7 +70,20 @@ def test_autoplacer_position_is_valid(ship):
 
 def test_autoplacer_raises_error_if_no_place_for_ship():
     board = domain.Board(size=4)
-    autoplacer = ai.Autoplacer(board, rosters.get_roster("classic"))
+    autoplacer = ai.Autoplacer(board, rosters.get_roster("classic"), disallow_ships_touch=False)
 
     with pytest.raises(errors.CannotPlaceShip):
         autoplacer.place("carrier")
+
+
+def test_autoplacer_respects_no_ships_touch_rule():
+    board = domain.Board(size=3)
+    ship = domain.Ship(id="1", hp=3, type="ship")
+    roster = rosters.Roster(name="test", items=[rosters.RosterItem(id="1", type="ship", hp=3)])
+    # Place the ship in the center of the 3x3 board.
+    board.place_ship(domain.position_to_coordinates(["B1", "B2", "B3"]), ship)
+    autoplacer = ai.Autoplacer(board, roster, disallow_ships_touch=True)
+
+    # Autoplacer can't place another ship on the board without violating the rule.
+    with pytest.raises(errors.CannotPlaceShip):
+        autoplacer.place(ship_type="ship")

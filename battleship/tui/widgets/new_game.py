@@ -18,12 +18,14 @@ class NewGame(Widget):
             roster: str,
             firing_order: domain.FiringOrder,
             salvo_mode: bool,
+            disallow_ships_touch: bool,
         ) -> None:
             super().__init__()
             self.name = name
             self.roster = roster
             self.firing_order = firing_order
             self.salvo_mode = salvo_mode
+            self.disallow_ships_touch = disallow_ships_touch
 
     def __init__(self, *args: Any, with_name: bool = False, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
@@ -32,6 +34,7 @@ class NewGame(Widget):
         self.roster = "classic"
         self.firing_order = domain.FiringOrder.ALTERNATELY
         self.salvo_mode = False
+        self.disallow_ships_touch = False
 
     def compose(self) -> ComposeResult:
         if self._with_name:
@@ -48,6 +51,7 @@ class NewGame(Widget):
             yield RadioButton("Until miss", name="until_miss")
 
         yield Checkbox("Salvo mode", name="salvo_mode", id="salvo_mode")
+        yield Checkbox("Disallow ships to touch edges", name="disallow_touch", id="disallow_touch")
         yield Button("Play", variant="success")
 
     @on(Mount)
@@ -76,6 +80,10 @@ class NewGame(Widget):
     def update_salvo_mode(self, event: Checkbox.Changed) -> None:
         self.salvo_mode = event.value
 
+    @on(Checkbox.Changed, "#disallow_touch")
+    def update_disallow_touch(self, event: Checkbox.Changed) -> None:
+        self.disallow_ships_touch = event.value
+
     @on(Button.Pressed)
     def emit_play_pressed(self) -> None:
         with self.prevent(Button.Pressed):
@@ -88,5 +96,6 @@ class NewGame(Widget):
                 self.roster,
                 self.firing_order,
                 self.salvo_mode,
+                self.disallow_ships_touch,
             )
         )

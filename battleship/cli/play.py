@@ -31,8 +31,11 @@ def single(
         FiringOrder, typer.Option(help="Choose firing order.")
     ] = FiringOrder.ALTERNATELY,
     salvo_mode: Annotated[bool, typer.Option("--salvo", help="Enable salvo mode.")] = False,
+    disallow_ships_touch: Annotated[
+        bool, typer.Option("--no-ships-touch", help="Disallow ships to touch edges.")
+    ] = False,
 ) -> None:
-    tui_app = tui.BattleshipApp.singleplayer(roster, firing_order, salvo_mode)
+    tui_app = tui.BattleshipApp.singleplayer(roster, firing_order, salvo_mode, disallow_ships_touch)
 
     tui.run(tui_app, ctx.obj["debug"])
 
@@ -50,8 +53,11 @@ def new(
         FiringOrder, typer.Option(help="Choose firing order.")
     ] = FiringOrder.ALTERNATELY,
     salvo_mode: Annotated[bool, typer.Option("--salvo", help="Enable salvo mode.")] = False,
+    disallow_ships_touch: Annotated[
+        bool, typer.Option("--no-ships-touch", help="Disallow ships to touch edges.")
+    ] = False,
 ) -> None:
-    credentials_provider: CredentialsProvider = inject.instance(CredentialsProvider)
+    credentials_provider: CredentialsProvider = inject.instance(CredentialsProvider)  # type: ignore
     credentials = credentials_provider.load()
 
     if credentials is None:
@@ -61,14 +67,16 @@ def new(
         )
         raise typer.Exit(1)
 
-    tui_app = tui.BattleshipApp.multiplayer_new(game_name, roster, firing_order, salvo_mode)
+    tui_app = tui.BattleshipApp.multiplayer_new(
+        game_name, roster, firing_order, salvo_mode, disallow_ships_touch
+    )
 
     tui.run(tui_app, ctx.obj["debug"])
 
 
 @multiplayer_app.command(help="Join a multiplayer session.")
 def join(ctx: typer.Context, game_code: str) -> None:
-    credentials_provider: CredentialsProvider = inject.instance(CredentialsProvider)
+    credentials_provider: CredentialsProvider = inject.instance(CredentialsProvider)  # type: ignore
     credentials = credentials_provider.load()
 
     if credentials is None:

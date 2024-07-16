@@ -45,11 +45,13 @@ class BattleshipApp(App[None]):
         self._client.add_listener(ConnectionEvent.CONNECTION_LOST, self._handle_connection_lost)
 
     @classmethod
-    def singleplayer(cls, roster: str, firing_order: str, salvo_mode: bool) -> "BattleshipApp":
+    def singleplayer(
+        cls, roster: str, firing_order: str, salvo_mode: bool, disallow_ships_touch: bool
+    ) -> "BattleshipApp":
         singleplayer_screen = screens.Singleplayer()
 
         def start_game() -> None:
-            singleplayer_screen.start_game(roster, firing_order, salvo_mode)
+            singleplayer_screen.start_game(roster, firing_order, salvo_mode, disallow_ships_touch)
 
         instance: BattleshipApp = cls(mount_screen=singleplayer_screen)
         instance.call_later(start_game)
@@ -57,12 +59,19 @@ class BattleshipApp(App[None]):
 
     @classmethod
     def multiplayer_new(
-        cls, game_name: str, roster_name: str, firing_order: str, salvo_mode: bool
+        cls,
+        game_name: str,
+        roster_name: str,
+        firing_order: str,
+        salvo_mode: bool,
+        disallow_ships_touch: bool,
     ) -> "BattleshipApp":
         multiplayer_screen = screens.Multiplayer()
 
         def create_session() -> None:
-            instance.create_multiplayer_session(game_name, roster_name, firing_order, salvo_mode)
+            instance.create_multiplayer_session(
+                game_name, roster_name, firing_order, salvo_mode, disallow_ships_touch
+            )
 
         instance: BattleshipApp = cls(mount_screen=multiplayer_screen)
         instance.call_later(create_session)
@@ -94,11 +103,17 @@ class BattleshipApp(App[None]):
             event.roster_name,
             event.firing_order,
             event.salvo_mode,
+            event.disallow_ships_touch,
         )
 
     @work
     async def create_multiplayer_session(
-        self, name: str, roster_name: str, firing_order: str, salvo_mode: bool
+        self,
+        name: str,
+        roster_name: str,
+        firing_order: str,
+        salvo_mode: bool,
+        disallow_ships_touch: bool,
     ) -> None:
         if not self._client.logged_in:
             logger.warning("Cannot create multiplayer session if not logged in.")
@@ -111,6 +126,7 @@ class BattleshipApp(App[None]):
             roster_name,
             firing_order,
             salvo_mode,
+            disallow_ships_touch,
         )
 
         strategy = strategies.MultiplayerStrategy(self._client.nickname, self._client)
