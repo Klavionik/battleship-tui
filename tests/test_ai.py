@@ -1,3 +1,4 @@
+import itertools
 import random
 
 import pytest
@@ -66,6 +67,19 @@ def test_autoplacer_position_is_valid(ship):
     position = autoplacer.place(ship_type=ship.type)
 
     assert domain.is_valid_position(position) is None
+
+
+@pytest.mark.parametrize(
+    "roster,adjacent_ships", [*itertools.product(rosters.get_rosters().values(), (True, False))]
+)
+def test_autoplacer_can_place_the_whole_fleet(roster, adjacent_ships):
+    board = domain.Board()
+    autoplacer = ai.Autoplacer(board, roster, no_adjacent_ships=adjacent_ships)
+
+    for item in roster:
+        autoplacer.place(ship_type=item.type)
+
+    assert True
 
 
 def test_autoplacer_raises_error_if_no_place_for_ship():

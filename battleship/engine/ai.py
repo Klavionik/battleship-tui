@@ -75,7 +75,6 @@ class Autoplacer:
         for cell in empty_cells:  # Get next random cell.
             for direction in directions:  # Get next random direction.
                 start_cell = cell  # For every direction, build from this random cell.
-                position.append(start_cell.coordinate)
 
                 # Try to found enough empty cells to place the ship in this direction.
                 for _ in range(ship_hp):
