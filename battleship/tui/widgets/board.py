@@ -13,7 +13,6 @@ from rich.style import Style
 from rich.text import Text
 from textual import on
 from textual.app import ComposeResult
-from textual.color import Color
 from textual.coordinate import Coordinate
 from textual.events import Click, Mount, MouseMove
 from textual.message import Message
@@ -84,9 +83,7 @@ class CellFactory:
         return Cell(self.empty_value, self.ship_bg, Cell.Type.SHIP)
 
     def ship_preview(self) -> "Cell":
-        return Cell(
-            self.empty_value, Color.parse(self.ship_bg).lighten(0.1).hex, Cell.Type.SHIP_PREVIEW
-        )
+        return Cell(self.empty_value, self.ship_bg, Cell.Type.SHIP_PREVIEW)
 
     def forbidden(self) -> "Cell":
         return Cell(self.empty_value, self.forbidden_bg, Cell.Type.FORBIDDEN)
