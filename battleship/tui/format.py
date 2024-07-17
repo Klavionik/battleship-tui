@@ -14,12 +14,12 @@ def format_duration(duration_secs: int) -> str:
 
 def format_session(template: str, session: Session) -> str:
     salvo_mode = "Yes" if session.salvo_mode else "No"
-    ships_touch = "Yes" if not session.disallow_ships_touch else "No"
+    adjacent_ships = "Yes" if not session.no_adjacent_ships else "No"
     firing_order = session.firing_order.replace("_", " ").capitalize()
     return Template(template).substitute(
         name=session.name,
         salvo_mode=salvo_mode,
         firing_order=firing_order,
         roster=session.roster.capitalize(),
-        ships_touch=ships_touch,
+        adjacent_ships=adjacent_ships,
     )

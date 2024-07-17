@@ -51,7 +51,7 @@ def test_target_caller_targets_adjacent_cells_after_hit_until_all_tried():
 @pytest.mark.parametrize("ship", [*rosters.get_roster("classic")])
 def test_autoplacer_position_matches_ship_hp(ship):
     board = domain.Board()
-    autoplacer = ai.Autoplacer(board, rosters.get_roster("classic"), disallow_ships_touch=False)
+    autoplacer = ai.Autoplacer(board, rosters.get_roster("classic"), no_adjacent_ships=False)
 
     position = autoplacer.place(ship_type=ship.type)
 
@@ -61,7 +61,7 @@ def test_autoplacer_position_matches_ship_hp(ship):
 @pytest.mark.parametrize("ship", [*rosters.get_roster("classic")])
 def test_autoplacer_position_is_valid(ship):
     board = domain.Board()
-    autoplacer = ai.Autoplacer(board, rosters.get_roster("classic"), disallow_ships_touch=False)
+    autoplacer = ai.Autoplacer(board, rosters.get_roster("classic"), no_adjacent_ships=False)
 
     position = autoplacer.place(ship_type=ship.type)
 
@@ -70,7 +70,7 @@ def test_autoplacer_position_is_valid(ship):
 
 def test_autoplacer_raises_error_if_no_place_for_ship():
     board = domain.Board(size=4)
-    autoplacer = ai.Autoplacer(board, rosters.get_roster("classic"), disallow_ships_touch=False)
+    autoplacer = ai.Autoplacer(board, rosters.get_roster("classic"), no_adjacent_ships=False)
 
     with pytest.raises(errors.CannotPlaceShip):
         autoplacer.place("carrier")
@@ -82,7 +82,7 @@ def test_autoplacer_respects_no_ships_touch_rule():
     roster = rosters.Roster(name="test", items=[rosters.RosterItem(id="1", type="ship", hp=3)])
     # Place the ship in the center of the 3x3 board.
     board.place_ship(domain.position_to_coordinates(["B1", "B2", "B3"]), ship)
-    autoplacer = ai.Autoplacer(board, roster, disallow_ships_touch=True)
+    autoplacer = ai.Autoplacer(board, roster, no_adjacent_ships=True)
 
     # Autoplacer can't place another ship on the board without violating the rule.
     with pytest.raises(errors.CannotPlaceShip):

@@ -22,14 +22,14 @@ class CreateGame(Screen[None]):
             roster_name: str,
             firing_order: str,
             salvo_mode: bool,
-            disallow_ships_touch: bool,
+            no_adjacent_ships: bool,
         ):
             super().__init__()
             self.game_name = game_name
             self.roster_name = roster_name
             self.firing_order = firing_order
             self.salvo_mode = salvo_mode
-            self.disallow_ships_touch = disallow_ships_touch
+            self.no_adjacent_ships = no_adjacent_ships
 
     BINDINGS = [("escape", "back", "Back")]
 
@@ -64,6 +64,6 @@ class CreateGame(Screen[None]):
                 event.roster,
                 event.firing_order,
                 event.salvo_mode,
-                event.disallow_ships_touch,
+                event.no_adjacent_ships,
             )
         )

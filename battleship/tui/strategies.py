@@ -55,7 +55,7 @@ class GameStrategy(abc.ABC):
 
     @property
     @abc.abstractmethod
-    def disallow_ships_touch(self) -> bool:
+    def no_adjacent_ships(self) -> bool:
         pass
 
     @property
@@ -107,7 +107,7 @@ class MultiplayerStrategy(GameStrategy):
         self._roster: Roster | None = None
         self._firing_order: str | None = None
         self._salvo_mode: bool | None = None
-        self._disallow_ships_touch: bool | None = None
+        self._no_adjacent_ships: bool | None = None
         self._winner = None
         self._client = client
 
@@ -145,9 +145,9 @@ class MultiplayerStrategy(GameStrategy):
         return self._salvo_mode
 
     @property
-    def disallow_ships_touch(self) -> bool:
-        assert self._disallow_ships_touch is not None
-        return self._disallow_ships_touch
+    def no_adjacent_ships(self) -> bool:
+        assert self._no_adjacent_ships is not None
+        return self._no_adjacent_ships
 
     @property
     def winner(self) -> str | None:
@@ -213,7 +213,7 @@ class MultiplayerStrategy(GameStrategy):
         enemy_nickname = payload["enemy"]
         firing_order = payload["firing_order"]
         salvo_mode = payload["salvo_mode"]
-        disallow_ships_touch = payload["disallow_ships_touch"]
+        no_adjacent_ships = payload["no_adjacent_ships"]
         roster_data = payload["roster"]
         roster = Roster(
             name=roster_data["name"],
@@ -223,7 +223,7 @@ class MultiplayerStrategy(GameStrategy):
         self._enemy = enemy_nickname
         self._firing_order = firing_order
         self._salvo_mode = salvo_mode
-        self._disallow_ships_touch = disallow_ships_touch
+        self._no_adjacent_ships = no_adjacent_ships
         self._roster = roster
 
         self._game_started.set()
@@ -237,7 +237,7 @@ class SingleplayerStrategy(GameStrategy):
         self._bot_player = game.player_b
         self._target_caller = ai.TargetCaller(self._human_player.board)
         self._autoplacer = ai.Autoplacer(
-            self._bot_player.board, self._game.roster, self._game.disallow_ships_touch
+            self._bot_player.board, self._game.roster, self._game.no_adjacent_ships
         )
         self._start = time()
         self._summary = models.GameSummary()
@@ -269,8 +269,8 @@ class SingleplayerStrategy(GameStrategy):
         return self._game.salvo_mode
 
     @property
-    def disallow_ships_touch(self) -> bool:
-        return self._game.disallow_ships_touch
+    def no_adjacent_ships(self) -> bool:
+        return self._game.no_adjacent_ships
 
     @property
     def winner(self) -> str | None:

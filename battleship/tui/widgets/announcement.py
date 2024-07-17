@@ -9,7 +9,7 @@ RULES_TEMPLATE = """
 [b]▪ Roster[/]: $roster
 [b]▪ Firing order[/]: $firing_order
 [b]▪ Salvo mode[/]: $salvo_mode
-[b]▪ Ships can touch edges[/]: $touch_edges
+[b]▪ Adjacent ships[/]: $adjacent_ships
 """
 
 PHASE_ARRANGE = """

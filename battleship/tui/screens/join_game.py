@@ -20,7 +20,7 @@ from battleship.tui.widgets import AppFooter
 class SessionItem(ListItem):
     LABEL_TEMPLATE = (
         "$name | Roster: $roster | Firing order: $firing_order | Salvo mode: $salvo_mode | "
-        "Ships touch: $ships_touch"
+        "Adjacent ships: $adjacent_ships"
     )
 
     def __init__(self, *args: Any, session: Session, **kwargs: Any) -> None:

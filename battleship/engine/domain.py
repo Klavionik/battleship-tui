@@ -210,7 +210,7 @@ class Board:
         return any([cell is not None and cell.ship is not None for cell in cells])
 
     def place_ship(
-        self, coordinates: Collection[Coordinate], ship: Ship, disallow_ships_touch: bool = False
+        self, coordinates: Collection[Coordinate], ship: Ship, no_adjacent_ships: bool = False
     ) -> None:
         if len(coordinates) != ship.hp:
             raise errors.ShipDoesntFitCells(
@@ -219,7 +219,7 @@ class Board:
 
         is_valid_position(coordinates)
 
-        if disallow_ships_touch:
+        if no_adjacent_ships:
             for coordinate in coordinates:
                 if self.has_adjacent_ship(coordinate):
                     raise errors.CannotPlaceShip(f"Coordinate {coordinate} has an adjacent ship.")
@@ -254,9 +254,9 @@ class Player:
         return self.name
 
     def add_ship(
-        self, position: Collection[Coordinate], ship: Ship, disallow_ships_touch: bool = False
+        self, position: Collection[Coordinate], ship: Ship, no_adjacent_ships: bool = False
     ) -> None:
-        self.board.place_ship(position, ship, disallow_ships_touch)
+        self.board.place_ship(position, ship, no_adjacent_ships)
 
     def attack(self, coordinate: Coordinate) -> Ship | None:
         return self.board.hit_cell(coordinate)
@@ -356,14 +356,14 @@ class Game:
         roster: rosters.Roster,
         firing_order: FiringOrder = FiringOrder.ALTERNATELY,
         salvo_mode: bool = False,
-        disallow_ships_touch: bool = False,
+        no_adjacent_ships: bool = False,
     ) -> None:
         self.player_a = player_a
         self.player_b = player_b
         self.roster = roster
         self.firing_order = firing_order
         self.salvo_mode = salvo_mode
-        self.disallow_ships_touch = disallow_ships_touch
+        self.no_adjacent_ships = no_adjacent_ships
 
         self._player_cycle = pairwise(cycle(random.sample([player_a, player_b], k=2)))
         self._actor, self._subject = next(self._player_cycle)
@@ -404,7 +404,7 @@ class Game:
 
         if player.get_ship(roster_id) is None:
             ship = self._build_ship(roster_id)
-            player.add_ship(coordinates, ship, self.disallow_ships_touch)
+            player.add_ship(coordinates, ship, self.no_adjacent_ships)
         else:
             raise errors.ShipLimitExceeded(
                 f"Player {player.name} already has a ship with roster id {roster_id}."

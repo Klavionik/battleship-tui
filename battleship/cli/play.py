@@ -31,11 +31,11 @@ def single(
         FiringOrder, typer.Option(help="Choose firing order.")
     ] = FiringOrder.ALTERNATELY,
     salvo_mode: Annotated[bool, typer.Option("--salvo", help="Enable salvo mode.")] = False,
-    disallow_ships_touch: Annotated[
-        bool, typer.Option("--no-ships-touch", help="Disallow ships to touch edges.")
+    no_adjacent_ships: Annotated[
+        bool, typer.Option("--no-adjacent-ships", help="Forbid adjacent ships.")
     ] = False,
 ) -> None:
-    tui_app = tui.BattleshipApp.singleplayer(roster, firing_order, salvo_mode, disallow_ships_touch)
+    tui_app = tui.BattleshipApp.singleplayer(roster, firing_order, salvo_mode, no_adjacent_ships)
 
     tui.run(tui_app, ctx.obj["debug"])
 
@@ -53,8 +53,8 @@ def new(
         FiringOrder, typer.Option(help="Choose firing order.")
     ] = FiringOrder.ALTERNATELY,
     salvo_mode: Annotated[bool, typer.Option("--salvo", help="Enable salvo mode.")] = False,
-    disallow_ships_touch: Annotated[
-        bool, typer.Option("--no-ships-touch", help="Disallow ships to touch edges.")
+    no_adjacent_ships: Annotated[
+        bool, typer.Option("--no-adjacent-ships", help="Forbid adjacent ships.")
     ] = False,
 ) -> None:
     credentials_provider: CredentialsProvider = inject.instance(CredentialsProvider)  # type: ignore
@@ -68,7 +68,7 @@ def new(
         raise typer.Exit(1)
 
     tui_app = tui.BattleshipApp.multiplayer_new(
-        game_name, roster, firing_order, salvo_mode, disallow_ships_touch
+        game_name, roster, firing_order, salvo_mode, no_adjacent_ships
     )
 
     tui.run(tui_app, ctx.obj["debug"])

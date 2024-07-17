@@ -57,12 +57,12 @@ class TargetCaller:
 
 
 class Autoplacer:
-    def __init__(self, board: domain.Board, ship_suite: rosters.Roster, disallow_ships_touch: bool):
+    def __init__(self, board: domain.Board, ship_suite: rosters.Roster, no_adjacent_ships: bool):
         self.board = board
         self.ship_hp_map: dict[rosters.ShipType, rosters.ShipHitpoints] = dict(
             (item.type, item.hp) for item in ship_suite
         )
-        self.disallow_ships_touch = disallow_ships_touch
+        self.no_adjacent_ships = no_adjacent_ships
 
     def place(self, ship_type: rosters.ShipType) -> list[domain.Coordinate]:
         ship_hp = self.ship_hp_map[ship_type]
@@ -94,7 +94,7 @@ class Autoplacer:
                     # If there is enough cells to place the ship, return the position.
                     if len(position) == ship_hp:
                         # If there's a flag set, check for adjacent ships.
-                        if self.disallow_ships_touch and any(
+                        if self.no_adjacent_ships and any(
                             self.board.has_adjacent_ship(c) for c in position
                         ):
                             continue

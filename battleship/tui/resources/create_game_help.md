@@ -18,5 +18,5 @@ Choose, whether players make turns one at a time, or until the first miss.
 Toggles salvo mode. In salvo mode, players make as many shots during the turn as they have ships
 left.
 
-**Disallow ships to touch edges**  
+**No adjacent ships**  
 When this toggle is on, there must be a distance of at least 1 cell between players' ships. 

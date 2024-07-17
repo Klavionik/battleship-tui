@@ -42,7 +42,7 @@ class Game:
             roster=self.roster,
             firing_order=session.firing_order,
             salvo_mode=session.salvo_mode,
-            disallow_ships_touch=session.disallow_ships_touch,
+            no_adjacent_ships=session.no_adjacent_ships,
         )
         self.message_bus = message_bus
         self.summary = GameSummary()
@@ -161,7 +161,7 @@ class Game:
             roster=Roster.from_domain(self.roster).to_dict(),
             firing_order=self.game.firing_order,
             salvo_mode=self.game.salvo_mode,
-            disallow_ships_touch=self.game.disallow_ships_touch,
+            no_adjacent_ships=self.game.no_adjacent_ships,
         )
 
         asyncio.create_task(

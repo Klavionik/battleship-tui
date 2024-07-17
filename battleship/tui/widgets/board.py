@@ -175,13 +175,13 @@ class Board(Widget):
         player_name: str,
         size: int,
         cell_factory: CellFactory,
-        disallow_ships_touch: bool,
+        no_adjacent_ships: bool,
         **kwargs: Any,
     ) -> None:
         super().__init__(*args, **kwargs)
         self.player_name = player_name
         self.board_size = size
-        self.disallow_ships_touch = disallow_ships_touch
+        self.no_adjacent_ships = no_adjacent_ships
         self._cell_factory = cell_factory
         # 1. Disable cursor to make Click events bubble up.
         # 2. Disable cell padding to make cells square.
@@ -425,7 +425,7 @@ class Board(Widget):
             self._preview_coordinates.append(next_cell)
             start = next_cell
 
-        if self.disallow_ships_touch and enough_space:
+        if self.no_adjacent_ships and enough_space:
             for i, cell in enumerate(self._preview_coordinates):
                 adjacent = [cell.up(), cell.right(), cell.down(), cell.left()]
 

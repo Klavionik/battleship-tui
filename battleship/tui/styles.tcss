@@ -152,7 +152,7 @@ NewGame > * {
   margin-bottom: 1;
 }
 
-NewGame #salvo_mode, NewGame #disallow_touch {
+NewGame #salvo_mode, NewGame #no_adjacent_ships {
   width: 100%;
   border: $option-border;
 }

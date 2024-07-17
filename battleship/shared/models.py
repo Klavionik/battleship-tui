@@ -40,7 +40,7 @@ class SessionCreate(BaseModel):
     roster: str
     firing_order: str
     salvo_mode: bool
-    disallow_ships_touch: bool
+    no_adjacent_ships: bool
 
 
 class Session(SessionCreate):

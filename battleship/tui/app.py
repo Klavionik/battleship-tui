@@ -46,12 +46,12 @@ class BattleshipApp(App[None]):
 
     @classmethod
     def singleplayer(
-        cls, roster: str, firing_order: str, salvo_mode: bool, disallow_ships_touch: bool
+        cls, roster: str, firing_order: str, salvo_mode: bool, no_adjacent_ships: bool
     ) -> "BattleshipApp":
         singleplayer_screen = screens.Singleplayer()
 
         def start_game() -> None:
-            singleplayer_screen.start_game(roster, firing_order, salvo_mode, disallow_ships_touch)
+            singleplayer_screen.start_game(roster, firing_order, salvo_mode, no_adjacent_ships)
 
         instance: BattleshipApp = cls(mount_screen=singleplayer_screen)
         instance.call_later(start_game)
@@ -64,13 +64,13 @@ class BattleshipApp(App[None]):
         roster_name: str,
         firing_order: str,
         salvo_mode: bool,
-        disallow_ships_touch: bool,
+        no_adjacent_ships: bool,
     ) -> "BattleshipApp":
         multiplayer_screen = screens.Multiplayer()
 
         def create_session() -> None:
             instance.create_multiplayer_session(
-                game_name, roster_name, firing_order, salvo_mode, disallow_ships_touch
+                game_name, roster_name, firing_order, salvo_mode, no_adjacent_ships
             )
 
         instance: BattleshipApp = cls(mount_screen=multiplayer_screen)
@@ -103,7 +103,7 @@ class BattleshipApp(App[None]):
             event.roster_name,
             event.firing_order,
             event.salvo_mode,
-            event.disallow_ships_touch,
+            event.no_adjacent_ships,
         )
 
     @work
@@ -113,7 +113,7 @@ class BattleshipApp(App[None]):
         roster_name: str,
         firing_order: str,
         salvo_mode: bool,
-        disallow_ships_touch: bool,
+        no_adjacent_ships: bool,
     ) -> None:
         if not self._client.logged_in:
             logger.warning("Cannot create multiplayer session if not logged in.")
@@ -126,7 +126,7 @@ class BattleshipApp(App[None]):
             roster_name,
             firing_order,
             salvo_mode,
-            disallow_ships_touch,
+            no_adjacent_ships,
         )
 
         strategy = strategies.MultiplayerStrategy(self._client.nickname, self._client)
