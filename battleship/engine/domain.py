@@ -2,10 +2,10 @@ import dataclasses
 import enum
 import itertools
 import random
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from functools import cached_property
 from itertools import cycle, pairwise
-from typing import Any, Collection, Iterable, Iterator, TypeVar
+from typing import Collection, Iterable, Iterator, TypeVar
 
 from pymitter import EventEmitter  # type: ignore[import-untyped]
 
@@ -344,8 +344,8 @@ class GameState(StrEnum):
     END = enum.auto()
 
 
-Handler = Callable[[GameEvent], Any]
 Event = TypeVar("Event", bound=GameEvent)
+Handler = Callable[[Event], None] | Callable[[Event], Awaitable[None]]
 
 
 class Game:
@@ -391,7 +391,7 @@ class Game:
     def winner(self) -> Player | None:
         return self._winner
 
-    def on(self, event: type[Event], func: Callable[[Event], None]) -> None:
+    def on(self, event: type[Event], func: Handler[Event]) -> None:
         self._ee.on(event.__name__, func)
 
     def add_ship(

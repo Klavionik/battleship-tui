@@ -1,11 +1,13 @@
 import abc
 import asyncio
+import random
 from asyncio import create_task
 from time import time
 from typing import Any, Callable, Collection
 
 from pyee.asyncio import AsyncIOEventEmitter
 
+from battleship import is_debug
 from battleship.client import Client
 from battleship.engine import Roster, RosterItem, ai, domain
 from battleship.shared import models
@@ -233,6 +235,7 @@ class SingleplayerStrategy(GameStrategy):
     def __init__(self, game: domain.Game):
         super().__init__()
         self._game = game
+        self._enable_move_delay = not is_debug()
         self._human_player = game.player_a
         self._bot_player = game.player_b
         self._target_caller = ai.TargetCaller(self._human_player.board)
@@ -286,8 +289,11 @@ class SingleplayerStrategy(GameStrategy):
             self.emit_fleet_ready(self._human_player.name)
             self.emit_fleet_ready(self._bot_player.name)
 
-    def on_next_move(self, event: domain.NextMove) -> None:
+    async def on_next_move(self, event: domain.NextMove) -> None:
         self.emit_awaiting_move(actor=event.actor.name, subject=event.subject.name)
+
+        if self._enable_move_delay:
+            await asyncio.sleep(random.uniform(1, 4))
 
         if event.actor is self._bot_player:
             target = self._call_bot_target()

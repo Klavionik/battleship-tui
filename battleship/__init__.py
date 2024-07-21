@@ -14,6 +14,11 @@ def get_client_version() -> str:
     return os.getenv("BATTLESHIP_CLIENT_VERSION", metadata.version("battleship-tui"))
 
 
+@cache
+def is_debug() -> bool:
+    return os.getenv("BATTLESHIP_DEBUG", False) == "true"
+
+
 APP_LABEL = "battleship"
 data_home = xdg_data_home() / APP_LABEL
 cache_home = xdg_cache_home() / APP_LABEL
