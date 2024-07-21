@@ -128,19 +128,19 @@ class Grid(DataTable[Cell]):
 
 
 class PlayerName(Label):
-    show_fire: reactive[bool] = reactive(False)
+    attacks: reactive[bool | None] = reactive(None)
 
     def __init__(self, *args: Any, value: str, **kwargs: Any):
         super().__init__(*args, **kwargs)
         self._value = value
 
-    def watch_show_fire(self, value: bool) -> None:
-        self.log.warning(f"{value=}")
-
-        if value:
+    def watch_attacks(self, value: bool | None) -> None:
+        if value is None:
+            name = self._value
+        elif value:
             name = f"{self._value} [red bold blink]FIRE[/]"
         else:
-            name = self._value
+            name = f"{self._value} [white bold blink]WAIT[/]"
 
         self.update(f"{MAN} {name}")
 
@@ -153,7 +153,7 @@ class Board(Widget):
 
     min_targets: var[int] = var(1)
     mode: var[Mode] = var(Mode.DISPLAY, init=False)
-    under_attack: reactive[bool] = reactive(False)
+    player_attacks: reactive[bool | None] = reactive(None)
 
     class ShipPlaced(Message):
         def __init__(self, ship: ShipToPlace, coordinates: list[Coordinate]):
@@ -283,7 +283,7 @@ class Board(Widget):
         return (row + column) % 2 == 0
 
     def compose(self) -> ComposeResult:
-        yield PlayerName(value=self.player_name).data_bind(show_fire=Board.under_attack)
+        yield PlayerName(value=self.player_name).data_bind(attacks=Board.player_attacks)
         yield self._grid
 
     def move_crosshair(self, coordinate: Coordinate | None) -> None:
