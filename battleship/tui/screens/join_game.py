@@ -6,7 +6,7 @@ from textual import on
 from textual.app import ComposeResult
 from textual.containers import Container
 from textual.css.query import NoMatches
-from textual.events import Mount, Unmount
+from textual.events import ScreenResume, ScreenSuspend
 from textual.message import Message
 from textual.screen import Screen
 from textual.widgets import Label, ListItem, ListView, Static
@@ -62,13 +62,13 @@ class JoinGame(Screen[None]):
     def action_back(self) -> None:
         self.app.pop_screen()
 
-    @on(Mount)
+    @on(ScreenResume)
     async def subscribe(self) -> None:
         await self.subscribe_to_updates()
         await self.fetch_sessions()
         self._client.add_listener(ConnectionEvent.CONNECTION_LOST, self.handle_connection_lost)
 
-    @on(Unmount)
+    @on(ScreenSuspend)
     async def unsubscribe(self) -> None:
         await self.unsubscribe_from_updates()
         self._subscription = None
