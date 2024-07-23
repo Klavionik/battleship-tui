@@ -9,5 +9,4 @@ Right now it includes the following.
 * Shots count
 * Accuracy (hits/shots ratio)
 * Average game duration
-* The quickest win (by shots count)
-* The quickest win (by duration)
+* The quickest win duration

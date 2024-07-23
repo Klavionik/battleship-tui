@@ -192,8 +192,7 @@ class PlayerStatistics(BaseModel):
     shots: int = 0
     hits: int = 0
     total_duration: int = 0
-    quickest_win_shots: int = 0
-    quickest_win_duration: int = 0
+    quickest_win: int = 0
 
     @computed_field  # type: ignore[misc]
     @property
@@ -222,11 +221,10 @@ class PlayerStatistics(BaseModel):
         if summary.winner == self.user_id:
             self.games_won += 1
 
-            if summary.duration < self.quickest_win_duration:
-                self.quickest_win_duration = summary.duration
-
-            if summary.get_hits(self.user_id) < self.quickest_win_shots:
-                self.quickest_win_shots = summary.duration
+            if not self.quickest_win:
+                self.quickest_win = summary.duration
+            elif summary.duration < self.quickest_win:
+                self.quickest_win = summary.duration
 
         self.shots += summary.get_shots(self.user_id)
         self.hits += summary.get_hits(self.user_id)

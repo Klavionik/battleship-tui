@@ -50,8 +50,5 @@ class Statistics(Screen[None]):
         table.add_row(str(stats.shots), label="Shots")
         table.add_row(f"{stats.accuracy * 100}%", label="Accuracy")
         table.add_row(format_duration(stats.avg_duration), label="Avg game duration")
-        table.add_row(str(stats.quickest_win_shots), label="Quickest win (by shots)")
-        table.add_row(
-            format_duration(stats.quickest_win_duration), label="Quickest win (by duration)"
-        )
+        table.add_row(format_duration(stats.quickest_win), label="Quickest win")
         return table
