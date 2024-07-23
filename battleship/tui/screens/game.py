@@ -229,6 +229,8 @@ class Game(Screen[None]):
         for board in self.board_map.values():
             board.mode = Board.Mode.DISPLAY
 
+        self.player_board.player_attacks = None
+
         self.write_as_game(f":party_popper: [b]{winner}[/] has won!")
 
         text = PHASE_VICTORY if self._player_name == winner else PHASE_DEFEAT
