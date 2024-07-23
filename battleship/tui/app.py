@@ -187,10 +187,11 @@ class BattleshipApp(App[None]):
             await self.app.push_screen(screens.Game(strategy=strategy))
 
     async def _handle_connection_lost(self) -> None:
-        def cancel_active_game() -> None:
+        async def cancel_active_game() -> None:
             if isinstance(self.screen, screens.Game):
-                game_screen = cast(screens.Game, self.pop_screen())
-                game_screen.cancel_game()
+                screen = cast(screens.Game, self.screen)
+                screen.cancel_game()
+                await self.pop_screen()
                 self.notify(
                     "Game cannot be continued.",
                     title="Connection lost",
@@ -212,28 +213,28 @@ class BattleshipApp(App[None]):
 
         await self.push_screen(modal)
 
-        def handle_connection_established() -> None:
+        async def handle_connection_established() -> None:
             logger.debug("Connection restored.")
             self._client.remove_listener(
                 ConnectionEvent.CONNECTION_IMPOSSIBLE, handle_connection_impossible
             )
-            modal.dismiss()
-            cancel_active_game()
+            await modal.dismiss()
+            await cancel_active_game()
 
-        def handle_connection_impossible() -> None:
+        async def handle_connection_impossible() -> None:
             logger.debug("Unable to restore connection, return to the main menu.")
             self._client.remove_listener(
                 ConnectionEvent.CONNECTION_ESTABLISHED, handle_connection_established
             )
-            modal.dismiss()
-            cancel_active_game()
+            await modal.dismiss()
+            await cancel_active_game()
 
             # Keep only the default screen, just in case.
             for _ in self.screen_stack[1:]:
-                self.pop_screen()
+                await self.pop_screen()
 
             # Now return to the main menu.
-            self.push_screen(screens.MainMenu())
+            await self.push_screen(screens.MainMenu())
             self.notify(
                 "Unable to re-establish connection.",
                 title="Connection lost",
