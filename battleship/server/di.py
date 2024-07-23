@@ -27,7 +27,7 @@ from battleship.server.repositories import (
 def connect_event_handlers(services: Container) -> None:
     message_bus = services.resolve(MessageBus)
     message_bus.subscribe("entities.session", services.resolve(SessionUpdateHandler))
-    message_bus.subscribe("entities.session.*", services.resolve(PlayersIngameSubscriptionHandler))
+    message_bus.subscribe("entities.session", services.resolve(PlayersIngameSubscriptionHandler))
     message_bus.subscribe("entities.client", services.resolve(PlayersOnlineSubscriptionHandler))
     message_bus.subscribe("websocket", services.resolve(ClientDisconnectedHandler))
     message_bus.subscribe("games", services.resolve(HandleServerGameEvent))
