@@ -399,8 +399,11 @@ class Client:
                                 logger.warning("Unknown message.")
                 except websockets.ConnectionClosed as exc:
                     logger.warning("Connection closed due to: {exc}", exc=exc)
-                    self._emitter.emit(ConnectionEvent.CONNECTION_LOST)
-                    continue
+                except Exception as exc:
+                    logger.warning("Exception while listening to connection: {exc}", exc=exc)
+
+                logger.debug("Connection closed.")
+                self._emitter.emit(ConnectionEvent.CONNECTION_LOST)
         except Exception:
             logger.exception("Exception caught in events worker.")
         except asyncio.CancelledError:
@@ -409,13 +412,13 @@ class Client:
         finally:
             logger.debug("WebSocket connection cleanup.")
 
-            if self._ws is not None:
+            if self._ws and not self._ws.closed:
                 await self._ws.close()
 
-            self._ws = None
-
     async def _send(self, message: AnyMessage) -> None:
-        assert self._ws, "No WebSocket connection"
+        if not self._ws:
+            logger.warning("Trying to send a message, but connection does not exist yet.")
+            return
 
         if self._ws.closed:
             logger.warning("Trying to send a message, but connection is closed.")
