@@ -5,7 +5,7 @@ from asyncio import create_task
 from time import time
 from typing import Any, Callable, Collection
 
-from pyee.asyncio import AsyncIOEventEmitter
+from pymitter import EventEmitter  # type: ignore[import-untyped]
 
 from battleship import is_debug
 from battleship.client import Client
@@ -28,7 +28,7 @@ class GameNeverStarted(Exception):
 
 class GameStrategy(abc.ABC):
     def __init__(self) -> None:
-        self._ee = AsyncIOEventEmitter()
+        self._ee = EventEmitter()
 
     @property
     @abc.abstractmethod
@@ -78,25 +78,25 @@ class GameStrategy(abc.ABC):
         pass
 
     def subscribe(self, event: str, handler: Callable[..., Any]) -> None:
-        self._ee.add_listener(event, handler)
+        self._ee.on(event, handler)
 
     def unsubscribe(self) -> None:
-        self._ee.remove_all_listeners()
+        self._ee.off_all()
 
     def emit_ship_spawned(self, player: str, ship_id: str, position: Collection[str]) -> None:
-        self._ee.emit("ship_spawned", player=player, ship_id=ship_id, position=position)
+        self._ee.emit_future("ship_spawned", player=player, ship_id=ship_id, position=position)
 
     def emit_fleet_ready(self, player: str) -> None:
-        self._ee.emit("fleet_ready", player=player)
+        self._ee.emit_future("fleet_ready", player=player)
 
     def emit_awaiting_move(self, actor: str, subject: str) -> None:
-        self._ee.emit("awaiting_move", actor=actor, subject=subject)
+        self._ee.emit_future("awaiting_move", actor=actor, subject=subject)
 
     def emit_salvo(self, salvo: models.Salvo) -> None:
-        self._ee.emit("salvo", salvo=salvo)
+        self._ee.emit_future("salvo", salvo=salvo)
 
     def emit_game_ended(self, winner: str, summary: models.GameSummary) -> None:
-        self._ee.emit("game_ended", winner=winner, summary=summary)
+        self._ee.emit_future("game_ended", winner=winner, summary=summary)
 
 
 class MultiplayerStrategy(GameStrategy):

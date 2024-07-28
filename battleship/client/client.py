@@ -9,9 +9,7 @@ import httpx
 import websockets
 from httpx import AsyncClient, Request, Response
 from loguru import logger
-from pyee.asyncio import AsyncIOEventEmitter
-
-# noinspection PyProtectedMember
+from pymitter import EventEmitter  # type: ignore[import-untyped]
 from websockets.client import WebSocketClientProtocol
 
 from battleship import get_client_version
@@ -106,7 +104,7 @@ class Client:
         self._scheme = parsed_url.scheme
         self._ws: Optional[WebSocketClientProtocol] = None
         self._ws_timeout = ws_timeout
-        self._emitter = AsyncIOEventEmitter()
+        self._emitter = EventEmitter()
         self.credentials: Credentials | None = None
         self.auth = IDTokenAuth()
         self._session = AsyncClient(
@@ -290,7 +288,7 @@ class Client:
 
             subscription.emit(action, **kwargs)
 
-        self._emitter.add_listener(Subscription.SESSIONS_UPDATE, publish_update)
+        self._emitter.on(Subscription.SESSIONS_UPDATE, publish_update)
         await self._request("POST", url="/sessions/subscribe")
         return subscription
 
@@ -306,7 +304,7 @@ class Client:
 
             subscription.emit(event, count=count)
 
-        self._emitter.add_listener(Subscription.PLAYERS_UPDATE, publish_update)
+        self._emitter.on(Subscription.PLAYERS_UPDATE, publish_update)
         await self._request("POST", url="/players/subscribe")
         return subscription
 
@@ -322,10 +320,10 @@ class Client:
             self._emitter.once(event, handler)
             return
 
-        self._emitter.add_listener(event, handler)
+        self._emitter.on(event, handler)
 
     def remove_listener(self, event: str, handler: Callable[..., Any]) -> None:
-        self._emitter.remove_listener(event, handler)
+        self._emitter.off(event, handler)
 
     async def join_game(self, session_id: str) -> None:
         await self._request("POST", f"/sessions/{session_id}/join")
@@ -366,9 +364,9 @@ class Client:
             ):
                 yield connection
         except ConnectionRejected:
-            self._emitter.emit(ConnectionEvent.CONNECTION_REJECTED)
+            self._emitter.emit_future(ConnectionEvent.CONNECTION_REJECTED)
         except ConnectionImpossible:
-            self._emitter.emit(ConnectionEvent.CONNECTION_IMPOSSIBLE)
+            self._emitter.emit_future(ConnectionEvent.CONNECTION_IMPOSSIBLE)
 
     async def _events_worker(self) -> None:
         logger.debug("Start events worker.")
@@ -377,7 +375,7 @@ class Client:
             logger.debug("Try to acquire a WebSocket connection.")
             async for connection in self._connect_with_retry():
                 logger.debug("Acquired new WebSocket connection.")
-                self._emitter.emit(ConnectionEvent.CONNECTION_ESTABLISHED)
+                self._emitter.emit_future(ConnectionEvent.CONNECTION_ESTABLISHED)
                 self._ws = connection
 
                 try:
@@ -390,10 +388,10 @@ class Client:
 
                         match event:
                             case NotificationEvent():
-                                self._emitter.emit(str(event.subscription), event.payload)
+                                self._emitter.emit_future(str(event.subscription), event.payload)
                                 continue
                             case GameEvent():
-                                self._emitter.emit(event.type, event.payload)
+                                self._emitter.emit_future(event.type, event.payload)
                                 continue
                             case _:
                                 logger.warning("Unknown message.")
@@ -403,7 +401,7 @@ class Client:
                     logger.warning("Exception while listening to connection: {exc}", exc=exc)
 
                 logger.debug("Connection closed.")
-                self._emitter.emit(ConnectionEvent.CONNECTION_LOST)
+                self._emitter.emit_future(ConnectionEvent.CONNECTION_LOST)
         except Exception:
             logger.exception("Exception caught in events worker.")
         except asyncio.CancelledError:

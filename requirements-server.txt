@@ -40,7 +40,6 @@ pycparser==2.22 ; python_version >= "3.10" and python_version < "3.13" and platf
 pydantic-core==2.18.4 ; python_version >= "3.10" and python_version < "3.13"
 pydantic-settings==2.3.3 ; python_version >= "3.10" and python_version < "3.13"
 pydantic==2.7.4 ; python_version >= "3.10" and python_version < "3.13"
-pyee==11.1.0 ; python_version >= "3.10" and python_version < "3.13"
 pygments==2.18.0 ; python_version >= "3.10" and python_version < "3.13"
 pyjwt==2.8.0 ; python_version >= "3.10" and python_version < "3.13"
 pyjwt[crypto]==2.8.0 ; python_version >= "3.10" and python_version < "3.13"
