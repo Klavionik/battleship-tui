@@ -61,7 +61,6 @@ class Ship(Static):
 
     def place(self) -> None:
         self.render_ship()
-        self.tooltip = self.type_display
         self._placed = True
 
     def damage(self) -> None:
@@ -71,6 +70,7 @@ class Ship(Static):
         self.render_ship()
 
     def render_ship(self) -> None:
+        self.tooltip = self.type_display
         self.update(self._factory(self.hp, self._damage, self.destroyed))
 
     def render_place_link(self, previewing: bool = False) -> None:
