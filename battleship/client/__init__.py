@@ -7,7 +7,7 @@ from battleship.client.client import (
 )
 from battleship.client.credentials import (
     CredentialsProvider,
-    filesystem_credentials_provider,
+    FilesystemCredentialsProvider,
 )
 from battleship.client.subscriptions import PlayerSubscription, SessionSubscription
 from battleship.client.websocket import ConnectionImpossible
@@ -16,7 +16,7 @@ __all__ = [
     "Client",
     "CredentialsProvider",
     "SessionSubscription",
-    "filesystem_credentials_provider",
+    "FilesystemCredentialsProvider",
     "RequestFailed",
     "Unauthorized",
     "ConnectionImpossible",

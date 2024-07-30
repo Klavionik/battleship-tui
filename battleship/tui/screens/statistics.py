@@ -1,12 +1,10 @@
 from typing import Any
 
-import inject
 from textual.app import ComposeResult
 from textual.containers import Container, VerticalScroll
 from textual.screen import Screen
 from textual.widgets import DataTable, Markdown
 
-from battleship.client import Client
 from battleship.shared.models import PlayerStatistics
 from battleship.tui import resources
 from battleship.tui.format import format_duration
@@ -16,10 +14,8 @@ from battleship.tui.widgets import AppFooter
 class Statistics(Screen[None]):
     BINDINGS = [("escape", "back", "Back")]
 
-    @inject.param("client", Client)
-    def __init__(self, *args: Any, client: Client, data: PlayerStatistics, **kwargs: Any) -> None:
+    def __init__(self, *args: Any, data: PlayerStatistics, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
-        self._client = client
         self._data = data
 
         with resources.get_resource("statistics_help.md").open() as fh:

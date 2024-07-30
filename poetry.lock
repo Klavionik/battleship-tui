@@ -887,17 +887,6 @@ files = [
 ]
 
 [[package]]
-name = "inject"
-version = "5.2.1"
-description = "Python dependency injection framework."
-optional = true
-python-versions = "*"
-files = [
-    {file = "inject-5.2.1-py2.py3-none-any.whl", hash = "sha256:e40a5b1bebd8a4050b6f98f3396f3de6e9e2e411ad2a2145f16f351cb6f54e51"},
-    {file = "inject-5.2.1.tar.gz", hash = "sha256:f7c305a75cc4e3a331d248e996f25783ba784b88d5a9b9f73c53eacaa6d76985"},
-]
-
-[[package]]
 name = "itsdangerous"
 version = "2.1.2"
 description = "Safely pass data to untrusted environments and back."
@@ -2340,11 +2329,11 @@ idna = ">=2.0"
 multidict = ">=4.0"
 
 [extras]
-client = ["copykitten", "inject", "sentry-offline-transport", "tenacity", "textual", "typer"]
+client = ["copykitten", "sentry-offline-transport", "tenacity", "textual", "typer"]
 dev = ["textual-dev"]
 server = ["aioprometheus", "auth0-python", "blacksheep", "pyjwt", "redis", "uvicorn", "uvloop"]
 
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.13"
-content-hash = "0411ef0b184913f73f0166479702455cfe87217a28cf6a0251fe7ac559280892"
+content-hash = "0e5e102efd079f9657028656abba94e26d1e96095f2a42e880f9b9e8a1407e5a"

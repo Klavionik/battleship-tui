@@ -2,7 +2,6 @@ import asyncio
 import sys
 from typing import Any, cast
 
-import inject
 from loguru import logger
 from sentry_sdk import capture_exception
 from textual import on, work
@@ -12,6 +11,7 @@ from textual.screen import Screen
 
 from battleship.client import Client, ClientError, ConnectionEvent
 from battleship.tui import screens, strategies
+from battleship.tui.di import container
 from battleship.tui.widgets import modals
 from battleship.tui.widgets.modals import WaitingModal
 
@@ -27,18 +27,16 @@ class BattleshipApp(App[None]):
     CSS_PATH = "styles.tcss"
     ENABLE_COMMAND_PALETTE = False
 
-    @inject.param("client", Client)
     def __init__(
         self,
         *args: Any,
         mount_screen: Screen[Any] | None = None,
-        client: Client,
         debug: bool = False,
         **kwargs: Any,
     ) -> None:
         super().__init__(*args, **kwargs)
         self._mount_screen = mount_screen or screens.MainMenu()
-        self._client = client
+        self._client = container.resolve(Client)
         self._debug = debug
         self.error_text = ""
 

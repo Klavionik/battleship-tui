@@ -1,15 +1,16 @@
-import inject
+from rodi import Container
 
-from battleship import tui
 from battleship.client import Client
 from battleship.client.credentials import CredentialsProvider
+from battleship.tui.config import Config
 from battleship.tui.settings import SettingsProvider
 
+container = Container()
 
-def configure_injection(config: tui.Config) -> None:
-    def configure_(binder: inject.Binder) -> None:
-        binder.bind(CredentialsProvider, config.credentials_provider)
-        binder.bind(SettingsProvider, config.game_settings_provider)
-        binder.bind(Client, Client(str(config.server_url), config.credentials_provider))
 
-    inject.configure(configure_)
+def configure(config: Config) -> None:
+    container.add_singleton(CredentialsProvider, config.credentials_provider)
+    container.add_singleton(SettingsProvider, config.game_settings_provider)
+    container.add_instance(
+        Client(str(config.server_url), container.resolve(CredentialsProvider)), Client
+    )

@@ -1,7 +1,6 @@
 from enum import auto
 from typing import Annotated
 
-import inject
 import typer
 
 from battleship import tui
@@ -9,6 +8,7 @@ from battleship.cli.console import get_console
 from battleship.client import CredentialsProvider
 from battleship.engine.domain import FiringOrder
 from battleship.shared.compat import StrEnum
+from battleship.tui.di import container
 
 app = typer.Typer(help="Play Battleship TUI.")
 multiplayer_app = typer.Typer(help="Start a multiplayer session.")
@@ -57,7 +57,7 @@ def new(
         bool, typer.Option("--no-adjacent-ships", help="Forbid adjacent ships.")
     ] = False,
 ) -> None:
-    credentials_provider: CredentialsProvider = inject.instance(CredentialsProvider)  # type: ignore
+    credentials_provider = container.resolve(CredentialsProvider)
     credentials = credentials_provider.load()
 
     if credentials is None:
@@ -76,7 +76,7 @@ def new(
 
 @multiplayer_app.command(help="Join a multiplayer session.")
 def join(ctx: typer.Context, game_code: str) -> None:
-    credentials_provider: CredentialsProvider = inject.instance(CredentialsProvider)  # type: ignore
+    credentials_provider = container.resolve(CredentialsProvider)
     credentials = credentials_provider.load()
 
     if credentials is None:

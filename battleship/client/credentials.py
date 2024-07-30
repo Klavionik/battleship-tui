@@ -78,7 +78,3 @@ class FilesystemCredentialsProvider(CredentialsProvider):
 
     def _ensure_cache_dir(self) -> None:
         self.cache.parent.mkdir(parents=True, exist_ok=True)
-
-
-dummy_credentials_provider = DummyCredentialsProvider()
-filesystem_credentials_provider = FilesystemCredentialsProvider()

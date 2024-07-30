@@ -1,6 +1,5 @@
 from typing import Any
 
-import inject
 from loguru import logger
 from textual import on
 from textual.app import ComposeResult
@@ -13,6 +12,7 @@ from textual.widgets import Label, ListItem, ListView, Static
 
 from battleship.client import Client, ClientError, ConnectionEvent, SessionSubscription
 from battleship.shared.models import Session, SessionID
+from battleship.tui.di import container
 from battleship.tui.format import format_session
 from battleship.tui.widgets import AppFooter
 
@@ -45,10 +45,9 @@ class JoinGame(Screen[None]):
 
     BINDINGS = [("escape", "back", "Back")]
 
-    @inject.param("client", Client)
-    def __init__(self, *args: Any, client: Client, **kwargs: Any) -> None:
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
-        self._client = client
+        self._client = container.resolve(Client)
         self._session_list = ListView()
         self._subscription: SessionSubscription | None = None
 

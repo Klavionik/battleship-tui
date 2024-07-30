@@ -1,6 +1,5 @@
 from typing import Any
 
-import inject
 from loguru import logger
 from textual import on
 from textual.app import ComposeResult
@@ -11,17 +10,17 @@ from textual.widgets import Label, ListItem, ListView, Markdown
 
 from battleship.client import Client, ClientError, ConnectionEvent, PlayerSubscription
 from battleship.tui import resources, screens
+from battleship.tui.di import container
 from battleship.tui.widgets import AppFooter, LobbyHeader
 
 
 class Lobby(Screen[None]):
     BINDINGS = [("escape", "back", "Back")]
 
-    @inject.param("client", Client)
-    def __init__(self, *args: Any, nickname: str, client: Client, **kwargs: Any) -> None:
+    def __init__(self, *args: Any, nickname: str, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self._nickname = nickname
-        self._client = client
+        self._client = container.resolve(Client)
         self._player_subscription: PlayerSubscription | None = None
 
         with resources.get_resource("lobby_help.md").open() as fh:

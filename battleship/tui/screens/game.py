@@ -2,7 +2,6 @@ from datetime import datetime
 from string import Template
 from typing import Any, Iterable, Literal
 
-import inject
 from textual import on
 from textual.app import ComposeResult
 from textual.containers import Container, Grid
@@ -12,6 +11,7 @@ from textual.screen import Screen
 from battleship.engine import domain
 from battleship.shared import models
 from battleship.tui import strategies
+from battleship.tui.di import container
 from battleship.tui.settings import SettingsProvider
 from battleship.tui.widgets import AppFooter
 from battleship.tui.widgets.announcement import (
@@ -47,15 +47,14 @@ CANCEL_MSG = {
 class Game(Screen[None]):
     BINDINGS = [("escape", "back", "Back"), ("ctrl+q", "try_quit", "Quit")]
 
-    @inject.param("settings_provider", SettingsProvider)
     def __init__(
         self,
         *args: Any,
         strategy: strategies.GameStrategy,
-        settings_provider: SettingsProvider,
         **kwargs: Any,
     ):
         super().__init__(*args, **kwargs)
+        settings_provider = container.resolve(SettingsProvider)
         self._settings = settings_provider.load()
         self._strategy = strategy
 

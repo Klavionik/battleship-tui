@@ -1,6 +1,5 @@
 from typing import Any
 
-import inject
 from textual import on
 from textual.app import ComposeResult
 from textual.containers import Container, Horizontal, VerticalScroll
@@ -9,6 +8,7 @@ from textual.validation import Length, ValidationResult, Validator
 from textual.widgets import Button, Input, Label, Markdown, Select
 
 from battleship.tui import resources, screens
+from battleship.tui.di import container
 from battleship.tui.settings import Settings as SettingsModel
 from battleship.tui.settings import SettingsProvider, hex_color, validate_color
 from battleship.tui.widgets import AppFooter
@@ -26,11 +26,10 @@ class HexColor(Validator):
 class Settings(Screen[None]):
     BINDINGS = [("escape", "back", "Back")]
 
-    @inject.param("provider", SettingsProvider)
-    def __init__(self, *args: Any, provider: SettingsProvider, **kwargs: Any) -> None:
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
-        self.provider = provider
-        self.current = provider.load()
+        self.provider = container.resolve(SettingsProvider)
+        self.current = self.provider.load()
 
         with resources.get_resource("settings_help.md").open() as fh:
             self.help = fh.read()

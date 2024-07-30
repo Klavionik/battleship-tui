@@ -1,9 +1,8 @@
 import functools
 
-import inject
 import pytest
 
-from battleship.tui import BattleshipApp, Config, configure_injection
+from battleship.tui import BattleshipApp, Config, di
 
 TERMINAL_SIZE = (120, 35)
 RELATIVE_APP_PATH = "../battleship/tui/app.py"
@@ -13,17 +12,16 @@ RELATIVE_APP_PATH = "../battleship/tui/app.py"
 def test_config():
     config = Config(
         server_url="http://locahost:9000",
-        credentials_provider="battleship.client.credentials:dummy_credentials_provider",
-        game_settings_provider="battleship.tui.settings:in_memory_settings_provider",
+        credentials_provider="battleship.client.credentials:DummyCredentialsProvider",
+        game_settings_provider="battleship.tui.settings:InMemorySettingsProvider",
     )
     return config
 
 
 @pytest.fixture(autouse=True, scope="session")
 def test_di(test_config):
-    configure_injection(test_config)
+    di.configure(test_config)
     yield
-    inject.clear()
 
 
 @pytest.fixture

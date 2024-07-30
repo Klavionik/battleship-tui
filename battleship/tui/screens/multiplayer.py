@@ -1,6 +1,5 @@
 from typing import Any
 
-import inject
 from loguru import logger
 from textual import on, work
 from textual.app import ComposeResult
@@ -20,6 +19,7 @@ from battleship.client.client import (
     Unauthorized,
 )
 from battleship.tui import resources, screens
+from battleship.tui.di import container
 from battleship.tui.widgets import AppFooter
 
 
@@ -29,10 +29,9 @@ class Multiplayer(Screen[None]):
     is_password_valid: var[bool] = var(False)
     is_input_valid: var[bool] = var(False)
 
-    @inject.param("client", Client)
-    def __init__(self, *args: Any, client: Client, **kwargs: Any) -> None:
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
-        self._client = client
+        self._client = container.resolve(Client)
 
         with resources.get_resource("multiplayer_help.md").open() as fh:
             self.help = fh.read()

@@ -7,5 +7,5 @@ from battleship.tui.settings import SettingsProvider
 
 class Config(BaseSettings):
     server_url: HttpUrl
-    credentials_provider: ImportString[CredentialsProvider]
-    game_settings_provider: ImportString[SettingsProvider]
+    credentials_provider: ImportString[type[CredentialsProvider]]
+    game_settings_provider: ImportString[type[SettingsProvider]]

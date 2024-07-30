@@ -1,6 +1,5 @@
 from typing import Any
 
-import inject
 from textual import on
 from textual.app import ComposeResult
 from textual.containers import Container, VerticalScroll
@@ -8,7 +7,6 @@ from textual.message import Message
 from textual.screen import Screen
 from textual.widgets import Markdown
 
-from battleship.client import Client
 from battleship.tui import resources
 from battleship.tui.widgets import AppFooter
 from battleship.tui.widgets.new_game import NewGame
@@ -33,10 +31,8 @@ class CreateGame(Screen[None]):
 
     BINDINGS = [("escape", "back", "Back")]
 
-    @inject.param("client", Client)
-    def __init__(self, *args: Any, client: Client, **kwargs: Any) -> None:
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
-        self._client = client
 
         with resources.get_resource("create_game_help.md").open() as fh:
             self.help = fh.read()

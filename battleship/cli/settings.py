@@ -1,12 +1,12 @@
 from dataclasses import dataclass
 from typing import Any
 
-import inject
 import typer
 from pydantic import ValidationError
 from rich.table import Table
 
 from battleship.cli.console import get_console
+from battleship.tui.di import container
 from battleship.tui.settings import Settings, SettingsProvider
 
 app = typer.Typer(help="Manage game settings.")
@@ -36,7 +36,7 @@ def make_settings_table() -> Table:
 def prepare_settings_data() -> list[Setting]:
     data = []
 
-    settings_provider: SettingsProvider = inject.instance(SettingsProvider)
+    settings_provider = container.resolve(SettingsProvider)
     settings = settings_provider.load()
     dump = settings.to_dict()
     schema = settings.model_json_schema()
@@ -87,7 +87,7 @@ def list_settings() -> None:
 )
 def get_value(key: str) -> None:
     console = get_console()
-    settings_provider: SettingsProvider = inject.instance(SettingsProvider)
+    settings_provider = container.resolve(SettingsProvider)
     settings = settings_provider.load().to_dict()
 
     value = settings.get(key)
@@ -101,7 +101,7 @@ def get_value(key: str) -> None:
 @app.command(name="set", help="Set key to a value.")
 def set_value(key: str, value: str) -> None:
     console = get_console()
-    settings_provider: SettingsProvider = inject.instance(SettingsProvider)
+    settings_provider = container.resolve(SettingsProvider)
     settings = settings_provider.load()
 
     try:

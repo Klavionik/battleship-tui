@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Annotated
 
+import pydantic
 import typer
 
 from battleship import data_home, get_client_version, tui
@@ -36,7 +37,7 @@ def main(
             show_envvar=False,
             help="Set multiplayer credentials provider.",
         ),
-    ] = "battleship.client:filesystem_credentials_provider",
+    ] = "battleship.client:FilesystemCredentialsProvider",
     settings_provider: Annotated[
         str,
         typer.Option(
@@ -44,7 +45,7 @@ def main(
             show_envvar=False,
             help="Set game settings provider.",
         ),
-    ] = "battleship.tui.settings:filesystem_settings_provider",
+    ] = "battleship.tui.settings:FilesystemSettingsProvider",
     server_url: Annotated[
         str,
         typer.Option(envvar="BATTLESHIP_SERVER_URL", show_envvar=False, help="Set server URL."),
@@ -66,12 +67,18 @@ def main(
 
     logging.configure_logger(make_log_sink(debug))
     logging.configure_sentry(SENTRY_DSN)
-    config = tui.Config(
-        server_url=server_url,
-        credentials_provider=credentials_provider,
-        game_settings_provider=settings_provider,
-    )
-    di.configure_injection(config)
+
+    try:
+        config = tui.Config(
+            server_url=server_url,
+            credentials_provider=credentials_provider,
+            game_settings_provider=settings_provider,
+        )
+    except pydantic.ValidationError as exc:
+        typer.echo(exc, err=True)
+        raise typer.Exit(1)
+
+    di.configure(config)
 
     if version:
         typer.echo(get_client_version())

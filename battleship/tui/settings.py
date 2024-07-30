@@ -107,7 +107,3 @@ class FilesystemSettingsProvider(SettingsProvider):
 
     def _ensure_config_dir(self) -> None:
         self.config.parent.mkdir(parents=True, exist_ok=True)
-
-
-filesystem_settings_provider = FilesystemSettingsProvider()
-in_memory_settings_provider = InMemorySettingsProvider()

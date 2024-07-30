@@ -1,6 +1,5 @@
 from typing import Any
 
-import inject
 from textual import on
 from textual.app import ComposeResult
 from textual.containers import Container, VerticalScroll
@@ -10,6 +9,7 @@ from textual.widgets import Markdown
 from battleship.engine import create_game
 from battleship.engine.rosters import get_roster
 from battleship.tui import resources, screens, strategies
+from battleship.tui.di import container
 from battleship.tui.settings import SettingsProvider
 from battleship.tui.widgets import AppFooter
 from battleship.tui.widgets.new_game import NewGame
@@ -18,10 +18,10 @@ from battleship.tui.widgets.new_game import NewGame
 class Singleplayer(Screen[None]):
     BINDINGS = [("escape", "back", "Back")]
 
-    @inject.param("settings_provider", SettingsProvider)
-    def __init__(self, *args: Any, settings_provider: SettingsProvider, **kwargs: Any) -> None:
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
 
+        settings_provider = container.resolve(SettingsProvider)
         self._settings = settings_provider.load()
 
         with resources.get_resource("singleplayer_help.md").open() as fh:
