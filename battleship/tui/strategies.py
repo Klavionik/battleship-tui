@@ -293,7 +293,7 @@ class SingleplayerStrategy(GameStrategy):
         self.emit_awaiting_move(actor=event.actor.name, subject=event.subject.name)
 
         if self._enable_move_delay:
-            await asyncio.sleep(random.uniform(1, 4))
+            await asyncio.sleep(random.uniform(0.5, 2))
 
         if event.actor is self._bot_player:
             target = self._call_bot_target()
