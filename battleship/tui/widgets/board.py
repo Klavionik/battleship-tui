@@ -54,7 +54,7 @@ class CellFactory:
     light_bg: str = "#2D2D2D"
     dark_bg: str = "#1E1E1E"
     forbidden_bg: str = "#ba3c5b"
-    ship_bg: str = "green"
+    ship_bg: str = "#36aa5e"
     miss_value: str = WATER
     crosshair_value: str = TARGET
     damaged_value: str = FIRE

@@ -13,25 +13,25 @@ RULES_TEMPLATE = """
 """
 
 PHASE_ARRANGE = """
-[b]Current phase[/]: [black on white]ARRANGE FLEET[/]
+[b]Current phase[/]: [#000000 on #ffffff]ARRANGE FLEET[/]
 
 Select a ship in the left bottom corner of the screen. Use [b]Right Click[/] to rotate the ship and [b]Left Click[/] to place the ship to position.
 """  # noqa: E501
 
 PHASE_BATTLE = """
-[b]Current phase[/]: [black on white]BATTLE[/]
+[b]Current phase[/]: [#000000 on #ffffff]BATTLE[/]
 
 On your turn, use [b]Left Click[/] to select a target to attack on the enemy board. The outcome of your shot will be displayed in the battle log.
 """  # noqa: E501
 
 PHASE_BATTLE_SALVO = """
-[b]Current phase[/]: [black on white]BATTLE[/]
+[b]Current phase[/]: [#000000 on #ffffff]BATTLE[/]
 
 On your turn, use [b]Left Click[/] to select targets to attack on the enemy board. Use [b]Right Click[/] to reset selected targets. The outcome of your salvo will be displayed in the battle log.
 """  # noqa: E501
 
 PHASE_VICTORY = """
-[b]Current phase[/]: [green on white]VICTORY[/]
+[b]Current phase[/]: [#36aa5e on #ffffff]VICTORY[/]
 
 Congratulations, Admiral! Your excellent commandship led your fleet to a well-deserved victory.
 
@@ -39,7 +39,7 @@ Congratulations, Admiral! Your excellent commandship led your fleet to a well-de
 """
 
 PHASE_DEFEAT = """
-[b]Current phase[/]: [red on white]DEFEAT[/]
+[b]Current phase[/]: [#ba3c5b on #ffffff]DEFEAT[/]
 
 You may have lost this battle... Still, you haven't lost the war!
 
