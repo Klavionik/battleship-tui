@@ -55,6 +55,9 @@ class Lobby(Screen[None]):
     async def unsubscribe(self) -> None:
         await self.unsubscribe_from_player_count()
 
+        if self._player_subscription:
+            self._player_subscription.clear()
+
         self._player_subscription = None
         self._client.remove_listener(ConnectionEvent.CONNECTION_LOST, self.handle_connection_lost)
 

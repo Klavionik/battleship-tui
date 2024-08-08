@@ -28,8 +28,13 @@ class SessionSubscription:
 
 
 class PlayerSubscription:
-    def __init__(self) -> None:
+    def __init__(self, on_clear: Callable[[], None]) -> None:
         self._ee = EventEmitter()
+        self._on_clear_cb = on_clear
+
+    def clear(self) -> None:
+        self._ee.off_all()
+        self._on_clear_cb()
 
     def on_online_changed(self, callback: ClientCallback) -> None:
         self._ee.on("online_changed", callback)

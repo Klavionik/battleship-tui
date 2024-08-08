@@ -296,7 +296,10 @@ class Client:
         await self._request("POST", url="/sessions/unsubscribe")
 
     async def players_subscribe(self) -> PlayerSubscription:
-        subscription = PlayerSubscription()
+        def disconnect_update_listener() -> None:
+            self._emitter.off(Subscription.PLAYERS_UPDATE, publish_update)
+
+        subscription = PlayerSubscription(disconnect_update_listener)
 
         def publish_update(payload: dict[str, Any]) -> None:
             count = payload["count"]
