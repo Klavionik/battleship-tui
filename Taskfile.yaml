@@ -3,7 +3,7 @@
 version: '3'
 
 tasks:
-  install: poetry install --all-extras
+  install: poetry install --all-extras --sync
   mypy: mypy --strict battleship
   coverage: coverage run -m pytest {{.CLI_ARGS}}
   cov-report:
