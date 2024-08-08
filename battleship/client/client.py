@@ -274,7 +274,10 @@ class Client:
         return PlayerCount(**response.json())
 
     async def sessions_subscribe(self) -> SessionSubscription:
-        subscription = SessionSubscription()
+        def disconnect_update_listener() -> None:
+            self._emitter.off(Subscription.SESSIONS_UPDATE, publish_update)
+
+        subscription = SessionSubscription(disconnect_update_listener)
 
         async def publish_update(payload: dict) -> None:  # type: ignore[type-arg]
             action = payload["action"]

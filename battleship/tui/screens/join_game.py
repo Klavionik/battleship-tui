@@ -70,6 +70,10 @@ class JoinGame(Screen[None]):
     @on(ScreenSuspend)
     async def unsubscribe(self) -> None:
         await self.unsubscribe_from_updates()
+
+        if self._subscription:
+            self._subscription.clear()
+
         self._subscription = None
         self._client.remove_listener(ConnectionEvent.CONNECTION_LOST, self.handle_connection_lost)
 

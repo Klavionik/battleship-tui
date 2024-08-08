@@ -11,8 +11,13 @@ ClientCallback = Callable[[ClientCount], Coroutine[Any, Any, Any]]
 
 
 class SessionSubscription:
-    def __init__(self) -> None:
+    def __init__(self, on_clear: Callable[[], None]) -> None:
         self._ee = EventEmitter()
+        self._on_clear_cb = on_clear
+
+    def clear(self) -> None:
+        self._ee.off_all()
+        self._on_clear_cb()
 
     def on_add(self, callback: SessionCallback) -> None:
         self._ee.on(Action.ADD, callback)
