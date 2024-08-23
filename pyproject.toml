@@ -50,11 +50,11 @@ copykitten = { version = "^1.2.0", optional = true }
 tenacity = { version = "^8.4.1", optional = true }
 pymitter = "^0.5.1"
 sentry-offline-transport = { version = "^1.0.0", optional = true }
-
+rodi = "^2.0.6"
 
 [tool.poetry.extras]
 server = ["blacksheep", "uvicorn", "auth0-python", "pyjwt", "uvloop", "redis", "aioprometheus"]
-client = ["rodi", "textual", "typer", "copykitten", "tenacity", "sentry-offline-transport"]
+client = ["textual", "typer", "copykitten", "tenacity", "sentry-offline-transport"]
 dev = ["textual-dev"]
 
 [tool.poetry.scripts]

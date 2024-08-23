@@ -1774,7 +1774,7 @@ jupyter = ["ipywidgets (>=7.5.1,<9)"]
 name = "rodi"
 version = "2.0.6"
 description = "Implementation of dependency injection for Python 3"
-optional = true
+optional = false
 python-versions = ">=3.7"
 files = [
     {file = "rodi-2.0.6-py3-none-any.whl", hash = "sha256:d299276be19842133def84dde365771d11a5195b76be0595eae9c1ecad818446"},
@@ -2336,4 +2336,4 @@ server = ["aioprometheus", "auth0-python", "blacksheep", "pyjwt", "redis", "uvic
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.13"
-content-hash = "306da6a19af4c3f37b2da513f549d7734766d50c3c220223fb4ac32980119583"
+content-hash = "6b54349acb0a5319ea689feb43c7a2a0a75cbaf15370659322eeb78ad54e5fc7"
