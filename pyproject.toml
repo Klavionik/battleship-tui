@@ -67,6 +67,8 @@ line-length = 100
 profile = "black"
 
 [tool.mypy]
+strict = true
+warn_no_return = false
 plugins = [
   "pydantic.mypy"
 ]
