@@ -2,10 +2,12 @@ from datetime import datetime
 from string import Template
 from typing import Any, Iterable, Literal
 
+from loguru import logger
 from textual import on
 from textual.app import ComposeResult
 from textual.containers import Container, Grid
 from textual.coordinate import Coordinate
+from textual.events import ScreenResume, ScreenSuspend
 from textual.screen import Screen
 
 from battleship.engine import domain
@@ -167,9 +169,12 @@ class Game(Screen[None]):
     def spawn_ship(self, event: Board.ShipPlaced) -> None:
         self.player_board.mode = Board.Mode.DISPLAY
         position = [convert_to_coordinate(c) for c in event.coordinates]
+        logger.info("Spawn ship #{ship_id} at {coords}.", ship_id=event.ship.id, coords=position)
         self._strategy.spawn_ship(ship_id=event.ship.id, position=position)
 
     def on_fleet_ready(self, player: str) -> None:
+        logger.info("{player}'s fleet is ready.", player=player)
+
         self.write_as_game(f":ship: {player}'s fleet is ready")
         self.players_ready += 1
 
@@ -178,6 +183,10 @@ class Game(Screen[None]):
             self.query_one(Announcement).update_phase(text)
 
     def on_awaiting_move(self, actor: str, subject: str) -> None:
+        logger.info(
+            "{subject} is waiting for {actor} to make a move.", actor=actor, subject=subject
+        )
+
         if actor == self._player_name:
             self.player_board.player_attacks = True
         else:
@@ -191,10 +200,19 @@ class Game(Screen[None]):
         self.write_as_game(f":man: {actor}'s turn. Fire at will!")
 
     def on_ship_spawned(self, player: str, ship_id: str, position: Iterable[str]) -> None:
+        logger.info(
+            "{player}'s ship #{ship_id} is spawned at {position}.",
+            player=player,
+            ship_id=ship_id,
+            position=position,
+        )
+
         self.board_map[player].paint_ship([convert_from_coordinate(p) for p in position])
         self.fleet_map[player].place(ship_id)
 
     def on_salvo(self, salvo: models.Salvo) -> None:
+        logger.info("New salvo is incoming. {salvo}", salvo=salvo)
+
         board = self.board_map[salvo.subject.name]
         fleet = self.fleet_map[salvo.subject.name]
 
@@ -223,6 +241,8 @@ class Game(Screen[None]):
             self.board_map[salvo.actor.name].min_targets = salvo.ships_left
 
     def on_game_ended(self, winner: str, summary: models.GameSummary) -> None:
+        logger.info("Game ended. {winner} has won.", winner=winner)
+
         self.summary = summary
 
         for board in self.board_map.values():
@@ -237,6 +257,8 @@ class Game(Screen[None]):
         self._strategy.unsubscribe()
 
     def on_game_cancelled(self, reason: Literal["quit", "disconnect", "error"]) -> None:
+        logger.info("Game was cancelled due to {reason}.", reason=reason)
+
         self._strategy.unsubscribe()
         self.app.pop_screen()
 
@@ -254,6 +276,8 @@ class Game(Screen[None]):
 
     @on(Board.CellShot)
     def fire(self, event: Board.CellShot) -> None:
+        logger.info("A fire was shot at {coords}.", coords=event.coordinates)
+
         self.enemy_board.mode = Board.Mode.DISPLAY
         position = [convert_to_coordinate(c) for c in event.coordinates]
         self._strategy.fire(position=position)
@@ -271,11 +295,14 @@ class Game(Screen[None]):
         self.app.push_screen(SessionEndModal(), callback)
 
     def cancel_game(self) -> None:
+        logger.info("Game has been cancelled.")
+
         self._strategy.cancel()
         self._strategy.unsubscribe()
 
     @on(Ship.ShowPreview)
     def show_ship_preview(self, event: Ship.ShowPreview) -> None:
+        logger.info("Preview ship {ship}.", ship=event.ship_key)
         self.player_board.mode = Board.Mode.ARRANGE
         roster_item = self._strategy.roster[event.ship_key]
         self.player_board.show_ship_preview(ship_id=roster_item.id, ship_hp=roster_item.hp)
@@ -290,3 +317,11 @@ class Game(Screen[None]):
             roster=self._strategy.roster.name.capitalize(),
             adjacent_ships=adjacent_ships,
         )
+
+    @on(ScreenResume)
+    def log_enter(self) -> None:
+        logger.info("Enter {screen} screen.", screen=self.__class__.__name__)
+
+    @on(ScreenSuspend)
+    def log_leave(self) -> None:
+        logger.info("Leave {screen} screen.", screen=self.__class__.__name__)

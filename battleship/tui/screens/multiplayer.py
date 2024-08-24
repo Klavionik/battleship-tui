@@ -4,7 +4,7 @@ from loguru import logger
 from textual import on, work
 from textual.app import ComposeResult
 from textual.containers import Container, VerticalScroll
-from textual.events import Mount
+from textual.events import Mount, ScreenResume, ScreenSuspend
 from textual.reactive import var
 from textual.screen import Screen
 from textual.validation import Length
@@ -77,6 +77,7 @@ class Multiplayer(Screen[None]):
             )
 
         if self._client.logged_in:
+            logger.info("Already logged in.")
             self.connect()
         else:
             self.loading = False  # noqa
@@ -184,10 +185,13 @@ class Multiplayer(Screen[None]):
 
         try:
             if guest:
+                logger.info("Log in as a guest.")
                 await self._client.login(guest=True)
             else:
                 nickname = self.query_one("#nickname", Input).value
                 password = self.query_one("#password", Input).value
+
+                logger.info("Log in as {nickname}.", nickname=nickname)
                 await self._client.login(nickname, password)
         except RequestFailed:
             self.loading = False  # noqa
@@ -214,4 +218,13 @@ class Multiplayer(Screen[None]):
                 timeout=5,
             )
         else:
+            logger.info("Login success.")
             self.connect(return_to_main_menu=False)
+
+    @on(ScreenResume)
+    def log_enter(self) -> None:
+        logger.info("Enter {screen} screen.", screen=self.__class__.__name__)
+
+    @on(ScreenSuspend)
+    def log_leave(self) -> None:
+        logger.info("Leave {screen} screen.", screen=self.__class__.__name__)

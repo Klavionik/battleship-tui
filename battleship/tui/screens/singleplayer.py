@@ -1,8 +1,10 @@
 from typing import Any
 
+from loguru import logger
 from textual import on
 from textual.app import ComposeResult
 from textual.containers import Container, VerticalScroll
+from textual.events import ScreenResume, ScreenSuspend
 from textual.screen import Screen
 from textual.widgets import Markdown
 
@@ -54,8 +56,26 @@ class Singleplayer(Screen[None]):
             salvo_mode=salvo_mode,
             no_adjacent_ships=no_adjacent_ships,
         )
+        logger.info(
+            "Start singleplayer game. Player name: {player_name}. Roster: {roster}. "
+            "Firing order: {firing_order}. Salvo mode: {salvo_mode}. "
+            "No adjacent ships: {no_adjacent_ships}.",
+            player_name=self._settings.player_name,
+            roster=roster,
+            firing_order=firing_order,
+            salvo_mode=salvo_mode,
+            no_adjacent_ships=no_adjacent_ships,
+        )
         self.app.push_screen(screens.Game(strategy=strategies.SingleplayerStrategy(game)))
 
     @on(NewGame.PlayPressed)
     def start_game_from_event(self, event: NewGame.PlayPressed) -> None:
         self.start_game(event.roster, event.firing_order, event.salvo_mode, event.no_adjacent_ships)
+
+    @on(ScreenResume)
+    def log_enter(self) -> None:
+        logger.info("Enter {screen} screen.", screen=self.__class__.__name__)
+
+    @on(ScreenSuspend)
+    def log_leave(self) -> None:
+        logger.info("Leave {screen} screen.", screen=self.__class__.__name__)

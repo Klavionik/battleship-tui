@@ -1,6 +1,8 @@
+from loguru import logger
 from textual import on
 from textual.app import ComposeResult
 from textual.containers import Container
+from textual.events import ScreenResume, ScreenSuspend
 from textual.screen import Screen
 from textual.widgets import Label, ListItem, ListView, Markdown
 
@@ -41,3 +43,11 @@ class MainMenu(Screen[None]):
     @on(ListView.Selected, item="#settings")
     def to_settings(self) -> None:
         self.app.switch_screen(screens.Settings())
+
+    @on(ScreenResume)
+    def log_enter(self) -> None:
+        logger.info("Enter {screen} screen.", screen=self.__class__.__name__)
+
+    @on(ScreenSuspend)
+    def log_leave(self) -> None:
+        logger.info("Leave {screen} screen.", screen=self.__class__.__name__)

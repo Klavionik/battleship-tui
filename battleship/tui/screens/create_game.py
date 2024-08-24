@@ -1,8 +1,10 @@
 from typing import Any
 
+from loguru import logger
 from textual import on
 from textual.app import ComposeResult
 from textual.containers import Container, VerticalScroll
+from textual.events import ScreenResume, ScreenSuspend
 from textual.message import Message
 from textual.screen import Screen
 from textual.widgets import Markdown
@@ -63,3 +65,11 @@ class CreateGame(Screen[None]):
                 event.no_adjacent_ships,
             )
         )
+
+    @on(ScreenResume)
+    def log_enter(self) -> None:
+        logger.info("Enter {screen} screen.", screen=self.__class__.__name__)
+
+    @on(ScreenSuspend)
+    def log_leave(self) -> None:
+        logger.info("Leave {screen} screen.", screen=self.__class__.__name__)

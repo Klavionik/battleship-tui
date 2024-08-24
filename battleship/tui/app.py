@@ -9,6 +9,7 @@ from textual.app import App
 from textual.events import Mount, Unmount
 from textual.screen import Screen
 
+from battleship import get_client_version
 from battleship.client import Client, ClientError, ConnectionEvent
 from battleship.tui import screens, strategies
 from battleship.tui.di import container
@@ -114,10 +115,21 @@ class BattleshipApp(App[None]):
         no_adjacent_ships: bool,
     ) -> None:
         if not self._client.logged_in:
-            logger.warning("Cannot create multiplayer session if not logged in.")
+            logger.warning("Cannot create a multiplayer session if not logged in.")
             return
 
         name = name or f"{self._client.nickname}'s game"
+
+        logger.info(
+            "Create a multiplayer session. Name: {name}. Roster: {roster}. "
+            "Firing order: {firing_order}. Salvo mode: {salvo_mode}. "
+            "No adjacent ships: {no_adjacent_ships}",
+            name=name,
+            roster=roster_name,
+            firing_order=firing_order,
+            salvo_mode=salvo_mode,
+            no_adjacent_ships=no_adjacent_ships,
+        )
 
         session = await self._client.create_session(
             name,
@@ -168,6 +180,7 @@ class BattleshipApp(App[None]):
 
     @work
     async def join_multiplayer_session(self, session_id: str) -> None:
+        logger.info("Join a multiplayer session {session_id}.", session_id=session_id)
         strategy = strategies.MultiplayerStrategy(self._client.nickname, self._client)
 
         await self._client.join_game(session_id)
@@ -263,7 +276,12 @@ def run(app: BattleshipApp | None = None, debug: bool = False) -> None:
     if app is None:
         app = BattleshipApp(debug=debug)
 
+    logger.info("Starting Battleship TUI v{version}.", version=get_client_version())
+
     app.run()
 
+    logger.info("Exiting.")
+
     if app.return_code != 0:
+        logger.warning("Exit with error: {error}.", error=app.error_text)
         raise BattleshipError(app.error_text)

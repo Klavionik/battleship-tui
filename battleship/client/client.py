@@ -212,7 +212,7 @@ class Client:
 
     async def load_credentials(self) -> None:
         credentials = self.credentials_provider.load()
-        logger.debug("Credentials loaded: {creds}.", creds=credentials)
+        logger.info("Credentials loaded: {creds}.", creds=credentials)
 
         if not credentials:
             return
@@ -487,9 +487,9 @@ async def log_request(request: Request) -> None:
         if isinstance(content, dict) and "password" in content:
             content["password"] = "[REDACTED]"
 
-    logger.debug(
-        "Make {method} request to {path} with content {content}.",
+    logger.info(
+        "{method} -> {url} | {content}.",
         method=request.method,
-        path=request.url.path,
+        url=request.url,
         content=content,
     )

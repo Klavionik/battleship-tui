@@ -1,8 +1,10 @@
 from typing import Any
 
+from loguru import logger
 from textual import on
 from textual.app import ComposeResult
 from textual.containers import Container, Horizontal, VerticalScroll
+from textual.events import ScreenResume, ScreenSuspend
 from textual.screen import Screen
 from textual.validation import Length, ValidationResult, Validator
 from textual.widgets import Button, Input, Label, Markdown, Select
@@ -31,15 +33,15 @@ class Settings(Screen[None]):
         self.provider = container.resolve(SettingsProvider)
         self.current = self.provider.load()
 
+        logger.info("Loaded current settings: {settings}.", settings=self.current)
+
         with resources.get_resource("settings_help.md").open() as fh:
             self.help = fh.read()
 
     def compose(self) -> ComposeResult:
         with Container(classes="container"):
             with VerticalScroll():
-                yield Markdown(
-                    self.help,
-                )
+                yield Markdown(self.help)
 
             with Container():
                 yield Label("Player name")
@@ -104,6 +106,7 @@ class Settings(Screen[None]):
         saved = self.provider.save(settings)
 
         if saved:
+            logger.info("Saved settings: {settings}.", settings=settings)
             self.notify("Settings saved.", timeout=3)
         else:
             self.notify("No changes to save.", severity="warning", timeout=5)
@@ -133,3 +136,11 @@ class Settings(Screen[None]):
     @property
     def language(self) -> Select[str]:
         return self.query_one("#language", Select)
+
+    @on(ScreenResume)
+    def log_enter(self) -> None:
+        logger.info("Enter {screen} screen.", screen=self.__class__.__name__)
+
+    @on(ScreenSuspend)
+    def log_leave(self) -> None:
+        logger.info("Leave {screen} screen.", screen=self.__class__.__name__)

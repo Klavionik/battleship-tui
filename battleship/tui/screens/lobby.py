@@ -53,11 +53,14 @@ class Lobby(Screen[None]):
 
     @on(ScreenSuspend)
     async def unsubscribe(self) -> None:
+        if self._player_subscription is None:
+            return
+
+        logger.info("Unsubscribe from player count updates.")
+
         await self.unsubscribe_from_player_count()
 
-        if self._player_subscription:
-            self._player_subscription.clear()
-
+        self._player_subscription.clear()
         self._player_subscription = None
         self._client.remove_listener(ConnectionEvent.CONNECTION_LOST, self.handle_connection_lost)
 
@@ -72,6 +75,8 @@ class Lobby(Screen[None]):
 
     @on(ListView.Selected, item="#logout")
     async def logout(self) -> None:
+        logger.info("Log out.")
+        await self.unsubscribe()
         await self._client.disconnect()
         await self._client.logout()
         self.action_back()
@@ -114,6 +119,8 @@ class Lobby(Screen[None]):
             await self.update_ingame_count(count.ingame)
 
     async def subscribe_to_player_count(self) -> None:
+        logger.info("Subscribe to player count updates.")
+
         try:
             subscription = await self._client.players_subscribe()
         except ClientError as exc:
@@ -154,3 +161,11 @@ class Lobby(Screen[None]):
     async def _setup_player_count_updates(self) -> None:
         await self.subscribe_to_player_count()
         await self.fetch_player_count()
+
+    @on(ScreenResume)
+    def log_enter(self) -> None:
+        logger.info("Enter {screen} screen.", screen=self.__class__.__name__)
+
+    @on(ScreenSuspend)
+    def log_leave(self) -> None:
+        logger.info("Leave {screen} screen.", screen=self.__class__.__name__)
