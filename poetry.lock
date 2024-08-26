@@ -447,17 +447,17 @@ files = [
 
 [[package]]
 name = "copykitten"
-version = "1.2.0"
+version = "1.2.1"
 description = "A robust, dependency-free way to use the system clipboard in Python."
 optional = true
 python-versions = "<3.13,>=3.8"
 files = [
-    {file = "copykitten-1.2.0-cp38-abi3-macosx_10_12_x86_64.whl", hash = "sha256:f683f630c6125a73a67dd902128c32d6fe2fd7d49a4bd01f73c0d5d82a5ab964"},
-    {file = "copykitten-1.2.0-cp38-abi3-macosx_11_0_arm64.whl", hash = "sha256:ffbda0331d112c831e2dd1250cedc0551a352c7f98be052a036623d5ed1e7dbd"},
-    {file = "copykitten-1.2.0-cp38-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:1ba032464aabe26349861ddfccfdb20a4466ffc2e2f100d3a7852905e5600539"},
-    {file = "copykitten-1.2.0-cp38-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:175db73dc504575479c82d0d650f02526bec77bf0dac865e8db2e8f4603ea759"},
-    {file = "copykitten-1.2.0-cp38-abi3-win_amd64.whl", hash = "sha256:4e5822cc8041b7c81f49202595cf8a1ac67a1cf7e67e9e5e0c8704b559bbd590"},
-    {file = "copykitten-1.2.0.tar.gz", hash = "sha256:d9053fc6cfbaa9de621fb3d1090e8d19ae31c94b6964fc8db317d9bdbdc31635"},
+    {file = "copykitten-1.2.1-cp38-abi3-macosx_10_12_x86_64.whl", hash = "sha256:35844a0822491ad79f10588e55f4bde6473cfbcacd4ef529570046626a8fea68"},
+    {file = "copykitten-1.2.1-cp38-abi3-macosx_11_0_arm64.whl", hash = "sha256:880836a8e2bf7f111fa9b046829d00ee75b314bb7a3b0bc4454604a638ae3f91"},
+    {file = "copykitten-1.2.1-cp38-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:a014f1ba9b6de69e9b7288b7b5e4cce6c39e0ffbe6b49197a427204642e9c67a"},
+    {file = "copykitten-1.2.1-cp38-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:537056ffb57370b2b212649e9f6d86b29d8f1d29029f18aea4f2901ac89f95eb"},
+    {file = "copykitten-1.2.1-cp38-abi3-win_amd64.whl", hash = "sha256:1e4295ca2b691a5da0fc6349336082e59303951bfcd1453f187eec32a5d6792b"},
+    {file = "copykitten-1.2.1.tar.gz", hash = "sha256:924e5c091cf93ab636d56a6e7a138429c91ebc60dcabbf4d165cd8ddb891703a"},
 ]
 
 [[package]]
@@ -2336,4 +2336,4 @@ server = ["aioprometheus", "auth0-python", "blacksheep", "pyjwt", "redis", "uvic
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.13"
-content-hash = "6b54349acb0a5319ea689feb43c7a2a0a75cbaf15370659322eeb78ad54e5fc7"
+content-hash = "0449b38b18445b501536c1bb218c8fd2a54f4070d3124af798c2c2f610d344a0"
