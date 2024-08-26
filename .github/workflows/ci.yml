@@ -1,0 +1,71 @@
+name: CI
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - "main"
+    paths-ignore:
+      - "README.md"
+      - "CHANGELOG.md"
+      - "Taskfile.yaml"
+  pull_request:
+    paths-ignore:
+      - "README.md"
+      - "CHANGELOG.md"
+      - "Taskfile.yaml"
+  release:
+    types:
+      - published
+
+env:
+  POETRY_VERSION: "1.8.3"
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+      - uses: pre-commit/action@v3.0.1
+        with:
+          extra_args: "--hook-stage manual"
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+    needs: [lint]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install tox
+        run: pip install tox-gh>=1.3
+      - name: Setup test suite
+        run: tox -v --notest
+      - name: Run test suite
+        run: tox --skip-pkg-install
+      - name: Upload test coverage
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+  publish:
+    name: Publish package
+    runs-on: ubuntu-latest
+    needs: [lint, test]
+    if: ${{ github.event_name == 'release' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+      - name: Publish release ${{ github.ref }}
+        run: |
+          pip install poetry==${{ env.POETRY_VERSION }}
+          poetry publish --build --username __token__ --password ${{ secrets.PYPI_TOKEN }}

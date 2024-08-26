@@ -46,7 +46,7 @@ async-timeout = { version = "^4.0.3", markers = "python_version < '3.11'" }
 backports-strenum = { version = "^1.2.8", markers = "python_version < '3.11'" }
 sentry-sdk = "^2.8.0"
 aioprometheus = {version = "^23.3.0", optional = true}
-copykitten = { version = "^1.2.0", optional = true }
+copykitten = { version = "^1.2.1", optional = true }
 tenacity = { version = "^8.4.1", optional = true }
 pymitter = "^0.5.1"
 sentry-offline-transport = { version = "^1.0.0", optional = true }
@@ -67,6 +67,8 @@ line-length = 100
 profile = "black"
 
 [tool.mypy]
+strict = true
+warn_no_return = false
 plugins = [
   "pydantic.mypy"
 ]

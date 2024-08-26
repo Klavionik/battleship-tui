@@ -13,9 +13,7 @@ repos:
     rev: 7.1.0
     hooks:
       - id: flake8
-        stages:
-          - commit
-          - manual
+        stages: [commit, manual]
         additional_dependencies: [flake8-bugbear]
         types: [python]
 
@@ -23,8 +21,7 @@ repos:
     rev: 23.3.0
     hooks:
       - id: black
-        stages:
-          - commit
+        stages: [commit]
         types: [python]
 
       - id: black
@@ -32,35 +29,30 @@ repos:
         args:
           - --check
           - --diff
-        stages:
-          - manual
+        stages: [manual]
         types: [python]
 
   - repo: https://github.com/pycqa/isort
     rev: 5.12.0
     hooks:
       - id: isort
-        stages:
-          - commit
+        stages: [commit]
         types: [python]
 
       - id: isort
         name: isort-check
         args:
           - --check-only
-        stages:
-          - manual
+        stages: [manual]
         types: [python]
 
   - repo: local
     hooks:
       - id: mypy
+        stages: [commit]
+        exclude: "^tests/"
         name: mypy
         entry: mypy
-        args:
-          - --strict
-          - --no-warn-no-return
-        exclude: "^tests/"
         language: system
         types: [python]
         require_serial: true
@@ -68,18 +60,20 @@ repos:
   - repo: local
     hooks:
       - id: pytest
+        stages: [commit]
         name: pytest-no-snap
         entry: pytest
         args: ["-m", "not snap"]
         pass_filenames: false
         language: system
-        types: [ python ]
+        types: [python]
         require_serial: true
 
   - repo: https://github.com/python-poetry/poetry
     rev: '1.8.3'
     hooks:
       - id: poetry-export
+        stages: [commit]
         name: poetry-export-server
         args:
           - --output=requirements-server.txt
