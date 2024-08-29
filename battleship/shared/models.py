@@ -199,7 +199,7 @@ class PlayerStatistics(BaseModel):
     def accuracy(self) -> float:
         if not self.shots:
             return 0
-        return round(self.hits / self.shots, 1)
+        return self.hits / self.shots
 
     @computed_field  # type: ignore[misc]
     @property
@@ -213,7 +213,7 @@ class PlayerStatistics(BaseModel):
     def win_ratio(self) -> float:
         if not self.games_played:
             return 0
-        return round(self.games_won / self.games_played, 1)
+        return self.games_won / self.games_played
 
     def update_from_summary(self, summary: GameSummary) -> None:
         self.games_played += 1

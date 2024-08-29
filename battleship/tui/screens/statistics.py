@@ -45,9 +45,9 @@ class Statistics(Screen[None]):
         table: DataTable[str] = DataTable()
         table.add_columns("")
         table.add_row(str(stats.games_played), label="Games played")
-        table.add_row(f"{stats.win_ratio * 100}%", label="Win/loss ratio")
+        table.add_row(f"{round(stats.win_ratio * 100, 1)}%", label="Win/loss ratio")
         table.add_row(str(stats.shots), label="Shots")
-        table.add_row(f"{stats.accuracy * 100}%", label="Accuracy")
+        table.add_row(f"{round(stats.accuracy * 100, 1)}%", label="Accuracy")
         table.add_row(format_duration(stats.avg_duration), label="Avg game duration")
         table.add_row(format_duration(stats.quickest_win), label="Quickest win")
         return table
