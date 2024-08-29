@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.24.1] - 2024-08-30
+### Fixed
+- Fix the excessive rounding of the win/loss ratio and accuracy.
+
 ## [0.24.0] - 2024-08-27
 Finally, the alpha release of Battleship TUI is here. Hooray!
 
