@@ -58,6 +58,9 @@ class Coordinate:
 
         raise NotImplementedError(f"Cannot compare Coordinate to {other.__class__.__name__}.")
 
+    def __hash__(self) -> int:
+        return hash((self.x, self.y))
+
     def up(self) -> "Coordinate":
         return Coordinate(self.x, self.y - 1)
 
