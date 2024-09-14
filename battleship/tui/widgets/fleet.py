@@ -5,7 +5,7 @@ from textual import on
 from textual.app import ComposeResult
 from textual.events import Mount
 from textual.message import Message
-from textual.reactive import var
+from textual.reactive import reactive, var
 from textual.widget import Widget
 from textual.widgets import Static
 
@@ -87,10 +87,12 @@ class Ship(Static):
 
 class Fleet(Widget):
     previewing_id: var[str] = var("")
+    ships_alive: reactive[int] = reactive(0)
 
     def __init__(
         self,
         *args: Any,
+        title: str,
         roster: Roster,
         cell_factory: CellFactory,
         allow_placing: bool = True,
@@ -107,7 +109,6 @@ class Fleet(Widget):
             damage_parts = [cell_factory.damaged().render() for _ in range(damage)]
             return Text.assemble(*(hp_parts + damage_parts), "\n")
 
-        self._roster = roster
         self._allow_placing = allow_placing
         self._previewing_id = ""
         self._ships: dict[str, Ship] = {
@@ -121,6 +122,10 @@ class Fleet(Widget):
             )
             for ship in roster
         }
+        self._title = title
+
+        self.ships_total = len(self._ships)
+        self.ships_alive = self.ships_total
 
     def watch_previewing_id(self, old: str, new: str) -> None:
         if old:
@@ -128,6 +133,9 @@ class Fleet(Widget):
 
         if new:
             self._ships[new].previewing = True
+
+    def watch_ships_alive(self) -> None:
+        self.update_title()
 
     def compose(self) -> ComposeResult:
         yield from self._ships.values()
@@ -144,3 +152,9 @@ class Fleet(Widget):
     def damage(self, ship_id: str) -> None:
         ship = self._ships[ship_id]
         ship.damage()
+
+        if ship.destroyed:
+            self.ships_alive -= 1
+
+    def update_title(self) -> None:
+        self.border_title = f"[{self.ships_alive}/{self.ships_total}] {self._title}"

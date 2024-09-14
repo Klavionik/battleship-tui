@@ -106,6 +106,7 @@ Fleet {
   scrollbar-size-vertical: 1;
   padding: 1 0;
   border: wide $accent;
+  border-title-align: center;
 }
 
 Fleet.player {
