@@ -52,7 +52,7 @@ def test_target_caller_targets_adjacent_cells_after_hit_until_all_tried():
 @pytest.mark.parametrize(
     "ship_position, excluded_cells",
     [
-        ["B1", ["A2", "C2", "A1", "B2", "C1"]],  # Ship positioned at the top edge.
+        ["B1", ["A2", "C2", "A1", "B2", "C1"]],  # Ship is positioned at the top edge.
         ["B2", ["A2", "B3", "C2", "A1", "C1", "A3", "C3", "B1"]],
     ],
 )
@@ -60,12 +60,12 @@ def test_target_caller_excludes_adjacent_cells_if_adjacent_ships_disallowed(
     ship_position, excluded_cells
 ):
     board = domain.Board()
+    caller = ai.TargetCaller(board, no_adjacent_ships=True)
     ship = domain.Ship("id", "ship", 1)
     board.place_ship(domain.position_to_coordinates([ship_position]), ship)
+
     board.hit_cell(domain.Coordinate.from_human(ship_position))
     shot = domain.Shot(domain.Coordinate.from_human(ship_position), hit=True, ship=ship)
-    caller = ai.TargetCaller(board, no_adjacent_ships=True)
-
     caller.provide_feedback([shot])
 
     assert [c.to_human() for c in caller.excluded_cells] == excluded_cells
@@ -131,7 +131,7 @@ def test_autoplacer_raises_error_if_no_place_for_ship():
         autoplacer.place("carrier")
 
 
-def test_autoplacer_respects_no_ships_touch_rule():
+def test_autoplacer_respects_no_adjacent_ships_rule():
     board = domain.Board(size=3)
     ship = domain.Ship(id="1", hp=3, type="ship")
     roster = rosters.Roster(name="test", items=[rosters.RosterItem(id="1", type="ship", hp=3)])
