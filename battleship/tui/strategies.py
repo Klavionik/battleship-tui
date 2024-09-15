@@ -238,7 +238,9 @@ class SingleplayerStrategy(GameStrategy):
         self._enable_move_delay = not is_debug()
         self._human_player = game.player_a
         self._bot_player = game.player_b
-        self._target_caller = ai.TargetCaller(self._human_player.board)
+        self._target_caller = ai.TargetCaller(
+            self._human_player.board, self._game.no_adjacent_ships
+        )
         self._autoplacer = ai.Autoplacer(
             self._bot_player.board, self._game.roster, self._game.no_adjacent_ships
         )

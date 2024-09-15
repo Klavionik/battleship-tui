@@ -6,9 +6,11 @@ from battleship.engine import domain, errors, rosters
 
 
 class TargetCaller:
-    def __init__(self, board: domain.Board) -> None:
+    def __init__(self, board: domain.Board, no_adjacent_ships: bool = False) -> None:
         self.board = board
+        self.no_adjacent_ships = no_adjacent_ships
         self.next_targets: deque[domain.Cell] = deque()
+        self.excluded_cells: set[domain.Coordinate] = set()
 
     def call_out(self, *, count: int = 1) -> list[str]:
         cells = self._get_targets(count)
@@ -16,14 +18,21 @@ class TargetCaller:
 
     def provide_feedback(self, shots: Iterable[domain.Shot]) -> None:
         for shot in shots:
-            if shot.hit and not shot.ship.destroyed:  # type: ignore
-                cell = self.board.get_cell(shot.coordinate)
+            if shot.hit:
+                assert shot.ship, "Shot was a hit, but no ship present"
 
-                if cell is None:
-                    raise errors.CellOutOfRange(f"Cell at {shot.coordinate} doesn't exist.")
+                if shot.ship.destroyed and self.no_adjacent_ships:
+                    coordinates = self._find_cells_around_ship(shot.ship)
+                    self.excluded_cells.update(coordinates)
+                    self.next_targets.clear()
+                elif not shot.ship.destroyed:
+                    cell = self.board.get_cell(shot.coordinate)
 
-                neighbors = self._find_neighbor_cells(cell)
-                self.next_targets.extend(neighbors)
+                    if cell is None:
+                        raise errors.CellOutOfRange(f"Cell at {shot.coordinate} doesn't exist.")
+
+                    cells = self._find_adjacent_cells(cell)
+                    self.next_targets.extend(cells)
 
     def _get_targets(self, count: int) -> list[domain.Cell]:
         targets: list[domain.Cell] = []
@@ -39,19 +48,43 @@ class TargetCaller:
         return targets
 
     def _find_random_targets(self, count: int) -> list[domain.Cell]:
-        candidates = [cell for cell in self.board.cells if not cell.is_shot]
+        candidates = [
+            cell
+            for cell in self.board.cells
+            if not (cell.is_shot or cell.coordinate in self.excluded_cells)
+        ]
         return random.sample(candidates, k=min(len(candidates), count))
 
-    def _find_neighbor_cells(self, cell: domain.Cell) -> list[domain.Cell]:
+    def _find_adjacent_cells(self, cell: domain.Cell) -> list[domain.Cell]:
         cells = []
 
-        for direction in list(domain.Direction):
-            candidate = self.board.get_adjacent_cell(cell, direction)  # type: ignore[arg-type]
-
-            if candidate is None or candidate.is_shot or candidate in self.next_targets:
+        for cell_ in self.board.get_adjacent_cells(cell, with_diagonals=False):
+            if (
+                cell_.is_shot
+                or cell_ in self.next_targets
+                or cell_.coordinate in self.excluded_cells
+            ):
                 continue
 
-            cells.append(candidate)
+            cells.append(cell_)
+
+        return cells
+
+    def _find_cells_around_ship(self, ship: domain.Ship) -> list[domain.Coordinate]:
+        cells = []
+
+        for coordinate in ship.cells:
+            cell = self.board.get_cell(coordinate)
+            assert cell, "Ship was placed on out-of-range cell"
+
+            adjacent_cells = self.board.get_adjacent_cells(cell)
+            adjacent_coordinates = [
+                cell.coordinate
+                for cell in adjacent_cells
+                if not cell.is_shot and cell.coordinate not in ship.cells
+            ]
+
+            cells.extend(adjacent_coordinates)
 
         return cells
 

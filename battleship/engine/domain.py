@@ -17,10 +17,17 @@ ASCII_OFFSET = 64
 
 
 class Direction(StrEnum):
-    UP = "up"
-    DOWN = "down"
-    RIGHT = "right"
-    LEFT = "left"
+    UP = enum.auto()
+    DOWN = enum.auto()
+    RIGHT = enum.auto()
+    LEFT = enum.auto()
+
+
+class DiagonalDirection(StrEnum):
+    UP_RIGHT = enum.auto()
+    UP_LEFT = enum.auto()
+    DOWN_RIGHT = enum.auto()
+    DOWN_LEFT = enum.auto()
 
 
 class FiringOrder(StrEnum):
@@ -167,7 +174,9 @@ class Board:
     def cells(self) -> list[Cell]:
         return [cell for row in self.grid for cell in row]
 
-    def get_adjacent_cell(self, cell: Cell, direction: Direction) -> Cell | None:
+    def get_adjacent_cell(
+        self, cell: Cell, direction: Direction | DiagonalDirection
+    ) -> Cell | None:
         match direction:
             case Direction.UP:
                 coordinate = cell.coordinate.up()
@@ -177,10 +186,38 @@ class Board:
                 coordinate = cell.coordinate.right()
             case Direction.LEFT:
                 coordinate = cell.coordinate.left()
+            case DiagonalDirection.UP_RIGHT:
+                up = cell.coordinate.up()
+                coordinate = up.right()
+            case DiagonalDirection.UP_LEFT:
+                up = cell.coordinate.up()
+                coordinate = up.left()
+            case DiagonalDirection.DOWN_RIGHT:
+                down = cell.coordinate.down()
+                coordinate = down.right()
+            case DiagonalDirection.DOWN_LEFT:
+                down = cell.coordinate.down()
+                coordinate = down.left()
             case _:
                 raise ValueError(f"Invalid direction {direction}.")
 
         return self.get_cell(coordinate)
+
+    def get_adjacent_cells(self, cell: Cell, with_diagonals: bool = True) -> list[Cell]:
+        cells = []
+
+        if with_diagonals:
+            directions = itertools.chain(Direction, DiagonalDirection)
+        else:
+            directions = itertools.chain(Direction)
+
+        for direction in directions:
+            adjacent_cell = self.get_adjacent_cell(cell, direction)  # type: ignore[arg-type]
+
+            if adjacent_cell is not None:
+                cells.append(adjacent_cell)
+
+        return cells
 
     def get_cell(self, coordinate: Coordinate) -> Cell | None:
         if not (0 <= coordinate.x < self.size and 0 <= coordinate.y < self.size):
@@ -194,23 +231,9 @@ class Board:
         if not cell:
             raise errors.CellOutOfRange(f"Cell at {coordinate=} does not exist.")
 
-        adjacent_coordinates = [
-            cell.coordinate.up(),
-            cell.coordinate.right(),
-            cell.coordinate.down(),
-            cell.coordinate.left(),
-        ]
-        diagonals = [
-            adjacent_coordinates[1].up(),
-            adjacent_coordinates[1].down(),
-            adjacent_coordinates[3].up(),
-            adjacent_coordinates[3].down(),
-        ]
-        adjacent_coordinates.extend(diagonals)
+        adjacent_cells = self.get_adjacent_cells(cell)
 
-        cells = [self.get_cell(coor) for coor in adjacent_coordinates]
-
-        return any([cell is not None and cell.ship is not None for cell in cells])
+        return any([cell.ship is not None for cell in adjacent_cells])
 
     def place_ship(
         self, coordinates: Collection[Coordinate], ship: Ship, no_adjacent_ships: bool = False
