@@ -96,6 +96,31 @@ class Coordinate:
     def to_human(self) -> str:
         return f"{self.col}{self.row}"
 
+    def next(self, direction: Direction | DiagonalDirection) -> "Coordinate":
+        match direction:
+            case Direction.UP:
+                return self.up()
+            case Direction.DOWN:
+                return self.down()
+            case Direction.RIGHT:
+                return self.right()
+            case Direction.LEFT:
+                return self.left()
+            case DiagonalDirection.UP_RIGHT:
+                up = self.up()
+                return up.right()
+            case DiagonalDirection.UP_LEFT:
+                up = self.up()
+                return up.left()
+            case DiagonalDirection.DOWN_RIGHT:
+                down = self.down()
+                return down.right()
+            case DiagonalDirection.DOWN_LEFT:
+                down = self.down()
+                return down.left()
+            case _:
+                raise ValueError(f"Invalid direction {direction}.")
+
 
 @dataclasses.dataclass
 class Cell:
@@ -174,36 +199,13 @@ class Board:
     def cells(self) -> list[Cell]:
         return [cell for row in self.grid for cell in row]
 
-    def get_adjacent_cell(
-        self, cell: Cell, direction: Direction | DiagonalDirection
-    ) -> Cell | None:
-        match direction:
-            case Direction.UP:
-                coordinate = cell.coordinate.up()
-            case Direction.DOWN:
-                coordinate = cell.coordinate.down()
-            case Direction.RIGHT:
-                coordinate = cell.coordinate.right()
-            case Direction.LEFT:
-                coordinate = cell.coordinate.left()
-            case DiagonalDirection.UP_RIGHT:
-                up = cell.coordinate.up()
-                coordinate = up.right()
-            case DiagonalDirection.UP_LEFT:
-                up = cell.coordinate.up()
-                coordinate = up.left()
-            case DiagonalDirection.DOWN_RIGHT:
-                down = cell.coordinate.down()
-                coordinate = down.right()
-            case DiagonalDirection.DOWN_LEFT:
-                down = cell.coordinate.down()
-                coordinate = down.left()
-            case _:
-                raise ValueError(f"Invalid direction {direction}.")
+    def has_cell(self, coordinate: Coordinate) -> bool:
+        return 0 <= coordinate.x < self.size and 0 <= coordinate.y < self.size
 
-        return self.get_cell(coordinate)
+    def has_ship_at(self, coordinate: Coordinate) -> bool:
+        return self.get_cell(coordinate).ship is not None
 
-    def get_adjacent_cells(self, cell: Cell, with_diagonals: bool = True) -> list[Cell]:
+    def get_adjacent_cells(self, coordinate: Coordinate, with_diagonals: bool = True) -> list[Cell]:
         cells = []
 
         if with_diagonals:
@@ -212,28 +214,25 @@ class Board:
             directions = itertools.chain(Direction)
 
         for direction in directions:
-            adjacent_cell = self.get_adjacent_cell(cell, direction)  # type: ignore[arg-type]
-
-            if adjacent_cell is not None:
+            try:
+                next_coordinate = coordinate.next(direction)  # type: ignore[arg-type]
+                adjacent_cell = self.get_cell(next_coordinate)
+            except errors.CellOutOfRange:
+                continue
+            else:
                 cells.append(adjacent_cell)
 
         return cells
 
-    def get_cell(self, coordinate: Coordinate) -> Cell | None:
-        if not (0 <= coordinate.x < self.size and 0 <= coordinate.y < self.size):
-            return None
+    def get_cell(self, coordinate: Coordinate) -> Cell:
+        if not self.has_cell(coordinate):
+            raise errors.CellOutOfRange(f"Cell at {coordinate} doesn't exist.")
 
         return self.grid[coordinate.y][coordinate.x]
 
     def has_adjacent_ship(self, coordinate: Coordinate) -> bool:
-        cell = self.get_cell(coordinate)
-
-        if not cell:
-            raise errors.CellOutOfRange(f"Cell at {coordinate=} does not exist.")
-
-        adjacent_cells = self.get_adjacent_cells(cell)
-
-        return any([cell.ship is not None for cell in adjacent_cells])
+        adjacent_cells = self.get_adjacent_cells(coordinate)
+        return any([self.has_ship_at(cell.coordinate) for cell in adjacent_cells])
 
     def place_ship(
         self, coordinates: Collection[Coordinate], ship: Ship, no_adjacent_ships: bool = False
@@ -252,10 +251,6 @@ class Board:
 
         for coordinate in coordinates:
             cell = self.get_cell(coordinate)
-
-            if cell is None:
-                raise errors.CellOutOfRange(f"Cell at {coordinate} doesn't exist.")
-
             cell.set_ship(ship)
 
         self.ships.append(ship)

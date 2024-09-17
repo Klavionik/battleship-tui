@@ -42,9 +42,9 @@ def test_target_caller_targets_adjacent_cells_after_hit_until_all_tried():
 
     caller.provide_feedback([shot])  # Adds 4 adjacent cells to next targets.
 
-    assert [t.coordinate.to_human() for t in caller.next_targets] == ["B2", "B4", "C3", "A3"]
+    assert [t.to_human() for t in caller.next_targets] == ["B2", "B4", "C3", "A3"]
     assert caller.call_out() == ["B2"]
-    assert [t.coordinate.to_human() for t in caller.next_targets] == ["B4", "C3", "A3"]
+    assert [t.to_human() for t in caller.next_targets] == ["B4", "C3", "A3"]
     # When all next targets are called out, caller starts mixing in random cells.
     assert caller.call_out(count=4) == ["B4", "C3", "A3", "C9"]
 
