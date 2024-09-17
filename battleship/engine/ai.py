@@ -18,15 +18,22 @@ class TargetCaller:
 
     def provide_feedback(self, shots: Iterable[domain.Shot]) -> None:
         for shot in shots:
+            # If shot was a hit, we can learn something from it.
             if shot.hit:
                 assert shot.ship, "Shot was a hit, but no ship present"
 
                 if shot.ship.destroyed and self.no_adjacent_ships:
+                    # If ship was destroyed and there's "No adjacent ships"
+                    # rule enabled, there's no point in firing cells
+                    # that surrounds the ship - it's impossible to place
+                    # another ship there.
                     coordinates = self._find_cells_around_ship(shot.ship)
                     self.excluded_cells.update(coordinates)
                     self.next_targets.clear()
                 elif not shot.ship.destroyed:
-                    cells = self._find_adjacent_cells(shot.coordinate)
+                    # If ship was hit, but not destroyed, keep on
+                    # firing cells around until it is destroyed.
+                    cells = self._target_ship(shot.coordinate)
                     self.next_targets.extend(cells)
 
     def _get_targets(self, count: int) -> list[domain.Coordinate]:
@@ -37,12 +44,12 @@ class TargetCaller:
             targets.append(next_target)
 
         if len(targets) != count:
-            random_targets = self._find_random_targets(count - len(targets))
+            random_targets = self._target_random_cells(count - len(targets))
             targets.extend(random_targets)
 
         return targets
 
-    def _find_random_targets(self, count: int) -> list[domain.Coordinate]:
+    def _target_random_cells(self, count: int) -> list[domain.Coordinate]:
         candidates = [
             cell.coordinate
             for cell in self.board.cells
@@ -50,7 +57,7 @@ class TargetCaller:
         ]
         return random.sample(candidates, k=min(len(candidates), count))
 
-    def _find_adjacent_cells(self, coordinate: domain.Coordinate) -> list[domain.Coordinate]:
+    def _target_ship(self, coordinate: domain.Coordinate) -> list[domain.Coordinate]:
         cells = []
 
         for cell_ in self.board.get_adjacent_cells(coordinate, with_diagonals=False):
