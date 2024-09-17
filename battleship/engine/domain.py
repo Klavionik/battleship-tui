@@ -68,6 +68,25 @@ class Coordinate:
     def __hash__(self) -> int:
         return hash((self.x, self.y))
 
+    def __repr__(self) -> str:
+        return f"Coordinate(x={self.x}, y={self.y}, human={self.to_human()})"
+
+    @classmethod
+    def from_human(cls, coordinate: str) -> "Coordinate":
+        col, row = parse_coordinate(coordinate)
+        return Coordinate(ord(col) - ASCII_OFFSET - 1, row - 1)
+
+    @property
+    def col(self) -> str:
+        return chr(self.x + ASCII_OFFSET + 1)
+
+    @property
+    def row(self) -> int:
+        return self.y + 1
+
+    def to_human(self) -> str:
+        return f"{self.col}{self.row}"
+
     def up(self) -> "Coordinate":
         return Coordinate(self.x, self.y - 1)
 
@@ -79,22 +98,6 @@ class Coordinate:
 
     def left(self) -> "Coordinate":
         return Coordinate(self.x - 1, self.y)
-
-    @property
-    def col(self) -> str:
-        return chr(self.x + ASCII_OFFSET + 1)
-
-    @property
-    def row(self) -> int:
-        return self.y + 1
-
-    @classmethod
-    def from_human(cls, coordinate: str) -> "Coordinate":
-        col, row = parse_coordinate(coordinate)
-        return Coordinate(ord(col) - ASCII_OFFSET - 1, row - 1)
-
-    def to_human(self) -> str:
-        return f"{self.col}{self.row}"
 
     def next(self, direction: Direction | DiagonalDirection) -> "Coordinate":
         match direction:
