@@ -258,10 +258,6 @@ class Board:
 
     def hit_cell(self, coordinate: Coordinate) -> Ship | None:
         cell = self.get_cell(coordinate)
-
-        if cell is None:
-            raise errors.CellOutOfRange(f"Cell at {coordinate} doesn't exist.")
-
         cell.hit()
         return cell.ship
 
