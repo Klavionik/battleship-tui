@@ -16,6 +16,7 @@ DEFAULT_BOARD_SIZE = 10
 ASCII_OFFSET = 64
 
 
+@enum.unique
 class Direction(StrEnum):
     UP = enum.auto()
     DOWN = enum.auto()
@@ -23,6 +24,7 @@ class Direction(StrEnum):
     LEFT = enum.auto()
 
 
+@enum.unique
 class DiagonalDirection(StrEnum):
     UP_RIGHT = enum.auto()
     UP_LEFT = enum.auto()
@@ -30,9 +32,10 @@ class DiagonalDirection(StrEnum):
     DOWN_LEFT = enum.auto()
 
 
+@enum.unique
 class FiringOrder(StrEnum):
-    ALTERNATELY = "alternately"
-    UNTIL_MISS = "until_miss"
+    ALTERNATELY = enum.auto()
+    UNTIL_MISS = enum.auto()
 
 
 @dataclasses.dataclass
