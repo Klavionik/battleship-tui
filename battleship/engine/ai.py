@@ -6,52 +6,84 @@ from battleship.engine import domain, errors, rosters
 
 
 class TargetCaller:
-    def __init__(self, board: domain.Board) -> None:
+    def __init__(self, board: domain.Board, no_adjacent_ships: bool = False) -> None:
         self.board = board
-        self.next_targets: deque[domain.Cell] = deque()
+        self.no_adjacent_ships = no_adjacent_ships
+        self.next_targets: deque[domain.Coordinate] = deque()
+        self.excluded_cells: set[domain.Coordinate] = set()
 
     def call_out(self, *, count: int = 1) -> list[str]:
-        cells = self._get_targets(count)
-        return [cell.coordinate.to_human() for cell in cells]
+        targets = self._get_targets(count)
+        return [target.to_human() for target in targets]
 
     def provide_feedback(self, shots: Iterable[domain.Shot]) -> None:
         for shot in shots:
-            if shot.hit and not shot.ship.destroyed:  # type: ignore
-                cell = self.board.get_cell(shot.coordinate)
+            # If shot was a hit, we can learn something from it.
+            if shot.hit:
+                assert shot.ship, "Shot was a hit, but no ship present"
 
-                if cell is None:
-                    raise errors.CellOutOfRange(f"Cell at {shot.coordinate} doesn't exist.")
+                if shot.ship.destroyed and self.no_adjacent_ships:
+                    # If ship was destroyed and there's "No adjacent ships"
+                    # rule enabled, there's no point in firing cells
+                    # that surrounds the ship - it's impossible to place
+                    # another ship there.
+                    coordinates = self._find_cells_around_ship(shot.ship)
+                    self.excluded_cells.update(coordinates)
+                    self.next_targets.clear()
+                elif not shot.ship.destroyed:
+                    # If ship was hit, but not destroyed, keep on
+                    # firing cells around until it is destroyed.
+                    cells = self._target_ship(shot.coordinate)
+                    self.next_targets.extend(cells)
 
-                neighbors = self._find_neighbor_cells(cell)
-                self.next_targets.extend(neighbors)
-
-    def _get_targets(self, count: int) -> list[domain.Cell]:
-        targets: list[domain.Cell] = []
+    def _get_targets(self, count: int) -> list[domain.Coordinate]:
+        targets: list[domain.Coordinate] = []
 
         while len(self.next_targets) and len(targets) != count:
             next_target = self.next_targets.popleft()
             targets.append(next_target)
 
         if len(targets) != count:
-            random_targets = self._find_random_targets(count - len(targets))
+            random_targets = self._target_random_cells(count - len(targets))
             targets.extend(random_targets)
 
         return targets
 
-    def _find_random_targets(self, count: int) -> list[domain.Cell]:
-        candidates = [cell for cell in self.board.cells if not cell.is_shot]
+    def _target_random_cells(self, count: int) -> list[domain.Coordinate]:
+        candidates = [
+            cell.coordinate
+            for cell in self.board.cells
+            if not (cell.is_shot or cell.coordinate in self.excluded_cells)
+        ]
         return random.sample(candidates, k=min(len(candidates), count))
 
-    def _find_neighbor_cells(self, cell: domain.Cell) -> list[domain.Cell]:
+    def _target_ship(self, coordinate: domain.Coordinate) -> list[domain.Coordinate]:
         cells = []
 
-        for direction in list(domain.Direction):
-            candidate = self.board.get_adjacent_cell(cell, direction)  # type: ignore[arg-type]
-
-            if candidate is None or candidate.is_shot or candidate in self.next_targets:
+        for cell_ in self.board.get_adjacent_cells(coordinate, with_diagonals=False):
+            if (
+                cell_.is_shot
+                or cell_.coordinate in self.next_targets
+                or cell_.coordinate in self.excluded_cells
+            ):
                 continue
 
-            cells.append(candidate)
+            cells.append(cell_.coordinate)
+
+        return cells
+
+    def _find_cells_around_ship(self, ship: domain.Ship) -> list[domain.Coordinate]:
+        cells = []
+
+        for coordinate in ship.cells:
+            adjacent_cells = self.board.get_adjacent_cells(coordinate)
+            adjacent_coordinates = [
+                cell.coordinate
+                for cell in adjacent_cells
+                if not cell.is_shot and cell.coordinate not in ship.cells
+            ]
+
+            cells.extend(adjacent_coordinates)
 
         return cells
 
@@ -67,7 +99,11 @@ class Autoplacer:
     def place(self, ship_type: rosters.ShipType) -> list[domain.Coordinate]:
         ship_hp = self.ship_hp_map[ship_type]
         position: list[domain.Coordinate] = []
-        empty_cells = [cell for cell in self.board.cells if cell.ship is None]
+        empty_cells = [
+            cell.coordinate
+            for cell in self.board.cells
+            if not self.board.has_ship_at(cell.coordinate)
+        ]
         directions = list[domain.Direction](domain.Direction)
         random.shuffle(empty_cells)
         random.shuffle(directions)
@@ -79,16 +115,16 @@ class Autoplacer:
                 # Try to found enough empty cells to place the ship in this direction.
                 for _ in range(ship_hp):
                     # Get the next cell in this direction.
-                    next_cell = self.board.get_adjacent_cell(start_cell, direction)
+                    next_cell = start_cell.next(direction)
 
                     # If there is no cell or the cell is taken,
                     # clear the progress and try another direction.
-                    if next_cell is None or next_cell.ship is not None:
+                    if not self.board.has_cell(next_cell) or self.board.has_ship_at(next_cell):
                         position.clear()
                         break
 
                     # Otherwise, save the coordinate.
-                    position.append(next_cell.coordinate)
+                    position.append(next_cell)
 
                     # If there is enough cells to place the ship, return the position.
                     if len(position) == ship_hp:

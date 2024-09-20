@@ -238,7 +238,9 @@ class SingleplayerStrategy(GameStrategy):
         self._enable_move_delay = not is_debug()
         self._human_player = game.player_a
         self._bot_player = game.player_b
-        self._target_caller = ai.TargetCaller(self._human_player.board)
+        self._target_caller = ai.TargetCaller(
+            self._human_player.board, self._game.no_adjacent_ships
+        )
         self._autoplacer = ai.Autoplacer(
             self._bot_player.board, self._game.roster, self._game.no_adjacent_ships
         )
@@ -319,14 +321,14 @@ class SingleplayerStrategy(GameStrategy):
     def cancel(self) -> None:
         pass
 
-    def _call_bot_target(self) -> Collection[str]:
+    def _call_bot_target(self) -> list[str]:
         if self._game.salvo_mode:
             count = self._bot_player.ships_alive
         else:
             count = 1
 
-        position = self._target_caller.call_out(count=count)
-        return position
+        targets = self._target_caller.call_out(count=count)
+        return targets
 
     def _spawn_bot_fleet(self) -> None:
         for item in self._game.roster:

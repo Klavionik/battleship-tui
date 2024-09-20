@@ -14,12 +14,13 @@ def test_board_find_cells(point: str):
 
 
 @pytest.mark.parametrize("coord", ["A11", "B0", "V5"])
-def test_board_returns_none_if_cell_not_found(coord):
+def test_board_raises_none_if_cell_not_found(coord):
     board = domain.Board()
 
     coor = domain.Coordinate.from_human(coord)
 
-    assert board.get_cell(coor) is None
+    with pytest.raises(errors.CellOutOfRange):
+        board.get_cell(coor)
 
 
 def test_board_places_ship():
@@ -74,50 +75,26 @@ def test_board_shooting():
     assert ship.hp == 3
 
 
-def test_board_gets_adjacent_cell():
-    board = domain.Board(size=5)
-    cell = domain.Cell(domain.Coordinate.from_human("B1"))
-
-    up = board.get_adjacent_cell(cell, domain.Direction.UP)
-    down = board.get_adjacent_cell(cell, domain.Direction.DOWN)
-    right = board.get_adjacent_cell(cell, domain.Direction.RIGHT)
-    left = board.get_adjacent_cell(cell, domain.Direction.LEFT)
-
-    assert up is None
-    assert down.coordinate == "B2"
-    assert right.coordinate == "C1"
-    assert left.coordinate == "A1"
-
-
-def test_board_finds_ships_in_adjacent_cells():
+@pytest.mark.parametrize(
+    "coor", ["F4", "G4", "G5", "G6", "G7", "G8", "E8", "F8", "E7", "E6", "E5", "E4"]
+)
+def test_board_finds_ships_in_adjacent_cells(coor):
     board = domain.Board()
     board.place_ship(
         domain.position_to_coordinates(["F5", "F6", "F7"]), domain.Ship(id="1", hp=3, type="ship")
     )
 
-    assert board.has_adjacent_ship(domain.Coordinate.from_human("F4"))
-    assert board.has_adjacent_ship(domain.Coordinate.from_human("G4"))
-    assert board.has_adjacent_ship(domain.Coordinate.from_human("G5"))
-    assert board.has_adjacent_ship(domain.Coordinate.from_human("G6"))
-    assert board.has_adjacent_ship(domain.Coordinate.from_human("G7"))
-    assert board.has_adjacent_ship(domain.Coordinate.from_human("G8"))
-    assert board.has_adjacent_ship(domain.Coordinate.from_human("E8"))
-    assert board.has_adjacent_ship(domain.Coordinate.from_human("F8"))
-    assert board.has_adjacent_ship(domain.Coordinate.from_human("E7"))
-    assert board.has_adjacent_ship(domain.Coordinate.from_human("E6"))
-    assert board.has_adjacent_ship(domain.Coordinate.from_human("E5"))
-    assert board.has_adjacent_ship(domain.Coordinate.from_human("E4"))
+    assert board.has_adjacent_ship(domain.Coordinate.from_human(coor))
 
 
-def test_board_doesnt_find_ships_in_distant_cells():
+@pytest.mark.parametrize("coor", ["F3", "F9", "D4"])
+def test_board_doesnt_find_ships_in_distant_cells(coor):
     board = domain.Board()
     board.place_ship(
         domain.position_to_coordinates(["F5", "F6", "F7"]), domain.Ship(id="1", hp=3, type="ship")
     )
 
-    assert not board.has_adjacent_ship(domain.Coordinate.from_human("F3"))
-    assert not board.has_adjacent_ship(domain.Coordinate.from_human("F9"))
-    assert not board.has_adjacent_ship(domain.Coordinate.from_human("D4"))
+    assert not board.has_adjacent_ship(domain.Coordinate.from_human(coor))
 
 
 def test_board_finds_ships_in_adjacent_cells_ignoring_cells_out_of_range():
