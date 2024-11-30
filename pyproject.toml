@@ -33,18 +33,19 @@ uvicorn = { version = "^0.30.0", optional = true }
 httpx = "^0.27.0"
 pydantic = "^2.7.0"
 pydantic-settings = "^2.3.0"
-pyjwt = {extras = ["crypto"], version = "^2.8.0", optional = true}
+pyjwt = {extras = ["crypto"], version = "^2.10.1", optional = true}
 uvloop = { version = "^0.19.0", optional = true }
 email-validator = "^2.2.0"
 auth0-python = { version = "^4.5.0", optional = true }
 typer = { version = "^0.12.0", optional = true }
 xdg-base-dirs = "^6.0.1"
 redis = { version = "^5.0.1", optional = true }
-textual = "0.71.0"
+textual = { version = "0.85.2", optional = true }
 textual-dev = { version = "^1.5.0", optional = true }
+pytest-textual-snapshot = { version = "^0.4.0", optional = true }
 async-timeout = { version = "^4.0.3", markers = "python_version < '3.11'" }
 backports-strenum = { version = "^1.2.8", markers = "python_version < '3.11'" }
-sentry-sdk = "^2.8.0"
+sentry-sdk = "^2.19.0"
 aioprometheus = {version = "^23.3.0", optional = true}
 copykitten = { version = "^1.2.1", optional = true }
 tenacity = { version = "^8.4.1", optional = true }
@@ -55,7 +56,7 @@ rodi = "^2.0.6"
 [tool.poetry.extras]
 server = ["blacksheep", "uvicorn", "auth0-python", "pyjwt", "uvloop", "redis", "aioprometheus"]
 client = ["textual", "typer", "copykitten", "tenacity", "sentry-offline-transport"]
-dev = ["textual-dev"]
+dev = ["textual-dev", "pytest-textual-snapshot"]
 
 [tool.poetry.scripts]
 battleship = "battleship.cli:run"
@@ -83,7 +84,6 @@ coverage = "^7.3.0"
 watchdog = {extras = ["watchmedo"], version = "^3.0.0"}
 pytest = "^7.4.2"
 pytest-asyncio = "^0.23.2"
-pytest-textual-snapshot = "^0.4.0"
 
 [build-system]
 requires = ["poetry-core"]
