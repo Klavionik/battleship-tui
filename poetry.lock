@@ -97,6 +97,21 @@ yarl = ">=1.0,<2.0"
 speedups = ["Brotli", "aiodns", "brotlicffi"]
 
 [[package]]
+name = "aiohttp-jinja2"
+version = "1.6"
+description = "jinja2 template renderer for aiohttp.web (http server for asyncio)"
+optional = true
+python-versions = ">=3.8"
+files = [
+    {file = "aiohttp-jinja2-1.6.tar.gz", hash = "sha256:a3a7ff5264e5bca52e8ae547bbfd0761b72495230d438d05b6c0915be619b0e2"},
+    {file = "aiohttp_jinja2-1.6-py3-none-any.whl", hash = "sha256:0df405ee6ad1b58e5a068a105407dc7dcc1704544c559f1938babde954f945c7"},
+]
+
+[package.dependencies]
+aiohttp = ">=3.9.0"
+jinja2 = ">=3.0.0"
+
+[[package]]
 name = "aioprometheus"
 version = "23.12.0"
 description = "A Prometheus Python client library for asyncio-based applications"
@@ -1366,6 +1381,22 @@ files = [
 ]
 
 [[package]]
+name = "platformdirs"
+version = "4.3.6"
+description = "A small Python package for determining appropriate platform-specific dirs, e.g. a `user data dir`."
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "platformdirs-4.3.6-py3-none-any.whl", hash = "sha256:73e575e1408ab8103900836b97580d5307456908a03e92031bab39e4554cc3fb"},
+    {file = "platformdirs-4.3.6.tar.gz", hash = "sha256:357fb2acbc885b0419afd3ce3ed34564c13c9b95c89360cd9563f73aa5e2b907"},
+]
+
+[package.extras]
+docs = ["furo (>=2024.8.6)", "proselint (>=0.14)", "sphinx (>=8.0.2)", "sphinx-autodoc-typehints (>=2.4)"]
+test = ["appdirs (==1.4.4)", "covdefaults (>=2.3)", "pytest (>=8.3.2)", "pytest-cov (>=5)", "pytest-mock (>=3.14)"]
+type = ["mypy (>=1.11.2)"]
+
+[[package]]
 name = "pluggy"
 version = "1.5.0"
 description = "plugin and hook calling mechanisms for python"
@@ -1909,17 +1940,18 @@ test = ["pytest", "tornado (>=4.5)", "typeguard"]
 
 [[package]]
 name = "textual"
-version = "0.71.0"
+version = "0.85.2"
 description = "Modern Text User Interface framework"
 optional = false
-python-versions = "<4.0,>=3.8"
+python-versions = "<4.0.0,>=3.8.1"
 files = [
-    {file = "textual-0.71.0-py3-none-any.whl", hash = "sha256:60500cc63ffd98a4aff8679976a1530d5e99a881e13bb040d26558a2c45f49d8"},
-    {file = "textual-0.71.0.tar.gz", hash = "sha256:a38a3bd7e450ed173b59ab1c93a3aa8174d95bc5c79647f220a50243236ce70a"},
+    {file = "textual-0.85.2-py3-none-any.whl", hash = "sha256:9ccdeb6b8a6a0ff72d497f714934f2e524f2eb67783b459fb08b1339ee537dc0"},
+    {file = "textual-0.85.2.tar.gz", hash = "sha256:2a416995c49d5381a81d0a6fd23925cb0e3f14b4f239ed05f35fa3c981bb1df2"},
 ]
 
 [package.dependencies]
 markdown-it-py = {version = ">=2.1.0", extras = ["linkify", "plugins"]}
+platformdirs = ">=3.6.0,<5"
 rich = ">=13.3.3"
 typing-extensions = ">=4.4.0,<5.0.0"
 
@@ -1928,13 +1960,13 @@ syntax = ["tree-sitter (>=0.20.1,<0.21.0)", "tree-sitter-languages (==1.10.2)"]
 
 [[package]]
 name = "textual-dev"
-version = "1.5.1"
+version = "1.6.1"
 description = "Development tools for working with Textual"
 optional = true
-python-versions = ">=3.8,<4.0"
+python-versions = "<4.0,>=3.8"
 files = [
-    {file = "textual_dev-1.5.1-py3-none-any.whl", hash = "sha256:bb37dd769ae6b67e1422aa97f6d6ef952e0a6d2aafe08327449e8bdd70474776"},
-    {file = "textual_dev-1.5.1.tar.gz", hash = "sha256:e0366ab6f42c128d7daa37a7c418e61fe7aa83731983da990808e4bf2de922a1"},
+    {file = "textual_dev-1.6.1-py3-none-any.whl", hash = "sha256:de93279da6dd0772be88a83e494be1bc895df0a0c3e47bcd48fa1acb1a83a34b"},
+    {file = "textual_dev-1.6.1.tar.gz", hash = "sha256:0d0d4523a09566bae56eb9ebc4fcbb09069d0f335448e6b9b10dd2d805606bd8"},
 ]
 
 [package.dependencies]
@@ -1942,7 +1974,26 @@ aiohttp = ">=3.8.1"
 click = ">=8.1.2"
 msgpack = ">=1.0.3"
 textual = ">=0.36.0"
+textual_serve = ">=1.0.3"
 typing-extensions = ">=4.4.0,<5.0.0"
+
+[[package]]
+name = "textual-serve"
+version = "1.1.1"
+description = "Turn your Textual TUIs in to web applications"
+optional = true
+python-versions = ">=3.8"
+files = [
+    {file = "textual_serve-1.1.1-py3-none-any.whl", hash = "sha256:568782f1c0e60e3f7039d9121e1cb5c2f4ca1aaf6d6bd7aeb833d5763a534cb2"},
+    {file = "textual_serve-1.1.1.tar.gz", hash = "sha256:71c662472c462e5e368defc660ee6e8eae3bfda88ca40c050c55474686eb0c54"},
+]
+
+[package.dependencies]
+aiohttp = ">=3.9.5"
+aiohttp-jinja2 = ">=1.6"
+jinja2 = ">=3.1.4"
+rich = "*"
+textual = ">=0.66.0"
 
 [[package]]
 name = "tomli"
@@ -2336,4 +2387,4 @@ server = ["aioprometheus", "auth0-python", "blacksheep", "pyjwt", "redis", "uvic
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.13"
-content-hash = "0449b38b18445b501536c1bb218c8fd2a54f4070d3124af798c2c2f610d344a0"
+content-hash = "8aaed44978c23ac850039e453fedb4864fb61e5a1090242dd98a07acbde44030"
