@@ -85,7 +85,7 @@ characters.
 > access will work until you log off.
 
 > [!NOTE]
-> At the moment, the user management is handled by Auth0. The game serve doesn't store 
+> At the moment, the user management is handled by Auth0. The game server doesn't store 
 > your credentials.
 
 ## Screenshots
