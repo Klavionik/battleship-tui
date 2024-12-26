@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The Fleet widget displays the number of ships `[alive/total]` in its header.
 - Computer player doesn't shoot cells, adjacent to a destroyed ship when `No adjacent 
 ships` rule is enabled.
+- Added support for Python 3.13.
 ### Changed
 - Updated Textual, sentry-sdk, pyjwt.
 
